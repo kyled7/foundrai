@@ -41,7 +41,14 @@ class QAEngineerAgent(BaseAgent):
             f"## Review Task: {task.title}\n\n"
             f"**Acceptance Criteria:**\n{criteria}\n\n"
             f"**Developer Output:**\n{result.output}\n\n"
-            "Review this task. If sandbox is unavailable, do a code-review-only analysis.\n"
+            "Review this task with a pragmatic mindset. Focus on:\n"
+            "- Does the code reasonably meet the acceptance criteria?\n"
+            "- Are there any critical bugs or security issues?\n"
+            "- Is the code functional and readable?\n\n"
+            "Be lenient on style, minor issues, and edge cases. "
+            "Pass the task if the core functionality works correctly.\n"
+            "Only fail if there are critical issues that would break functionality.\n\n"
+            "If sandbox is unavailable, do a code-review-only analysis.\n"
             "Return JSON: {\"passed\": bool, \"issues\": [...], \"suggestions\": [...]}"
         )
 

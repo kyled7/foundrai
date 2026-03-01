@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -46,6 +46,7 @@ interface Props {
 export function GoalTree({ sprintId }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [isEmpty, setIsEmpty] = useState(false);
 
   const loadTree = useCallback(async () => {
     try {
@@ -66,11 +67,17 @@ export function GoalTree({ sprintId }: Props) {
           ? { strokeDasharray: '5 5', stroke: '#3b82f6' }
           : { stroke: '#9ca3af' },
       }));
+      const taskNodes = rfNodes.filter(n => n.type === 'task');
+      if (taskNodes.length === 0) {
+        setIsEmpty(true);
+      } else {
+        setIsEmpty(false);
+      }
       const laid = layoutTree(rfNodes, rfEdges);
       setNodes(laid.nodes);
       setEdges(laid.edges);
     } catch {
-      // Sprint may not have tasks yet
+      setIsEmpty(true);
     }
   }, [sprintId, setNodes, setEdges]);
 
@@ -79,6 +86,18 @@ export function GoalTree({ sprintId }: Props) {
   }, [loadTree]);
 
   const memoNodeTypes = useMemo(() => nodeTypes, []);
+
+  if (isEmpty) {
+    return (
+      <div className="h-full w-full flex items-center justify-center text-gray-400">
+        <div className="text-center">
+          <p className="text-4xl mb-2">🌳</p>
+          <p className="text-lg font-medium">No task decomposition yet</p>
+          <p className="text-sm">Tasks will appear here once planning is complete.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full">

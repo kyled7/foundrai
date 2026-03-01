@@ -321,6 +321,6 @@ class SprintEngine:
         status_val = task.status if isinstance(task.status, str) else task.status.value
         await self.event_log.append(
             "task.status_changed",
-            {"task_id": task.id, "status": status_val},
+            {"task_id": task.id, "status": status_val, "task_title": task.title},
         )
         await self.sprint_store.update_task(task)

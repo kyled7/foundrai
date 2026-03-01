@@ -25,7 +25,7 @@ team:
 
   developer:
     enabled: true
-    model: openai/gpt-4o
+    model: anthropic/claude-sonnet-4-20250514
     autonomy: auto_approve
     max_tokens_per_action: 8192
     persona_override: null
@@ -35,7 +35,7 @@ team:
 
   qa_engineer:
     enabled: true
-    model: openai/gpt-4o-mini
+    model: anthropic/claude-sonnet-4-20250514
     autonomy: auto_approve
     max_tokens_per_action: 4096
     persona_override: null

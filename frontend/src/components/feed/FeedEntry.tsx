@@ -27,7 +27,7 @@ function renderContent(event: WSMessage): string {
     case 'agent.message':
       return String(d.content ?? d.message ?? '');
     case 'task.status_changed':
-      return `Task moved to ${d.status}`;
+      return `${d.task_title || d.title || 'Task'} → ${d.status}`;
     case 'task.created':
       return `New task: ${(d.task as Record<string, unknown>)?.title ?? ''}`;
     case 'sprint.status_changed':
