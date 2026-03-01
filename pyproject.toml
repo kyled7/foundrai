@@ -1,0 +1,86 @@
+[project]
+name = "foundrai"
+version = "0.1.0"
+description = "AI agent orchestration as an autonomous Agile startup team"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [
+    { name = "FoundrAI Contributors" },
+]
+keywords = ["ai", "agents", "multi-agent", "agile", "orchestration", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "websockets>=12.0",
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+    "litellm>=1.30.0",
+    "chromadb>=0.4.0",
+    "aiosqlite>=0.20.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.1.0",
+    "typer[all]>=0.9.0",
+    "rich>=13.7.0",
+    "networkx>=3.2.0",
+    "pyyaml>=6.0.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.27.0",
+    "langchain-community>=0.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "hypothesis>=6.98.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+]
+
+[project.scripts]
+foundrai = "foundrai.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/YOUR_USERNAME/foundrai"
+Documentation = "https://github.com/YOUR_USERNAME/foundrai/tree/main/docs"
+Repository = "https://github.com/YOUR_USERNAME/foundrai"
+Issues = "https://github.com/YOUR_USERNAME/foundrai/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "ANN", "S", "B"]
+ignore = ["S101", "B008", "ANN401", "UP042", "S104", "S108", "S110", "S608", "B023"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ANN"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--cov=foundrai --cov-report=term-missing"
