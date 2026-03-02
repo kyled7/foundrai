@@ -24,7 +24,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await deps.cleanup_db()
 
 
-def create_app(config: FoundrAIConfig) -> FastAPI:
+def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
+    if config is None:
+        config = FoundrAIConfig()
     """Create and configure the FastAPI application."""
     deps.set_config(config)
 
@@ -48,13 +50,17 @@ def create_app(config: FoundrAIConfig) -> FastAPI:
     # API routes
     from foundrai.api.routes import (
         agents,
+        analytics,
         approvals,
         artifacts,
+        errors,
         events,
         learnings,
         projects,
+        replay,
         sprints,
         tasks,
+        traces,
     )
 
     app.include_router(projects.router, prefix="/api")
@@ -65,6 +71,10 @@ def create_app(config: FoundrAIConfig) -> FastAPI:
     app.include_router(artifacts.router, prefix="/api")
     app.include_router(agents.router, prefix="/api")
     app.include_router(learnings.router, prefix="/api")
+    app.include_router(analytics.router, prefix="/api")
+    app.include_router(traces.router, prefix="/api")
+    app.include_router(errors.router, prefix="/api")
+    app.include_router(replay.router, prefix="/api")
 
     # WebSocket
     @app.websocket("/ws/sprints/{sprint_id}")
@@ -101,3 +111,7 @@ def create_app(config: FoundrAIConfig) -> FastAPI:
         return HTMLResponse("<h1>FoundrAI</h1><p>Frontend not built.</p>")
 
     return app
+
+
+# Module-level app instance for `uvicorn foundrai.api.app:app`
+app = create_app()

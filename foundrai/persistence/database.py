@@ -106,6 +106,30 @@ CREATE TABLE IF NOT EXISTS learnings (
 );
 CREATE INDEX IF NOT EXISTS idx_learnings_project ON learnings(project_id);
 
+CREATE TABLE IF NOT EXISTS token_usage (
+    usage_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT,
+    sprint_id TEXT,
+    project_id TEXT,
+    agent_role TEXT NOT NULL,
+    model TEXT NOT NULL,
+    prompt_tokens INTEGER DEFAULT 0,
+    completion_tokens INTEGER DEFAULT 0,
+    total_tokens INTEGER DEFAULT 0,
+    cost_usd REAL DEFAULT 0.0,
+    timestamp TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_token_usage_sprint ON token_usage(sprint_id);
+CREATE INDEX IF NOT EXISTS idx_token_usage_project ON token_usage(project_id);
+
+CREATE TABLE IF NOT EXISTS budget_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sprint_id TEXT,
+    agent_role TEXT,
+    budget_usd REAL NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS agent_configs (
     project_id TEXT NOT NULL,
     agent_role TEXT NOT NULL,
@@ -114,6 +138,40 @@ CREATE TABLE IF NOT EXISTS agent_configs (
     enabled INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (project_id, agent_role)
 );
+
+CREATE TABLE IF NOT EXISTS decision_traces (
+    trace_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER,
+    task_id TEXT,
+    sprint_id TEXT,
+    agent_role TEXT NOT NULL,
+    model TEXT,
+    prompt_compressed BLOB,
+    response_compressed BLOB,
+    thinking TEXT,
+    tool_calls_json TEXT,
+    tokens_used INTEGER DEFAULT 0,
+    cost_usd REAL DEFAULT 0.0,
+    duration_ms INTEGER DEFAULT 0,
+    timestamp TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_traces_task ON decision_traces(task_id);
+CREATE INDEX IF NOT EXISTS idx_traces_sprint ON decision_traces(sprint_id);
+
+CREATE TABLE IF NOT EXISTS error_logs (
+    error_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT,
+    sprint_id TEXT,
+    agent_role TEXT NOT NULL DEFAULT '',
+    error_type TEXT NOT NULL DEFAULT 'unknown',
+    error_message TEXT NOT NULL DEFAULT '',
+    traceback TEXT NOT NULL DEFAULT '',
+    context_json TEXT DEFAULT '{}',
+    suggested_fix TEXT DEFAULT '',
+    timestamp TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_errors_task ON error_logs(task_id);
+CREATE INDEX IF NOT EXISTS idx_errors_sprint ON error_logs(sprint_id);
 """
 
 

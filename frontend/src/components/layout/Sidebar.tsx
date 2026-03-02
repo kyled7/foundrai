@@ -59,6 +59,16 @@ export function Sidebar() {
         )}
       </div>
 
+      <div className="p-3">
+        <Link
+          to="/analytics"
+          className="flex items-center gap-2 px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          <span>📊</span>
+          <span>Analytics</span>
+        </Link>
+      </div>
+
       <div className="p-3 flex-1 overflow-y-auto">
         <h3 className="text-xs font-semibold uppercase text-gray-400 mb-2">Sprints</h3>
         {sprints.map((s) => (

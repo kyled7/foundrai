@@ -20,6 +20,12 @@ def set_config(config: FoundrAIConfig) -> None:
     _config = config
 
 
+def get_config() -> FoundrAIConfig:
+    """Get the global config."""
+    assert _config is not None, "Config not set"
+    return _config
+
+
 def set_project_dir(project_dir: str) -> None:
     """Set the project directory for DB path resolution."""
     global _project_dir

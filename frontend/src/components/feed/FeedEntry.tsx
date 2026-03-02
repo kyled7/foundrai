@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { WSMessage } from '../../types';
 import { AgentAvatar } from '../shared/AgentAvatar';
 import { TimeAgo } from '../shared/TimeAgo';
+import { TraceViewer } from './TraceViewer';
 
 const EVENT_CONFIG: Record<string, { icon: string; label: string }> = {
   'agent.message':        { icon: '💬', label: 'Message' },
@@ -59,6 +60,7 @@ interface Props {
 
 export function FeedEntry({ event }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [showTrace, setShowTrace] = useState(false);
   const config = EVENT_CONFIG[event.type] ?? { icon: '📌', label: event.type };
   const agentId = String((event.data as Record<string, unknown>).agent_id ?? (event.data as Record<string, unknown>).from_agent ?? 'system');
 
@@ -93,6 +95,18 @@ export function FeedEntry({ event }: Props) {
           <pre className="mt-2 bg-gray-50 dark:bg-gray-900 rounded p-2 text-xs overflow-x-auto whitespace-pre-wrap">
             {JSON.stringify(event.data, null, 2)}
           </pre>
+        )}
+
+        {Boolean((event.data as Record<string, unknown>).trace_id) && (
+          <button
+            onClick={() => setShowTrace(!showTrace)}
+            className="text-xs text-purple-500 mt-1 hover:underline"
+          >
+            {showTrace ? 'Hide reasoning' : '🧠 Show reasoning'}
+          </button>
+        )}
+        {showTrace && Boolean((event.data as Record<string, unknown>).trace_id) && (
+          <TraceViewer traceId={(event.data as Record<string, unknown>).trace_id as number} />
         )}
       </div>
     </div>

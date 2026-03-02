@@ -31,6 +31,7 @@ class SprintEngine:
         event_log: EventLog,
         artifact_store: ArtifactStore,
         vector_memory: Any | None = None,
+        error_store: Any | None = None,
     ) -> None:
         self.config = config
         self.agents = agents
@@ -40,6 +41,7 @@ class SprintEngine:
         self.event_log = event_log
         self.artifact_store = artifact_store
         self.vector_memory = vector_memory
+        self.error_store = error_store
         self.graph = self._build_graph()
 
     def _build_graph(self) -> object:
@@ -196,8 +198,9 @@ class SprintEngine:
                         for artifact in result.artifacts:
                             await self.artifact_store.save(artifact)
                             state["artifacts"].append(artifact)
-                    except Exception:
+                    except Exception as exc:
                         task.status = TaskStatus.FAILED
+                        await self._record_error(exc, task_id=task.id, sprint_id=state["sprint_id"], agent_role="developer")
 
                     self.task_graph.mark_completed(task.id)
                     await self._emit_task_status(task)
@@ -240,8 +243,9 @@ class SprintEngine:
                 review_result = await qa.review_task(task, task.result)
                 task.review = review_result
                 task.status = TaskStatus.DONE if review_result.passed else TaskStatus.FAILED
-            except Exception:
+            except Exception as exc:
                 task.status = TaskStatus.FAILED
+                await self._record_error(exc, task_id=task.id, sprint_id=state["sprint_id"], agent_role="qa_engineer")
 
             await self._emit_task_status(task)
 
@@ -315,6 +319,29 @@ class SprintEngine:
             "sprint.status_changed",
             {"sprint_id": state["sprint_id"], "status": status_val},
         )
+
+    async def _record_error(
+        self, exc: Exception, task_id: str = "", sprint_id: str = "", agent_role: str = ""
+    ) -> None:
+        """Record an error via the error_store if available."""
+        if not self.error_store:
+            return
+        try:
+            import traceback as tb
+            from foundrai.models.error_log import ErrorLog
+            from foundrai.persistence.error_store import ErrorStore
+
+            error = ErrorLog(
+                task_id=task_id or None,
+                sprint_id=sprint_id or None,
+                agent_role=agent_role,
+                error_type=ErrorStore.classify_error(exc),
+                error_message=str(exc),
+                traceback=tb.format_exc(),
+            )
+            await self.error_store.record_error(error)
+        except Exception:
+            pass
 
     async def _emit_task_status(self, task: Task) -> None:
         """Emit a task status change event and persist to DB."""

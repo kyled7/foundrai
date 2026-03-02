@@ -88,6 +88,11 @@ class LoggingConfig(BaseModel):
     file: str = ".foundrai/logs/foundrai.log"
 
 
+class BudgetConfigModel(BaseModel):
+    sprint_budget_usd: float = 0.0
+    agent_budgets: dict[str, float] = Field(default_factory=dict)
+
+
 class FoundrAIConfig(BaseModel):
     """Root configuration model parsed from foundrai.yaml."""
 
@@ -99,6 +104,7 @@ class FoundrAIConfig(BaseModel):
     sandbox: SandboxConfig = Field(default_factory=SandboxConfig)
     server: ServerConfig = Field(default_factory=ServerConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    budget: BudgetConfigModel = Field(default_factory=BudgetConfigModel)
 
 
 def load_config(project_dir: str = ".") -> FoundrAIConfig:
