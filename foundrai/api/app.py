@@ -55,11 +55,15 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
         artifacts,
         errors,
         events,
+        integrations,
         learnings,
+        plugins,
         projects,
         replay,
         sprints,
         tasks,
+        teams,
+        templates,
         traces,
     )
 
@@ -75,6 +79,12 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
     app.include_router(traces.router, prefix="/api")
     app.include_router(errors.router, prefix="/api")
     app.include_router(replay.router, prefix="/api")
+    
+    # Phase 4 routes
+    app.include_router(plugins.router, prefix="/api")
+    app.include_router(templates.router, prefix="/api") 
+    app.include_router(teams.router, prefix="/api")
+    app.include_router(integrations.router, prefix="/api")
 
     # WebSocket
     @app.websocket("/ws/sprints/{sprint_id}")

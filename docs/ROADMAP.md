@@ -1,6 +1,6 @@
 # FoundrAI — Development Roadmap
 
-## Phase 0 — Foundation (Weeks 1-3)
+## Phase 0 — Foundation
 **Goal:** Core agent orchestration engine that can run a simple sprint from CLI.
 
 ### Milestones
@@ -19,7 +19,7 @@ A user can run `foundrai sprint start "Build a hello world API"` and watch 3 age
 
 ---
 
-## Phase 1 — Visual Layer (Weeks 4-7)
+## Phase 1 — Visual Layer
 **Goal:** Web dashboard showing live sprint activity.
 
 ### Milestones
@@ -37,7 +37,7 @@ A user can run `foundrai serve` and watch agents work on a beautiful live dashbo
 
 ---
 
-## Phase 2 — Agile Engine (Weeks 8-11)
+## Phase 2 — Agile Engine
 **Goal:** Full Agile sprint lifecycle with iteration and learning.
 
 ### Milestones
@@ -56,7 +56,7 @@ A user can run multiple sprints on the same project and observe the AI team impr
 
 ---
 
-## Phase 3 — Observability (Weeks 12-15)
+## Phase 3 — Observability
 **Goal:** Full monitoring and debugging capabilities.
 
 ### Milestones
@@ -74,7 +74,7 @@ A user can fully understand why agents made every decision, track costs precisel
 
 ---
 
-## Phase 4 — Ecosystem (Weeks 16+)
+## Phase 4 — Ecosystem
 **Goal:** Extensibility, integrations, and community.
 
 ### Milestones

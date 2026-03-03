@@ -172,6 +172,116 @@ CREATE TABLE IF NOT EXISTS error_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_errors_task ON error_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_errors_sprint ON error_logs(sprint_id);
+
+-- Phase 4 tables
+CREATE TABLE IF NOT EXISTS plugins (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    version TEXT NOT NULL,
+    type TEXT NOT NULL, -- 'role', 'tool', 'integration'
+    metadata TEXT NOT NULL, -- JSON
+    config_schema TEXT, -- JSON schema
+    installed_at TEXT NOT NULL DEFAULT (datetime('now')),
+    enabled INTEGER DEFAULT 1,
+    UNIQUE(name, version)
+);
+
+CREATE TABLE IF NOT EXISTS team_templates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    author TEXT NOT NULL,
+    version TEXT NOT NULL,
+    tags TEXT, -- JSON array
+    team_config TEXT NOT NULL, -- JSON
+    sprint_config TEXT NOT NULL, -- JSON
+    required_plugins TEXT, -- JSON array
+    recommended_plugins TEXT, -- JSON array
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    is_public INTEGER DEFAULT 0,
+    marketplace_url TEXT,
+    downloads INTEGER DEFAULT 0,
+    rating REAL DEFAULT 0.0
+);
+
+CREATE TABLE IF NOT EXISTS teams (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    project_id TEXT NOT NULL,
+    agents TEXT NOT NULL, -- JSON array of AgentConfig
+    template_id TEXT,
+    lead_agent TEXT,
+    coordination_channel TEXT,
+    sprint_config TEXT NOT NULL, -- JSON
+    current_sprint_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects (project_id),
+    FOREIGN KEY (template_id) REFERENCES team_templates (id)
+);
+
+CREATE TABLE IF NOT EXISTS cross_team_dependencies (
+    id TEXT PRIMARY KEY,
+    dependent_team_id TEXT NOT NULL,
+    provider_team_id TEXT NOT NULL,
+    dependency_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL,
+    due_date TEXT,
+    discussion_thread TEXT,
+    resolution_notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at TEXT,
+    FOREIGN KEY (dependent_team_id) REFERENCES teams (id),
+    FOREIGN KEY (provider_team_id) REFERENCES teams (id)
+);
+
+CREATE TABLE IF NOT EXISTS integrations (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL, -- 'github', 'jira', 'slack'
+    project_id TEXT NOT NULL,
+    config TEXT NOT NULL, -- JSON configuration
+    enabled INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects (project_id),
+    UNIQUE(name, project_id)
+);
+
+CREATE TABLE IF NOT EXISTS external_task_mappings (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    external_system TEXT NOT NULL, -- 'jira', 'linear'
+    external_task_id TEXT NOT NULL,
+    external_url TEXT,
+    last_sync TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (task_id) REFERENCES tasks (task_id),
+    UNIQUE(task_id, external_system)
+);
+
+CREATE TABLE IF NOT EXISTS marketplace_cache (
+    id TEXT PRIMARY KEY,
+    item_type TEXT NOT NULL, -- 'plugin', 'template'
+    item_data TEXT NOT NULL, -- JSON
+    cached_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+);
+
+-- Indexes for Phase 4 tables
+CREATE INDEX IF NOT EXISTS idx_plugins_name ON plugins(name);
+CREATE INDEX IF NOT EXISTS idx_plugins_type ON plugins(type);
+CREATE INDEX IF NOT EXISTS idx_team_templates_author ON team_templates(author);
+CREATE INDEX IF NOT EXISTS idx_teams_project ON teams(project_id);
+CREATE INDEX IF NOT EXISTS idx_dependencies_dependent ON cross_team_dependencies(dependent_team_id);
+CREATE INDEX IF NOT EXISTS idx_dependencies_provider ON cross_team_dependencies(provider_team_id);
+CREATE INDEX IF NOT EXISTS idx_integrations_project ON integrations(project_id);
+CREATE INDEX IF NOT EXISTS idx_task_mappings_task ON external_task_mappings(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_mappings_system ON external_task_mappings(external_system);
 """
 
 
