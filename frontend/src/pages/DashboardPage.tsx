@@ -61,8 +61,8 @@ export function DashboardPage() {
                     </div>
                     <p className="text-sm text-gray-500 mt-1">{s.goal}</p>
                     <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                      <span>{s.metrics.total_tasks} tasks</span>
-                      <span>{s.metrics.completed_tasks} completed</span>
+                      <span>{s.metrics?.total_tasks || 0} tasks</span>
+                      <span>{s.metrics?.completed_tasks || 0} completed</span>
                     </div>
                   </Link>
                 ))}

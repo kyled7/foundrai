@@ -45,6 +45,12 @@ FoundrAI is an open-source platform that orchestrates multiple AI agents as an a
 
 📈 **Performance Analytics** — Track token costs, agent performance, and sprint velocity
 
+## Screenshots
+
+### Main Dashboard
+![FoundrAI Dashboard](./docs/screenshots/main-dashboard.jpg)
+*Live dashboard showing project overview, recent sprints, and task metrics — no crashes, just clean empty state handling*
+
 ## Getting Started
 
 ### Prerequisites
@@ -75,6 +81,28 @@ foundrai sprint start "Build a REST API for a todo app with authentication"
 
 # Or launch the web dashboard
 foundrai serve
+```
+
+## CLI Commands
+
+FoundrAI provides a comprehensive CLI for project management:
+
+```bash
+# Check system health and prerequisites
+foundrai doctor
+
+# Initialize a new project
+foundrai init my-project
+
+# Sprint management
+foundrai sprint start "Build a todo app with authentication"
+
+# Project status and monitoring
+foundrai status
+foundrai logs
+
+# Launch the web dashboard
+foundrai serve --port 8420
 ```
 
 ## Architecture

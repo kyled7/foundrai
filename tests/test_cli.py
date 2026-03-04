@@ -53,7 +53,7 @@ class TestInitCommand:
     def test_shows_next_steps(self, tmp_path):
         result = runner.invoke(app, ["init", "myproj", "--path", str(tmp_path)])
         assert "Next steps" in result.stdout
-        assert "sprint-start" in result.stdout
+        assert "sprint start" in result.stdout
 
 
 class TestStatusCommand:
@@ -84,7 +84,7 @@ class TestLogsCommand:
 class TestSprintStartCommand:
     def test_no_project(self, tmp_path):
         result = runner.invoke(
-            app, ["sprint-start", "Build something", "--project", str(tmp_path / "nonexistent")]
+            app, ["sprint", "start", "Build something", "--project", str(tmp_path / "nonexistent")]
         )
         assert result.exit_code == 1
 

@@ -15,6 +15,15 @@ app = typer.Typer(
     help="FoundrAI — Your AI-Powered Founding Team",
     no_args_is_help=True,
 )
+
+# Create sprint subcommand group
+sprint_app = typer.Typer(
+    name="sprint",
+    help="Sprint management commands",
+    no_args_is_help=True,
+)
+app.add_typer(sprint_app, name="sprint")
+
 console = Console()
 
 DEFAULT_YAML_TEMPLATE = '''# FoundrAI Project Configuration
@@ -65,6 +74,19 @@ def init(
     path: str = typer.Option(".", "--path", help="Directory to create project in"),
 ) -> None:
     """Initialize a new FoundrAI project."""
+    # Basic checks
+    import sys
+    if sys.version_info < (3, 11):
+        console.print("[red]Error: Python 3.11+ required[/red]")
+        raise typer.Exit(code=1)
+
+    # Check Docker availability (warn but don't block)
+    try:
+        import subprocess
+        subprocess.run(["docker", "--version"], capture_output=True, check=True, timeout=5)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        console.print("[yellow]Warning: Docker not available - sandboxed code execution disabled[/yellow]")
+
     project_dir = Path(path) / name
     project_dir.mkdir(parents=True, exist_ok=True)
 
@@ -95,7 +117,7 @@ def init(
     console.print("[bold]Next steps:[/bold]")
     console.print(f"  cd {name}")
     console.print("  export ANTHROPIC_API_KEY=sk-ant-...")
-    console.print('  foundrai sprint-start "Build a hello world REST API"')
+    console.print('  foundrai sprint start "Build a hello world REST API"')
 
 
 @app.command()
@@ -125,7 +147,7 @@ def logs(
     asyncio.run(_show_logs(project_dir, limit))
 
 
-@app.command()
+@sprint_app.command("start")
 def sprint_start(
     goal: str = typer.Argument(..., help="Sprint goal"),
     project: str = typer.Option(".", "--project", "-p", help="Project directory"),
@@ -136,7 +158,26 @@ def sprint_start(
         console.print(f"[red]Error: foundrai.yaml not found in {project_dir}[/red]")
         raise typer.Exit(code=1)
 
-    asyncio.run(_run_sprint(project_dir, goal))
+    # Check for API keys before starting
+    from os import getenv
+    has_openai = getenv("OPENAI_API_KEY")
+    has_anthropic = getenv("ANTHROPIC_API_KEY")
+    
+    if not has_openai and not has_anthropic:
+        console.print("[red]Error: No LLM API keys found.[/red]")
+        console.print("Set at least one of:")
+        console.print("  export OPENAI_API_KEY=sk-...")
+        console.print("  export ANTHROPIC_API_KEY=sk-ant-...")
+        raise typer.Exit(code=1)
+
+    try:
+        asyncio.run(_run_sprint(project_dir, goal))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Sprint interrupted by user[/yellow]")
+        raise typer.Exit(code=1)
+    except Exception as e:
+        console.print(f"[red]Sprint failed: {e}[/red]")
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -156,6 +197,100 @@ def serve(
     deps.set_project_dir(str(project_dir))
     app = create_app(config)
     uvicorn.run(app, host=config.server.host, port=port)
+
+
+@app.command()
+def doctor() -> None:
+    """Check system prerequisites and configuration."""
+    import sys
+    import subprocess
+    from os import getenv
+    
+    console.print("[bold]🏥 FoundrAI System Health Check[/bold]\n")
+    
+    issues = []
+    
+    # Python version
+    if sys.version_info >= (3, 11):
+        console.print("[green]✓[/green] Python version: " + sys.version.split()[0])
+    else:
+        console.print("[red]✗[/red] Python version: " + sys.version.split()[0] + " (3.11+ required)")
+        issues.append("Python 3.11+ required")
+    
+    # Docker
+    try:
+        result = subprocess.run(["docker", "--version"], capture_output=True, check=True, timeout=5)
+        docker_version = result.stdout.decode().strip()
+        console.print(f"[green]✓[/green] Docker: {docker_version}")
+        
+        # Check if Docker daemon is running
+        try:
+            subprocess.run(["docker", "ps"], capture_output=True, check=True, timeout=5)
+            console.print("[green]✓[/green] Docker daemon: Running")
+        except subprocess.CalledProcessError:
+            console.print("[yellow]⚠[/yellow] Docker daemon: Not running")
+            issues.append("Docker daemon not running")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        console.print("[red]✗[/red] Docker: Not available")
+        issues.append("Docker not installed or not in PATH")
+    
+    # API Keys
+    api_keys = []
+    if getenv("OPENAI_API_KEY"):
+        console.print("[green]✓[/green] OpenAI API key: Set")
+        api_keys.append("OpenAI")
+    else:
+        console.print("[yellow]⚠[/yellow] OpenAI API key: Not set")
+    
+    if getenv("ANTHROPIC_API_KEY"):
+        console.print("[green]✓[/green] Anthropic API key: Set")
+        api_keys.append("Anthropic")
+    else:
+        console.print("[yellow]⚠[/yellow] Anthropic API key: Not set")
+    
+    if not api_keys:
+        issues.append("No LLM API keys configured")
+    
+    # Dependencies
+    try:
+        import fastapi
+        console.print(f"[green]✓[/green] FastAPI: {fastapi.__version__}")
+    except ImportError:
+        console.print("[red]✗[/red] FastAPI: Not installed")
+        issues.append("FastAPI not installed")
+    
+    try:
+        import langgraph
+        # Try to get version, fall back to just "installed" if no version attr
+        try:
+            version = langgraph.__version__
+        except AttributeError:
+            version = "installed"
+        console.print(f"[green]✓[/green] LangGraph: {version}")
+    except ImportError:
+        console.print("[red]✗[/red] LangGraph: Not installed")
+        issues.append("LangGraph not installed")
+    
+    # Summary
+    console.print()
+    if issues:
+        console.print("[red]❌ Issues found:[/red]")
+        for issue in issues:
+            console.print(f"  • {issue}")
+        console.print()
+        console.print("[bold]To fix:[/bold]")
+        if "Python 3.11+" in str(issues):
+            console.print("  • Upgrade to Python 3.11 or higher")
+        if "Docker" in str(issues):
+            console.print("  • Install Docker Desktop or Docker Engine")
+        if "API keys" in str(issues):
+            console.print("  • Set API keys: export OPENAI_API_KEY=sk-... or ANTHROPIC_API_KEY=sk-ant-...")
+        if any("not installed" in issue for issue in issues):
+            console.print("  • Run: pip install foundrai")
+        raise typer.Exit(code=1)
+    else:
+        console.print("[green]✅ All systems operational![/green]")
+        console.print(f"Ready to orchestrate AI teams with {', '.join(api_keys)} LLM{'s' if len(api_keys) > 1 else ''}")
 
 
 async def _show_status(project_dir: Path) -> None:
@@ -321,8 +456,14 @@ async def _run_sprint(project_dir: Path, goal: str) -> None:
             artifact_store=artifact_store,
         )
 
-        result = await engine.run_sprint(goal, project_id)
-        _print_summary(result)
+        # Add timeout to prevent hanging
+        try:
+            result = await asyncio.wait_for(engine.run_sprint(goal, project_id), timeout=3600)  # 1 hour timeout
+            _print_summary(result)
+        except asyncio.TimeoutError:
+            console.print("[red]Sprint timed out after 1 hour[/red]")
+            console.print("This may indicate an issue with LLM connectivity or model responsiveness.")
+            raise typer.Exit(code=1)
 
     finally:
         await db.close()
