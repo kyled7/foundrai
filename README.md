@@ -47,9 +47,33 @@ FoundrAI is an open-source platform that orchestrates multiple AI agents as an a
 
 ## Screenshots
 
-### Main Dashboard
-![FoundrAI Dashboard](./docs/screenshots/main-dashboard.jpg)
-*Live dashboard showing project overview, recent sprints, and task metrics — no crashes, just clean empty state handling*
+### Dashboard
+![Dashboard](./docs/screenshots/01-dashboard.jpg)
+*Main dashboard with project stats, quick actions, and empty state onboarding*
+
+### Project Creation Wizard
+![Project Wizard](./docs/screenshots/02-wizard-step1.jpg)
+*3-step project wizard — configure name, team, and settings with form validation*
+
+### Template Browser
+![Templates](./docs/screenshots/03-templates.jpg)
+*Browse and search project templates with tag filtering*
+
+### Settings — General
+![Settings General](./docs/screenshots/04-settings-general.jpg)
+*Configure default model, autonomy level, and budget limits with breadcrumb navigation*
+
+### Settings — API Keys
+![Settings API Keys](./docs/screenshots/05-settings-apikeys.jpg)
+*Manage LLM provider API keys — add, test, and remove with masked display*
+
+### Settings — Appearance
+![Settings Appearance](./docs/screenshots/06-settings-appearance.jpg)
+*Theme selector with Dark, Light, and System options*
+
+### 404 Page
+![404](./docs/screenshots/07-404.jpg)
+*Clean error page with navigation back to dashboard*
 
 ## Getting Started
 
@@ -163,11 +187,14 @@ sprint:
 
 ## Roadmap
 
-- **Phase 0** ✅ Core agent engine + CLI
-- **Phase 1** 🔨 Visual dashboard (Sprint Board, Agent Feed)
-- **Phase 2** 📋 Full Agile engine (sprints, retros, learning)
-- **Phase 3** 📊 Observability (metrics, cost tracking, debugging)
-- **Phase 4** 🔌 Ecosystem (plugins, integrations, marketplace)
+- **v0.1** ✅ Core agent engine + CLI (Foundation, Visual Layer, Agile Engine, Observability, Ecosystem)
+- **v0.2** ✅ UI-First Platform — Full web dashboard replacing CLI
+  - v0.2.0 ✅ Frontend Foundation (React 19, TypeScript, Tailwind, TanStack Router/Query)
+  - v0.2.1 ✅ Dashboard & Project Management (wizard, team config, templates)
+  - v0.2.2 ✅ Sprint Command Center (realtime feed, WebSocket, approvals)
+  - v0.2.3 ✅ Analytics & Insights (charts, cost tracking, sprint replay)
+  - v0.2.4 ✅ Settings & Polish (settings page, error handling, accessibility)
+- **v0.3** 🔨 Backend Integration — Connect frontend to live backend
 
 See [full roadmap](./docs/ROADMAP.md) for details.
 
