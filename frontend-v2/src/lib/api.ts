@@ -49,6 +49,15 @@ export const api = {
       request<Sprint>(`/projects/${projectId}/sprints`, { method: 'POST', body: JSON.stringify(data) }),
     metrics: (id: string) => request<SprintMetrics>(`/sprints/${id}/metrics`),
     goalTree: (id: string) => request<GoalTree>(`/sprints/${id}/goal-tree`),
+    start: (id: string) => request<Sprint>(`/sprints/${id}/start`, { method: 'POST' }),
+    pause: (id: string) => request<Sprint>(`/sprints/${id}/pause`, { method: 'POST' }),
+    resume: (id: string) => request<Sprint>(`/sprints/${id}/resume`, { method: 'POST' }),
+    cancel: (id: string) => request<Sprint>(`/sprints/${id}/cancel`, { method: 'POST' }),
+    message: (id: string, message: string, targetAgent?: string) =>
+      request<void>(`/sprints/${id}/message`, {
+        method: 'POST',
+        body: JSON.stringify({ message, target_agent: targetAgent }),
+      }),
   },
 
   // Tasks

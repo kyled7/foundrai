@@ -41,3 +41,27 @@ export function useCreateSprint(projectId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['sprints', projectId] }),
   });
 }
+
+export function useStartSprint() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sprintId: string) => api.sprints.start(sprintId),
+    onSuccess: (_, sprintId) => qc.invalidateQueries({ queryKey: ['sprint', sprintId] }),
+  });
+}
+
+export function usePauseSprint() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sprintId: string) => api.sprints.pause(sprintId),
+    onSuccess: (_, sprintId) => qc.invalidateQueries({ queryKey: ['sprint', sprintId] }),
+  });
+}
+
+export function useCancelSprint() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sprintId: string) => api.sprints.cancel(sprintId),
+    onSuccess: (_, sprintId) => qc.invalidateQueries({ queryKey: ['sprint', sprintId] }),
+  });
+}
