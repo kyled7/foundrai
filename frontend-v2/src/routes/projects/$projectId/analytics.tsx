@@ -1,8 +1,7 @@
+import { useParams } from '@tanstack/react-router';
+import { ProjectAnalyticsPage } from '@/components/analytics/AnalyticsPage';
+
 export function AnalyticsPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-      <p className="text-muted mt-2">Analytics dashboard — coming in v0.2.3</p>
-    </div>
-  );
+  const { projectId } = useParams({ strict: false }) as { projectId: string };
+  return <ProjectAnalyticsPage projectId={projectId} />;
 }

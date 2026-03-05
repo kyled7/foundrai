@@ -63,6 +63,38 @@ export function useLearnings(projectId: string) {
   });
 }
 
+// Analytics v0.2.3
+export function useCostOverTime(projectId: string) {
+  return useQuery({
+    queryKey: ['project', projectId, 'cost-over-time'],
+    queryFn: () => api.analytics.costOverTime(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useSprintHistory(projectId: string) {
+  return useQuery({
+    queryKey: ['project', projectId, 'sprint-history'],
+    queryFn: () => api.analytics.sprintHistory(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useAgentPerformance(projectId: string) {
+  return useQuery({
+    queryKey: ['project', projectId, 'agent-performance'],
+    queryFn: () => api.analytics.agentPerformance(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useGlobalAnalytics() {
+  return useQuery({
+    queryKey: ['analytics', 'global'],
+    queryFn: () => api.analytics.global(),
+  });
+}
+
 // Replay
 export function useReplayEvents(sprintId: string) {
   return useQuery({

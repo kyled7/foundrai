@@ -8,6 +8,7 @@ import { AnalyticsPage } from '@/routes/projects/$projectId/analytics';
 import { TeamConfigPage } from '@/routes/projects/$projectId/team';
 import { TemplatesPage } from '@/routes/templates';
 import { SettingsPage } from '@/routes/settings';
+import { SprintReplayPage } from '@/routes/projects/$projectId/sprint/$sprintId/replay';
 
 const rootRoute = createRootRoute({ component: AppShell });
 
@@ -59,6 +60,12 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
+const sprintReplayRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId/sprint/$sprintId/replay',
+  component: SprintReplayPage,
+});
+
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
   newProjectRoute,
@@ -68,6 +75,7 @@ const routeTree = rootRoute.addChildren([
   teamRoute,
   templatesRoute,
   settingsRoute,
+  sprintReplayRoute,
 ]);
 
 export const router = createRouter({ routeTree });

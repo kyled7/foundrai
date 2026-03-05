@@ -222,6 +222,47 @@ export interface WSEvent {
   sequence: number;
 }
 
+// === Analytics v0.2.3 ===
+export interface SprintCostPoint {
+  sprint_id: string;
+  sprint_number: number;
+  date: string;
+  cost_usd: number;
+  cumulative_cost_usd: number;
+}
+
+export interface SprintSummary {
+  sprint_id: string;
+  sprint_number: number;
+  goal: string;
+  status: SprintStatus;
+  total_tasks: number;
+  completed_tasks: number;
+  failed_tasks: number;
+  completion_rate: number;
+  duration_seconds: number | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface AgentMetrics {
+  agent_role: string;
+  tasks_completed: number;
+  tasks_failed: number;
+  avg_duration_seconds: number;
+  total_cost_usd: number;
+  cost_per_task_usd: number;
+}
+
+export interface GlobalAnalytics {
+  total_spend_usd: number;
+  total_sprints: number;
+  completed_sprints: number;
+  failed_sprints: number;
+  success_rate: number;
+  top_agents: { role: string; tasks_completed: number }[];
+}
+
 // === API Response Wrappers ===
 export interface ListResponse<T> {
   items: T[];

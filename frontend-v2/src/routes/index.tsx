@@ -3,6 +3,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { GlobalStats } from '@/components/analytics/GlobalStats';
 import { Link } from '@tanstack/react-router';
 import { Plus, FolderKanban, Zap, DollarSign, BarChart3 } from 'lucide-react';
 
@@ -23,6 +24,9 @@ export function DashboardPage() {
           New Project
         </Link>
       </div>
+
+      {/* Global Analytics */}
+      <GlobalStats />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
