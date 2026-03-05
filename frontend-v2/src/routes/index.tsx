@@ -1,18 +1,15 @@
-import { useProjects } from '@/hooks/use-projects';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { useDashboardStats } from '@/hooks/use-dashboard-stats';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { TimeAgo } from '@/components/shared/TimeAgo';
 import { Link } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
+import { Plus, FolderKanban, Zap, DollarSign, BarChart3 } from 'lucide-react';
 
 export function DashboardPage() {
-  const { data, isLoading, error } = useProjects();
+  const { projects, stats, isLoading } = useDashboardStats();
 
   if (isLoading) return <PageSkeleton />;
-  if (error) return <div className="p-6 text-red-400">Failed to load projects</div>;
-
-  const projects = data?.projects ?? [];
 
   return (
     <div className="p-6 space-y-6">
@@ -28,27 +25,15 @@ export function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-muted text-sm">Projects</p>
-          <p className="text-2xl font-bold text-foreground">{projects.length}</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-muted text-sm">Active Sprints</p>
-          <p className="text-2xl font-bold text-foreground">
-            {projects.filter(p => p.current_sprint_id).length}
-          </p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-muted text-sm">Total Sprints</p>
-          <p className="text-2xl font-bold text-foreground">
-            {projects.reduce((sum, p) => sum + p.sprint_count, 0)}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Total Projects" value={stats.totalProjects} icon={<FolderKanban size={18} />} />
+        <StatCard label="Active Sprints" value={stats.activeSprints} icon={<Zap size={18} />} />
+        <StatCard label="Total Sprints" value={stats.totalSprints} icon={<BarChart3 size={18} />} />
+        <StatCard label="Total Cost" value={`$${stats.totalCost.toFixed(2)}`} icon={<DollarSign size={18} />} />
       </div>
 
       {/* Project list */}
-      {projects.length === 0 ? (
+      {stats.totalProjects === 0 ? (
         <EmptyState
           icon="🚀"
           title="No projects yet"
@@ -64,23 +49,19 @@ export function DashboardPage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((project) => (
-            <a
-              key={project.project_id}
-              href={`/projects/${project.project_id}`}
-              className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
-            >
-              <h3 className="font-semibold text-foreground">{project.name}</h3>
-              {project.description && (
-                <p className="text-muted text-sm mt-1 line-clamp-2">{project.description}</p>
-              )}
-              <div className="flex items-center gap-3 mt-3 text-sm">
-                <span className="text-muted">{project.sprint_count} sprints</span>
-                {project.current_sprint_id && <StatusBadge status="in_progress" />}
-                <TimeAgo date={project.created_at} className="text-muted text-xs ml-auto" />
-              </div>
-            </a>
-          ))}
+          {projects.map((q, i) => {
+            const data = q.data;
+            if (!data) return null;
+            return (
+              <ProjectCard
+                key={data.project.project_id ?? i}
+                project={data.project}
+                lastSprint={data.lastSprint}
+                agentCount={data.agentCount}
+                totalCost={data.totalCost}
+              />
+            );
+          })}
         </div>
       )}
     </div>
