@@ -30,6 +30,7 @@ import type {
   SprintEvent, AgentMessage, Artifact, CostBreakdown, BudgetStatus,
   TeamTemplate, CreateTemplateRequest, Team, CreateTeamRequest, Learning,
   SprintCostPoint, SprintSummary, AgentMetrics, GlobalAnalytics,
+  GlobalSettings, ApiKeyInfo,
 } from './types';
 
 export const api = {
@@ -153,5 +154,26 @@ export const api = {
   replay: {
     events: (sprintId: string) =>
       request<{ events: SprintEvent[]; total: number }>(`/sprints/${sprintId}/replay`),
+  },
+  // Settings
+  settings: {
+    get: () => request<GlobalSettings>('/settings'),
+    update: (data: Partial<GlobalSettings>) =>
+      request<GlobalSettings>('/settings', { method: 'POST', body: JSON.stringify(data) }),
+    keys: {
+      list: () => request<ApiKeyInfo[]>('/settings/keys'),
+      add: (provider: string, key: string) =>
+        request<ApiKeyInfo>('/settings/keys', {
+          method: 'POST',
+          body: JSON.stringify({ provider, key }),
+        }),
+      remove: (provider: string) =>
+        request<void>(`/settings/keys/${provider}`, { method: 'DELETE' }),
+      test: (provider: string) =>
+        request<{ valid: boolean; error?: string }>('/settings/test-key', {
+          method: 'POST',
+          body: JSON.stringify({ provider }),
+        }),
+    },
   },
 } as const;

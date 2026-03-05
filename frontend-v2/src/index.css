@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+*:focus-visible {
+  outline: 2px solid hsl(239 84% 67%);
+  outline-offset: 2px;
+}
+
 @theme {
   --color-primary: #6366f1;
   --color-primary-foreground: #ffffff;

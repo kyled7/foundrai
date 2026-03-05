@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import type { SprintCreate } from '@/lib/types';
 
@@ -38,7 +39,11 @@ export function useCreateSprint(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: SprintCreate) => api.sprints.create(projectId, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['sprints', projectId] }),
+    onSuccess: () => {
+      toast.success('Sprint created');
+      qc.invalidateQueries({ queryKey: ['sprints', projectId] });
+    },
+    onError: (err: Error) => toast.error('Failed to create sprint', { description: err.message }),
   });
 }
 
@@ -46,7 +51,11 @@ export function useStartSprint() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (sprintId: string) => api.sprints.start(sprintId),
-    onSuccess: (_, sprintId) => qc.invalidateQueries({ queryKey: ['sprint', sprintId] }),
+    onSuccess: (_, sprintId) => {
+      toast.success('Sprint started');
+      qc.invalidateQueries({ queryKey: ['sprint', sprintId] });
+    },
+    onError: (err: Error) => toast.error('Failed to start sprint', { description: err.message }),
   });
 }
 
@@ -54,7 +63,11 @@ export function usePauseSprint() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (sprintId: string) => api.sprints.pause(sprintId),
-    onSuccess: (_, sprintId) => qc.invalidateQueries({ queryKey: ['sprint', sprintId] }),
+    onSuccess: (_, sprintId) => {
+      toast.success('Sprint paused');
+      qc.invalidateQueries({ queryKey: ['sprint', sprintId] });
+    },
+    onError: (err: Error) => toast.error('Failed to pause sprint', { description: err.message }),
   });
 }
 
@@ -62,6 +75,10 @@ export function useCancelSprint() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (sprintId: string) => api.sprints.cancel(sprintId),
-    onSuccess: (_, sprintId) => qc.invalidateQueries({ queryKey: ['sprint', sprintId] }),
+    onSuccess: (_, sprintId) => {
+      toast.success('Sprint cancelled');
+      qc.invalidateQueries({ queryKey: ['sprint', sprintId] });
+    },
+    onError: (err: Error) => toast.error('Failed to cancel sprint', { description: err.message }),
   });
 }

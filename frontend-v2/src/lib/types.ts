@@ -263,6 +263,37 @@ export interface GlobalAnalytics {
   top_agents: { role: string; tasks_completed: number }[];
 }
 
+// === Settings ===
+export interface GlobalSettings {
+  default_model: string;
+  default_autonomy: AutonomyLevel;
+  budget_per_sprint_usd: number | null;
+  budget_monthly_usd: number | null;
+  notifications: NotificationSettings;
+  theme: 'dark' | 'light' | 'system';
+}
+
+export interface NotificationSettings {
+  sound_enabled: boolean;
+  browser_push_enabled: boolean;
+  notify_on_approval: boolean;
+  notify_on_sprint_complete: boolean;
+  notify_on_error: boolean;
+  notify_on_budget_warning: boolean;
+}
+
+export interface ApiKeyInfo {
+  provider: string;
+  masked_key: string;
+  is_valid: boolean | null;
+  last_tested: string | null;
+}
+
+export interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
 // === API Response Wrappers ===
 export interface ListResponse<T> {
   items: T[];

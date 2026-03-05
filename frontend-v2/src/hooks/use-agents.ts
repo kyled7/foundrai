@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import type { AgentConfigUpdate } from '@/lib/types';
 
@@ -15,6 +16,10 @@ export function useUpdateAgent(projectId: string) {
   return useMutation({
     mutationFn: ({ role, data }: { role: string; data: AgentConfigUpdate }) =>
       api.agents.update(projectId, role, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['agents', projectId] }),
+    onSuccess: () => {
+      toast.success('Agent config updated');
+      qc.invalidateQueries({ queryKey: ['agents', projectId] });
+    },
+    onError: (err: Error) => toast.error('Failed to update agent', { description: err.message }),
   });
 }

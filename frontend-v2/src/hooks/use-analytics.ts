@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import type { ApprovalDecision } from '@/lib/types';
 
@@ -33,7 +34,11 @@ export function useApprove() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data?: ApprovalDecision }) =>
       api.approvals.approve(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['approvals'] }),
+    onSuccess: () => {
+      toast.success('Approved');
+      qc.invalidateQueries({ queryKey: ['approvals'] });
+    },
+    onError: (err: Error) => toast.error('Failed to approve', { description: err.message }),
   });
 }
 
@@ -42,7 +47,11 @@ export function useReject() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data?: ApprovalDecision }) =>
       api.approvals.reject(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['approvals'] }),
+    onSuccess: () => {
+      toast.success('Rejected');
+      qc.invalidateQueries({ queryKey: ['approvals'] });
+    },
+    onError: (err: Error) => toast.error('Failed to reject', { description: err.message }),
   });
 }
 

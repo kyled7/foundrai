@@ -1,16 +1,34 @@
+import { lazy, Suspense } from 'react';
 import { createRouter, createRoute, createRootRoute } from '@tanstack/react-router';
 import { AppShell } from '@/components/layout/AppShell';
+import { RouteLoadingFallback } from '@/components/shared/RouteLoadingFallback';
+import { NotFoundPage } from '@/routes/not-found';
+
+// Eager (lightweight)
 import { DashboardPage } from '@/routes/index';
 import { NewProjectPage } from '@/routes/projects/new';
 import { ProjectDetailPage } from '@/routes/projects/$projectId/index';
-import { SprintCommandCenter } from '@/routes/projects/$projectId/sprint';
-import { AnalyticsPage } from '@/routes/projects/$projectId/analytics';
-import { TeamConfigPage } from '@/routes/projects/$projectId/team';
-import { TemplatesPage } from '@/routes/templates';
 import { SettingsPage } from '@/routes/settings';
-import { SprintReplayPage } from '@/routes/projects/$projectId/sprint/$sprintId/replay';
+import { TemplatesPage } from '@/routes/templates';
 
-const rootRoute = createRootRoute({ component: AppShell });
+// Lazy (heavy: Recharts, CodeMirror, replay)
+const AnalyticsPage = lazy(() =>
+  import('@/routes/projects/$projectId/analytics').then((m) => ({ default: m.AnalyticsPage }))
+);
+const SprintReplayPage = lazy(() =>
+  import('@/routes/projects/$projectId/sprint/$sprintId/replay').then((m) => ({ default: m.SprintReplayPage }))
+);
+const SprintCommandCenter = lazy(() =>
+  import('@/routes/projects/$projectId/sprint').then((m) => ({ default: m.SprintCommandCenter }))
+);
+const TeamConfigPage = lazy(() =>
+  import('@/routes/projects/$projectId/team').then((m) => ({ default: m.TeamConfigPage }))
+);
+
+const rootRoute = createRootRoute({
+  component: AppShell,
+  notFoundComponent: NotFoundPage,
+});
 
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -33,19 +51,31 @@ const projectDetailRoute = createRoute({
 const sprintRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects/$projectId/sprint',
-  component: SprintCommandCenter,
+  component: () => (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <SprintCommandCenter />
+    </Suspense>
+  ),
 });
 
 const analyticsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects/$projectId/analytics',
-  component: AnalyticsPage,
+  component: () => (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <AnalyticsPage />
+    </Suspense>
+  ),
 });
 
 const teamRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects/$projectId/team',
-  component: TeamConfigPage,
+  component: () => (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <TeamConfigPage />
+    </Suspense>
+  ),
 });
 
 const templatesRoute = createRoute({
@@ -63,7 +93,11 @@ const settingsRoute = createRoute({
 const sprintReplayRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects/$projectId/sprint/$sprintId/replay',
-  component: SprintReplayPage,
+  component: () => (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <SprintReplayPage />
+    </Suspense>
+  ),
 });
 
 const routeTree = rootRoute.addChildren([
