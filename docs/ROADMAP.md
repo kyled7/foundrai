@@ -93,6 +93,40 @@ FoundrAI has a thriving plugin ecosystem, integrates with real development tools
 
 ---
 
+---
+
+## v0.2 — UI-First Platform
+**Goal:** Move all control from CLI to Web UI — zero terminal required.
+
+Full design document: [`docs/V0.2_UI_FIRST_DESIGN.md`](./V0.2_UI_FIRST_DESIGN.md)
+
+### Phases
+| Phase | Focus | Duration |
+|-------|-------|----------|
+| 0.2.0 | Frontend Foundation (scaffold, API client, layout) | 3–4 days |
+| 0.2.1 | Dashboard + Project Creation Wizard | 4–5 days |
+| 0.2.2 | Sprint Command Center ⭐ (core experience) | 7–10 days |
+| 0.2.3 | Analytics + Sprint Replay | 4–5 days |
+| 0.2.4 | Settings, Polish, Desktop (Tauri) evaluation | 4–5 days |
+
+### Key Deliverables
+- **Project Wizard** — create projects entirely from UI (replaces `foundrai init`)
+- **Team Config UI** — visual agent configuration (replaces YAML editing)
+- **Sprint Command Center** — start/pause/cancel sprints, realtime feed, inline approvals, mid-sprint chat
+- **Analytics Dashboard** — cost tracking, sprint history, learnings
+- **Settings UI** — API keys, models, sandbox, health checks (replaces `foundrai doctor`)
+
+### New Backend APIs
+- Sprint lifecycle: `start`, `pause`, `resume`, `cancel`, `message`
+- Settings: CRUD + test API key
+- System health check
+- WebSocket: full event bus broadcast (replaces ping/pong)
+
+### Definition of Done
+A new user opens browser → creates project → configures team → starts sprint → approves/rejects → views results. **Never opens terminal.**
+
+---
+
 ## Risk Mitigations (Applied Throughout)
 - **Token costs:** Model tiering, token budgets, cost estimator before execution
 - **Quality degradation:** Structured handoff protocols, periodic sync steps, rich shared context
