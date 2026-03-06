@@ -6,6 +6,10 @@
 
 **Autonomous AI agents working as an Agile startup team — with a live visual dashboard.**
 
+[![PyPI version](https://img.shields.io/pypi/v/foundrai.svg)](https://pypi.org/project/foundrai/)
+[![Python 3.11+](https://img.shields.io/pypi/pyversions/foundrai.svg)](https://pypi.org/project/foundrai/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 [Getting Started](#getting-started) · [Documentation](./docs/) · [Roadmap](./docs/ROADMAP.md) · [Contributing](#contributing)
 
 ---
@@ -90,7 +94,10 @@ FoundrAI is an open-source platform that orchestrates multiple AI agents as an a
 git clone https://github.com/kyled7/foundrai.git
 cd foundrai
 
-# Install Python backend
+# Install from PyPI
+pip install foundrai
+
+# Or install from source (for development)
 pip install -e ".[dev]"
 
 # Install frontend dependencies
