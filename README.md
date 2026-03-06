@@ -79,54 +79,60 @@ FoundrAI is an open-source platform that orchestrates multiple AI agents as an a
 
 ### Prerequisites
 - Python 3.11+
+- Node.js 18+ & npm (for the web dashboard)
 - Docker (for sandboxed code execution)
 - An API key for at least one LLM provider (OpenAI, Anthropic, etc.)
 
 ### Installation
 
 ```bash
-pip install foundrai
+# Clone the repo
+git clone https://github.com/kyled7/foundrai.git
+cd foundrai
+
+# Install Python backend
+pip install -e ".[dev]"
+
+# Install frontend dependencies
+cd frontend-v2
+npm install
 ```
 
 ### Quick Start
 
 ```bash
-# Initialize a new project
-foundrai init my-project
-cd my-project
-
 # Configure your LLM provider(s)
 export OPENAI_API_KEY="sk-..."
 # and/or
 export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Start a sprint from CLI
-foundrai sprint start "Build a REST API for a todo app with authentication"
+# Start the web dashboard (recommended)
+cd frontend-v2
+npm run dev
+# → Open http://localhost:5173
 
-# Or launch the web dashboard
-foundrai serve
+# Or use the CLI directly
+foundrai sprint start "Build a REST API for a todo app with authentication"
 ```
+
+### Web Dashboard (v0.2)
+
+The dashboard is the primary interface as of v0.2. From the UI you can:
+- **Create projects** via the 3-step wizard (name → team → settings)
+- **Browse templates** to quick-start common project types
+- **Configure settings** — default model, autonomy level, budget, API keys, theme
+- **Monitor sprints** — real-time agent feed, Kanban board, approvals (coming in v0.3)
 
 ## CLI Commands
 
-FoundrAI provides a comprehensive CLI for project management:
+FoundrAI also provides a CLI for headless usage:
 
 ```bash
-# Check system health and prerequisites
-foundrai doctor
-
-# Initialize a new project
-foundrai init my-project
-
-# Sprint management
-foundrai sprint start "Build a todo app with authentication"
-
-# Project status and monitoring
-foundrai status
-foundrai logs
-
-# Launch the web dashboard
-foundrai serve --port 8420
+foundrai doctor          # Check system health and prerequisites
+foundrai sprint start    # Start a sprint from a goal description
+foundrai status          # Project status and monitoring
+foundrai logs            # View agent logs
+foundrai serve           # Launch the web dashboard on port 8420
 ```
 
 ## Architecture
