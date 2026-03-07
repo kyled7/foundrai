@@ -16,6 +16,7 @@ class MockLLMClient:
         self._responses: list[str] = []
         self._call_index = 0
         self.total_tokens_used = 0
+        self.model = "mock/test-model"
 
     def add_response(self, content: str) -> None:
         """Add a response to the queue."""

@@ -1,9 +1,11 @@
-"""FastAPI application factory."""
+"""FastAPI application factory with WebSocket event streaming."""
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -13,26 +15,97 @@ from fastapi.responses import FileResponse, HTMLResponse
 from foundrai.api import deps
 from foundrai.config import FoundrAIConfig
 
+logger = logging.getLogger(__name__)
+
+
+class WebSocketManager:
+    """Manages WebSocket connections and broadcasts events to subscribers."""
+
+    def __init__(self) -> None:
+        # sprint_id -> set of connected WebSocket clients
+        self._connections: dict[str, set[WebSocket]] = {}
+        self._sequence: int = 0
+
+    async def connect(self, websocket: WebSocket, sprint_id: str) -> None:
+        """Register a new WebSocket connection for a sprint."""
+        await websocket.accept()
+        if sprint_id not in self._connections:
+            self._connections[sprint_id] = set()
+        self._connections[sprint_id].add(websocket)
+        count = len(self._connections[sprint_id])
+        logger.info("WebSocket connected for sprint %s (%d clients)", sprint_id, count)
+
+    def disconnect(self, websocket: WebSocket, sprint_id: str) -> None:
+        """Remove a disconnected WebSocket."""
+        if sprint_id in self._connections:
+            self._connections[sprint_id].discard(websocket)
+            if not self._connections[sprint_id]:
+                del self._connections[sprint_id]
+
+    async def broadcast(self, sprint_id: str, event_type: str, data: dict) -> None:
+        """Broadcast an event to all clients subscribed to a sprint."""
+        clients = self._connections.get(sprint_id, set())
+        if not clients:
+            return
+
+        self._sequence += 1
+        message = {
+            "type": event_type,
+            "data": data,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "sequence": self._sequence,
+        }
+
+        dead: list[WebSocket] = []
+        for ws in clients:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                dead.append(ws)
+
+        for ws in dead:
+            self._connections[sprint_id].discard(ws)
+
+    async def broadcast_all(self, event_type: str, data: dict) -> None:
+        """Broadcast to all connected clients (cross-sprint)."""
+        sprint_id = data.get("sprint_id", "")
+        if sprint_id:
+            await self.broadcast(sprint_id, event_type, data)
+        else:
+            for sid in list(self._connections.keys()):
+                await self.broadcast(sid, event_type, data)
+
+
+# Global WebSocket manager instance
+ws_manager = WebSocketManager()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan — connect/disconnect DB."""
-    # Startup
+    """Application lifespan — connect/disconnect DB, register event listener."""
     await deps.get_db()
+    # Register the WebSocket broadcaster as an EventLog listener
+    event_log = await deps.get_event_log()
+    event_log.register_listener(_on_event)
     yield
-    # Shutdown
+    event_log.unregister_listener(_on_event)
     await deps.cleanup_db()
 
 
+async def _on_event(event_type: str, data: dict) -> None:
+    """EventLog listener that forwards events to WebSocket clients."""
+    await ws_manager.broadcast_all(event_type, data)
+
+
 def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
+    """Create and configure the FastAPI application."""
     if config is None:
         config = FoundrAIConfig()
-    """Create and configure the FastAPI application."""
     deps.set_config(config)
 
     app = FastAPI(
         title="FoundrAI",
-        version="0.1.0",
+        version="0.2.4",
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         lifespan=lifespan,
@@ -79,22 +152,22 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
     app.include_router(traces.router, prefix="/api")
     app.include_router(errors.router, prefix="/api")
     app.include_router(replay.router, prefix="/api")
-    
+
     # Phase 4 routes
     app.include_router(plugins.router, prefix="/api")
-    app.include_router(templates.router, prefix="/api") 
+    app.include_router(templates.router, prefix="/api")
     app.include_router(teams.router, prefix="/api")
     app.include_router(integrations.router, prefix="/api")
 
-    # WebSocket
+    # WebSocket endpoint with real-time event streaming
     @app.websocket("/ws/sprints/{sprint_id}")
     async def websocket_endpoint(websocket: WebSocket, sprint_id: str) -> None:
-        await websocket.accept()
+        await ws_manager.connect(websocket, sprint_id)
         # Send handshake
         await websocket.send_json({
             "type": "connection.established",
             "data": {"sprint_id": sprint_id, "status": "connected"},
-            "timestamp": "",
+            "timestamp": datetime.now(UTC).isoformat(),
             "sequence": 0,
         })
         try:
@@ -103,7 +176,7 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
                 if data == "ping":
                     await websocket.send_text("pong")
         except WebSocketDisconnect:
-            pass
+            ws_manager.disconnect(websocket, sprint_id)
 
     # SPA catch-all route (no StaticFiles mount)
     frontend_dir = Path(__file__).parent.parent / "frontend" / "dist"

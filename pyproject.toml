@@ -1,6 +1,6 @@
 [project]
 name = "foundrai"
-version = "0.1.0"
+version = "0.2.4"
 description = "AI agent orchestration as an autonomous Agile startup team"
 readme = "README.md"
 license = { text = "MIT" }

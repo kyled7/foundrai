@@ -14,7 +14,7 @@ export function SprintBoard() {
   const tasks = useSprintStore((s) => s.tasks);
 
   return (
-    <div className="flex gap-4 overflow-x-auto p-4 h-full">
+    <div className="flex gap-4 overflow-x-auto p-4 h-full" role="region" aria-label="Sprint task board">
       {COLUMNS.map((col) => {
         const filtered = tasks.filter((t) => col.statuses.includes(t.status));
         return (

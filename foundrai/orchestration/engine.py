@@ -1,13 +1,14 @@
-"""SprintEngine — orchestrates the sprint lifecycle."""
+"""SprintEngine — orchestrates the sprint lifecycle with approval gates."""
 
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from typing import Any
 
 from foundrai.config import FoundrAIConfig
-from foundrai.models.enums import AgentRoleName, SprintStatus, TaskStatus
+from foundrai.models.enums import AgentRoleName, AutonomyLevel, SprintStatus, TaskStatus
 from foundrai.models.sprint import SprintMetrics, SprintState
 from foundrai.models.task import Task
 from foundrai.orchestration.ceremonies import SprintRetrospective, SprintReview
@@ -17,9 +18,15 @@ from foundrai.persistence.artifact_store import ArtifactStore
 from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
 
+logger = logging.getLogger(__name__)
+
+# How long to wait for a human approval decision (seconds)
+APPROVAL_TIMEOUT = 300  # 5 minutes
+APPROVAL_POLL_INTERVAL = 2  # Check every 2 seconds
+
 
 class SprintEngine:
-    """Orchestrates the sprint lifecycle."""
+    """Orchestrates the sprint lifecycle with approval gates and multi-sprint support."""
 
     def __init__(
         self,
@@ -32,6 +39,7 @@ class SprintEngine:
         artifact_store: ArtifactStore,
         vector_memory: Any | None = None,
         error_store: Any | None = None,
+        db: Any | None = None,
     ) -> None:
         self.config = config
         self.agents = agents
@@ -42,6 +50,7 @@ class SprintEngine:
         self.artifact_store = artifact_store
         self.vector_memory = vector_memory
         self.error_store = error_store
+        self.db = db
         self.graph = self._build_graph()
 
     def _build_graph(self) -> object:
@@ -91,6 +100,75 @@ class SprintEngine:
         state = await self._complete_node(state)
         return state
 
+    async def run_multi_sprint(
+        self, goal: str, project_id: str, max_sprints: int | None = None
+    ) -> list[SprintState]:
+        """Run multiple sprints iteratively until the goal is achieved or max reached.
+
+        Each sprint after the first refines remaining work based on the previous
+        sprint's results and retrospective learnings.
+        """
+        max_sprints = max_sprints or self.config.sprint.max_sprints
+        sprint_results: list[SprintState] = []
+
+        remaining_goal = goal
+
+        for sprint_num in range(max_sprints):
+            logger.info(
+                "Starting sprint %d/%d for goal: %s",
+                sprint_num + 1, max_sprints, remaining_goal[:100],
+            )
+
+            state = await self.run_sprint(remaining_goal, project_id)
+            sprint_results.append(state)
+
+            # Check if all tasks completed successfully
+            tasks = state.get("tasks", [])
+            done = sum(1 for t in tasks if t.status in (TaskStatus.DONE, "done"))
+            failed = sum(1 for t in tasks if t.status in (TaskStatus.FAILED, "failed"))
+            total = len(tasks)
+
+            if failed == 0 and done == total and total > 0:
+                logger.info("All tasks completed in sprint %d. Goal achieved.", sprint_num + 1)
+                await self.event_log.append("multi_sprint.goal_achieved", {
+                    "project_id": project_id,
+                    "sprints_used": sprint_num + 1,
+                    "goal": goal,
+                })
+                break
+
+            # Check if auto_start_next is disabled
+            if not self.config.sprint.auto_start_next:
+                logger.info("auto_start_next disabled. Stopping after sprint %d.", sprint_num + 1)
+                break
+
+            # Build refined goal for next sprint from failed/incomplete tasks
+            failed_tasks = [t for t in tasks if t.status in (TaskStatus.FAILED, "failed")]
+            if not failed_tasks:
+                logger.info("No failed tasks to retry. Stopping.")
+                break
+
+            failed_descriptions = "\n".join(
+                f"- {t.title}: {t.description}" for t in failed_tasks
+            )
+            remaining_goal = (
+                f"Continue working on the original goal: {goal}\n\n"
+                f"The following tasks from the previous sprint need to be completed:\n"
+                f"{failed_descriptions}"
+            )
+
+            await self.event_log.append("multi_sprint.continuing", {
+                "project_id": project_id,
+                "sprint_number": sprint_num + 1,
+                "failed_tasks": len(failed_tasks),
+                "remaining_goal": remaining_goal[:500],
+            })
+
+            # Reset task graph for next sprint
+            self.task_graph.reset()
+
+        return sprint_results
+
     async def _plan_node(self, state: SprintState) -> SprintState:
         """PLANNING node: PM decomposes goal into tasks."""
         state["status"] = SprintStatus.PLANNING
@@ -139,12 +217,9 @@ class SprintEngine:
         return state
 
     async def _execute_node(self, state: SprintState) -> SprintState:
-        """EXECUTING node: Execute tasks (parallel where deps allow)."""
+        """EXECUTING node: Execute tasks (parallel where deps allow) with approval gates."""
         state["status"] = SprintStatus.EXECUTING
         await self._emit_status_change(state)
-
-        dev_key = AgentRoleName.DEVELOPER.value
-        dev = self.agents.get(dev_key)
 
         max_parallel = self.config.sprint.max_tasks_parallel
 
@@ -154,44 +229,46 @@ class SprintEngine:
             if not ready:
                 break
 
-            # Filter to dev-assigned tasks (QA excluded from execute)
-            dev_tasks = [
-                t for t in ready
-                if t.assigned_to in (
-                    AgentRoleName.DEVELOPER, AgentRoleName.DEVELOPER.value,
-                    "developer",
-                )
-            ]
-
-            # Mark non-dev tasks as done (skip them in execute)
+            # Categorize tasks by assigned agent
+            executable_tasks = []
             for t in ready:
-                if t not in dev_tasks:
-                    t.status = TaskStatus.DONE
+                assigned = t.assigned_to
+                if isinstance(assigned, AgentRoleName):
+                    assigned = assigned.value
+                agent = self.agents.get(assigned or "developer")
+                if agent:
+                    executable_tasks.append((t, agent, assigned or "developer"))
+                else:
+                    # No agent available for this role — mark as failed
+                    t.status = TaskStatus.FAILED
                     self.task_graph.mark_completed(t.id)
                     await self._emit_task_status(t)
 
-            if not dev_tasks:
+            if not executable_tasks:
                 if not ready:
                     break
                 continue
 
-            if not dev:
-                for t in dev_tasks:
-                    t.status = TaskStatus.FAILED
-                    self.task_graph.mark_completed(t.id)
-                    await self._emit_task_status(t)
-                break
-
             # Execute batch with concurrency limit
             sem = asyncio.Semaphore(max_parallel)
 
-            async def execute_one(task: Task) -> None:
+            async def execute_one(task: Task, agent: Any, role_name: str) -> None:
                 async with sem:
+                    # --- Approval gate ---
+                    approved = await self._check_approval_gate(
+                        task, role_name, state["sprint_id"]
+                    )
+                    if not approved:
+                        task.status = TaskStatus.BLOCKED
+                        self.task_graph.mark_completed(task.id)
+                        await self._emit_task_status(task)
+                        return
+
                     task.status = TaskStatus.IN_PROGRESS
                     await self._emit_task_status(task)
 
                     try:
-                        result = await dev.execute_task(task)
+                        result = await agent.execute_task(task)
                         task.result = result
                         task.status = TaskStatus.IN_REVIEW if result.success else TaskStatus.FAILED
 
@@ -200,17 +277,124 @@ class SprintEngine:
                             state["artifacts"].append(artifact)
                     except Exception as exc:
                         task.status = TaskStatus.FAILED
-                        await self._record_error(exc, task_id=task.id, sprint_id=state["sprint_id"], agent_role="developer")
+                        await self._record_error(
+                            exc, task_id=task.id,
+                            sprint_id=state["sprint_id"],
+                            agent_role=role_name,
+                        )
 
                     self.task_graph.mark_completed(task.id)
                     await self._emit_task_status(task)
 
             await asyncio.gather(
-                *[execute_one(t) for t in dev_tasks],
+                *[execute_one(t, agent, role) for t, agent, role in executable_tasks],
                 return_exceptions=True,
             )
 
         return state
+
+    async def _check_approval_gate(
+        self, task: Task, agent_role: str, sprint_id: str
+    ) -> bool:
+        """Check if this task/agent requires human approval before execution.
+
+        Returns True if approved (or no approval needed), False if rejected/timed out.
+        """
+        # Look up autonomy level from config
+        autonomy = self._get_agent_autonomy(agent_role)
+
+        if autonomy in (AutonomyLevel.AUTO_APPROVE, AutonomyLevel.NOTIFY):
+            # Auto-approve or just notify (no blocking)
+            if autonomy == AutonomyLevel.NOTIFY:
+                await self.event_log.append("approval.notify", {
+                    "sprint_id": sprint_id,
+                    "task_id": task.id,
+                    "agent_role": agent_role,
+                    "task_title": task.title,
+                    "message": f"Agent '{agent_role}' is starting task: {task.title}",
+                })
+            return True
+
+        if autonomy == AutonomyLevel.BLOCK:
+            await self.event_log.append("approval.blocked", {
+                "sprint_id": sprint_id,
+                "task_id": task.id,
+                "agent_role": agent_role,
+                "task_title": task.title,
+            })
+            return False
+
+        # REQUIRE_APPROVAL — create approval request and wait
+        if not self.db:
+            # No DB means we can't persist approvals — auto-approve as fallback
+            return True
+
+        approval_id = str(uuid.uuid4())
+        await self.db.conn.execute(
+            """INSERT INTO approvals
+               (approval_id, sprint_id, task_id, agent_id, action_type, title, description, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')""",
+            (
+                approval_id, sprint_id, task.id, agent_role,
+                "task_execution", task.title, task.description,
+            ),
+        )
+        await self.db.conn.commit()
+
+        await self.event_log.append("approval.requested", {
+            "approval_id": approval_id,
+            "sprint_id": sprint_id,
+            "task_id": task.id,
+            "agent_role": agent_role,
+            "action_type": "task_execution",
+            "task_title": task.title,
+        })
+
+        # Poll for approval decision
+        elapsed = 0.0
+        while elapsed < APPROVAL_TIMEOUT:
+            await asyncio.sleep(APPROVAL_POLL_INTERVAL)
+            elapsed += APPROVAL_POLL_INTERVAL
+
+            cursor = await self.db.conn.execute(
+                "SELECT status FROM approvals WHERE approval_id = ?",
+                (approval_id,),
+            )
+            row = await cursor.fetchone()
+            if row and row["status"] == "approved":
+                await self.event_log.append("approval.approved", {
+                    "approval_id": approval_id,
+                    "sprint_id": sprint_id,
+                    "task_id": task.id,
+                })
+                return True
+            if row and row["status"] == "rejected":
+                await self.event_log.append("approval.rejected", {
+                    "approval_id": approval_id,
+                    "sprint_id": sprint_id,
+                    "task_id": task.id,
+                })
+                return False
+
+        # Timed out
+        await self.db.conn.execute(
+            "UPDATE approvals SET status = 'expired' WHERE approval_id = ?",
+            (approval_id,),
+        )
+        await self.db.conn.commit()
+        await self.event_log.append("approval.expired", {
+            "approval_id": approval_id,
+            "sprint_id": sprint_id,
+            "task_id": task.id,
+        })
+        return False
+
+    def _get_agent_autonomy(self, agent_role: str) -> AutonomyLevel:
+        """Get the autonomy level for an agent role from config."""
+        agent_config = getattr(self.config.team, agent_role, None)
+        if agent_config and hasattr(agent_config, "autonomy"):
+            return agent_config.autonomy
+        return AutonomyLevel.NOTIFY
 
     async def _review_node(self, state: SprintState) -> SprintState:
         """REVIEWING node: QA reviews completed tasks."""
@@ -245,7 +429,10 @@ class SprintEngine:
                 task.status = TaskStatus.DONE if review_result.passed else TaskStatus.FAILED
             except Exception as exc:
                 task.status = TaskStatus.FAILED
-                await self._record_error(exc, task_id=task.id, sprint_id=state["sprint_id"], agent_role="qa_engineer")
+                await self._record_error(
+                    exc, task_id=task.id,
+                    sprint_id=state["sprint_id"], agent_role="qa_engineer",
+                )
 
             await self._emit_task_status(task)
 
@@ -328,6 +515,7 @@ class SprintEngine:
             return
         try:
             import traceback as tb
+
             from foundrai.models.error_log import ErrorLog
             from foundrai.persistence.error_store import ErrorStore
 

@@ -129,3 +129,21 @@ register_role(AgentRole(
     skills=["ui_design", "ux_design", "wireframing"],
     tools=["file_manager"],
 ))
+
+register_role(AgentRole(
+    name=AgentRoleName.DEVOPS,
+    display_name="DevOps",
+    persona=(
+        "You are a senior DevOps engineer. You design and implement CI/CD pipelines, "
+        "containerization, infrastructure as code, and deployment strategies.\n\n"
+        "When given a task:\n"
+        "1. Analyze infrastructure requirements\n"
+        "2. Create CI/CD pipeline configurations\n"
+        "3. Write Dockerfiles and docker-compose configs\n"
+        "4. Set up monitoring and health checks\n"
+        "5. Document deployment procedures\n\n"
+        "Return infrastructure files and deployment documentation."
+    ),
+    skills=["ci_cd", "containerization", "infrastructure", "monitoring", "deployment"],
+    tools=["file_manager", "code_executor"],
+))

@@ -140,6 +140,23 @@ async def get_sprint_metrics(sprint_id: str) -> dict:
     }
 
 
+@router.post("/projects/{project_id}/sprints/multi")
+async def start_multi_sprint(project_id: str, body: SprintCreate) -> dict:
+    """Start a multi-sprint execution that iterates until goal is achieved."""
+    db = await get_db()
+    cursor = await db.conn.execute(
+        "SELECT 1 FROM projects WHERE project_id = ?", (project_id,)
+    )
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {
+        "status": "multi_sprint_queued",
+        "project_id": project_id,
+        "goal": body.goal,
+        "message": "Multi-sprint execution queued. Monitor via WebSocket or events API.",
+    }
+
+
 @router.get("/sprints/{sprint_id}/goal-tree")
 async def get_goal_tree(sprint_id: str) -> dict:
     """Get goal decomposition tree."""

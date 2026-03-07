@@ -84,8 +84,33 @@ class ProductManagerAgent(BaseAgent):
     async def refine_with_learnings(
         self, tasks: list[Task], learnings: list[Any]
     ) -> list[Task]:
-        """Refine tasks based on past learnings."""
-        return tasks
+        """Refine tasks based on past learnings from vector memory."""
+        if not learnings:
+            return tasks
+
+        learnings_text = "\n".join(
+            f"- {lr.content}" if hasattr(lr, "content") else f"- {lr}"
+            for lr in learnings
+        )
+        task_summaries = "\n".join(
+            f"- {t.title}: {t.description}" for t in tasks
+        )
+
+        messages = [
+            {"role": "system", "content": self.get_system_prompt()},
+            {"role": "user", "content": (
+                "Review these tasks based on lessons learned from previous sprints.\n\n"
+                f"## Past Learnings:\n{learnings_text}\n\n"
+                f"## Current Tasks:\n{task_summaries}\n\n"
+                "Return a JSON array of refined tasks. Each task should have: "
+                "title, description, acceptance_criteria, dependencies, assigned_to, priority. "
+                "Apply the learnings to improve task quality, add missing criteria, "
+                "adjust priorities, or split/merge tasks as needed."
+            )},
+        ]
+        result = await self.runtime.run(messages, response_format="json")
+        refined = self._parse_tasks(result.parsed or result.output)
+        return refined if refined else tasks
 
     async def execute_task(self, task: Task) -> TaskResult:
         """PM does not execute implementation tasks."""

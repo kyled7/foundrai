@@ -54,7 +54,10 @@ class SprintPlanning:
 
         # Retrieve past learnings
         if vector_memory:
-            learnings = await vector_memory.query_relevant(goal, k=5)
+            learnings = await vector_memory.query_relevant(
+                goal, k=5,
+                project_id=context.project_id if hasattr(context, "project_id") else None,
+            )
             if learnings and hasattr(pm, "refine_with_learnings"):
                 tasks = await pm.refine_with_learnings(tasks, learnings)
 

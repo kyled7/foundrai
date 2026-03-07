@@ -8,10 +8,11 @@ export function AgentFeed() {
   const { bottomRef, autoScroll, handleScroll, scrollToBottom } = useAutoScroll([filteredEvents.length]);
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex flex-col h-full relative" aria-label="Agent activity feed">
       <FeedFilters />
       <div
         className="flex-1 overflow-y-auto p-4 space-y-2"
+        aria-live="polite"
         onScroll={handleScroll}
       >
         {filteredEvents.length === 0 && (

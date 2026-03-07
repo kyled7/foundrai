@@ -27,6 +27,7 @@ interface Props {
 export function StatusBadge({ status, size = 'sm', className }: Props) {
   return (
     <span
+      role="status"
       className={cn(
         'inline-flex items-center rounded-full font-medium capitalize',
         size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm',
