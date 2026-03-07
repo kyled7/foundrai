@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter
 
 from foundrai.api.deps import get_db
 

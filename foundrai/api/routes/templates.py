@@ -53,12 +53,12 @@ async def list_templates(
         else:  # "all"
             templates = await manager.store.list_templates(author=author, public_only=public_only)
             # TODO: Add marketplace templates when implemented
-        
+
         return templates
-        
+
     except Exception as e:
         logger.error(f"Failed to list templates: {e}")
-        raise HTTPException(status_code=500, detail="Failed to list templates")
+        raise HTTPException(status_code=500, detail="Failed to list templates") from e
 
 
 @router.post("/templates", response_model=TeamTemplate)
@@ -72,13 +72,13 @@ async def create_template(
         # TODO: Get current project configuration from context/session
         # For now, create a basic configuration
         from foundrai.config import ProjectConfig, SprintConfig, TeamConfig
-        
+
         config = FoundrAIConfig(
             project=ProjectConfig(name="template-project"),
             team=TeamConfig(),
             sprint=SprintConfig()
         )
-        
+
         template = await manager.save_template(
             name=request.name,
             config=config,
@@ -87,15 +87,15 @@ async def create_template(
             tags=request.tags,
             is_public=request.is_public
         )
-        
+
         return template
-        
+
     except Exception as e:
         logger.error(f"Failed to create template: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create template: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/templates/{template_id}", response_model=TeamTemplate)
@@ -108,9 +108,9 @@ async def get_template(
         template = await manager.load_template(template_id)
         if not template:
             raise HTTPException(status_code=404, detail="Template not found")
-        
+
         return template
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -118,7 +118,7 @@ async def get_template(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get template: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/templates/{template_id}/apply")
@@ -132,17 +132,17 @@ async def apply_template(
         template = await manager.load_template(template_id)
         if not template:
             raise HTTPException(status_code=404, detail="Template not found")
-        
+
         # TODO: Get current project configuration and apply template
         # For now, just simulate success
         logger.info(f"Applied template {template.name} to project {request.project_id}")
-        
+
         return {
             "message": f"Template '{template.name}' applied successfully",
             "project_id": request.project_id,
             "template_id": template_id
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -150,7 +150,7 @@ async def apply_template(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to apply template: {str(e)}"
-        )
+        ) from e
 
 
 @router.delete("/templates/{template_id}")
@@ -163,9 +163,9 @@ async def delete_template(
         success = await manager.delete_template(template_id)
         if not success:
             raise HTTPException(status_code=404, detail="Template not found")
-        
+
         return {"message": "Template deleted successfully"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -173,7 +173,7 @@ async def delete_template(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to delete template: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/templates/{template_id}/publish")
@@ -186,18 +186,18 @@ async def publish_template(
     try:
         # TODO: Implement marketplace publishing
         logger.warning("Marketplace publishing not yet implemented")
-        
+
         return {
             "message": "Marketplace publishing not yet implemented",
             "template_id": template_id
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to publish template {template_id}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to publish template: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/templates/search")
@@ -210,7 +210,7 @@ async def search_templates(
     try:
         templates = await manager.store.search_templates(query=q, tags=tags)
         return templates
-        
+
     except Exception as e:
         logger.error(f"Failed to search templates: {e}")
-        raise HTTPException(status_code=500, detail="Failed to search templates")
+        raise HTTPException(status_code=500, detail="Failed to search templates") from e

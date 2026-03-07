@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from foundrai.models.plugin import Plugin, PluginType
 
@@ -13,11 +13,11 @@ if TYPE_CHECKING:
 
 class PluginStore:
     """Storage for plugins."""
-    
+
     def __init__(self, db: Database) -> None:
         """Initialize plugin store."""
         self.db = db
-    
+
     async def create_plugin(self, plugin: Plugin) -> Plugin:
         """Create a new plugin record."""
         await self.db.conn.execute("""
@@ -35,10 +35,10 @@ class PluginStore:
             plugin.installed_at.isoformat(),
             int(plugin.enabled)
         ))
-        
+
         await self.db.conn.commit()
         return plugin
-    
+
     async def get_plugin(self, plugin_id: str) -> Plugin | None:
         """Get plugin by ID."""
         cursor = await self.db.conn.execute("""
@@ -46,13 +46,13 @@ class PluginStore:
                    installed_at, enabled
             FROM plugins WHERE id = ?
         """, (plugin_id,))
-        
+
         row = await cursor.fetchone()
         if not row:
             return None
-            
+
         return self._row_to_plugin(row)
-    
+
     async def get_plugin_by_name(self, name: str, version: str | None = None) -> Plugin | None:
         """Get plugin by name and optional version."""
         if version:
@@ -68,15 +68,15 @@ class PluginStore:
                 FROM plugins WHERE name = ?
                 ORDER BY installed_at DESC LIMIT 1
             """, (name,))
-        
+
         row = await cursor.fetchone()
         if not row:
             return None
-            
+
         return self._row_to_plugin(row)
-    
+
     async def list_plugins(
-        self, 
+        self,
         plugin_type: PluginType | None = None,
         enabled_only: bool = False
     ) -> list[Plugin]:
@@ -88,21 +88,21 @@ class PluginStore:
             WHERE 1=1
         """
         params = []
-        
+
         if plugin_type:
             query += " AND type = ?"
             params.append(plugin_type.value)
-            
+
         if enabled_only:
             query += " AND enabled = 1"
-            
+
         query += " ORDER BY name, version"
-        
+
         cursor = await self.db.conn.execute(query, params)
         rows = await cursor.fetchall()
-        
+
         return [self._row_to_plugin(row) for row in rows]
-    
+
     async def update_plugin(self, plugin: Plugin) -> Plugin:
         """Update an existing plugin."""
         await self.db.conn.execute("""
@@ -119,32 +119,32 @@ class PluginStore:
             int(plugin.enabled),
             plugin.id
         ))
-        
+
         await self.db.conn.commit()
         return plugin
-    
+
     async def delete_plugin(self, plugin_id: str) -> bool:
         """Delete a plugin."""
         cursor = await self.db.conn.execute("DELETE FROM plugins WHERE id = ?", (plugin_id,))
         await self.db.conn.commit()
         return cursor.rowcount > 0
-    
+
     async def toggle_plugin(self, plugin_id: str, enabled: bool) -> bool:
         """Enable or disable a plugin."""
         cursor = await self.db.conn.execute("""
             UPDATE plugins SET enabled = ? WHERE id = ?
         """, (int(enabled), plugin_id))
-        
+
         await self.db.conn.commit()
         return cursor.rowcount > 0
-    
-    def _row_to_plugin(self, row) -> Plugin:
+
+    def _row_to_plugin(self, row: Any) -> Plugin:
         """Convert database row to Plugin object."""
         # Load plugin from JSON metadata
         metadata = json.loads(row[4])
         plugin = Plugin(**metadata)
-        
+
         # Override with database values that might have changed
         plugin.enabled = bool(row[7])
-        
+
         return plugin

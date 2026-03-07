@@ -161,7 +161,8 @@ class TokenStore:
     async def get_agent_spent(self, sprint_id: str, agent_role: str) -> float:
         """Get total USD spent by an agent in a sprint."""
         cursor = await self.db.conn.execute(
-            "SELECT COALESCE(SUM(cost_usd), 0.0) as total FROM token_usage WHERE sprint_id = ? AND agent_role = ?",
+            "SELECT COALESCE(SUM(cost_usd), 0.0) as total "
+            "FROM token_usage WHERE sprint_id = ? AND agent_role = ?",
             (sprint_id, agent_role),
         )
         row = await cursor.fetchone()

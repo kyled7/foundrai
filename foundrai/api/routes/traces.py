@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
 from foundrai.api.deps import get_db
@@ -62,7 +64,7 @@ async def get_trace(trace_id: int) -> dict:
     }
 
 
-def _trace_summary(t) -> dict:
+def _trace_summary(t: Any) -> dict:
     """Return a trace without full prompt/response (for list views)."""
     return {
         "trace_id": t.trace_id,

@@ -75,17 +75,15 @@ def init(
 ) -> None:
     """Initialize a new FoundrAI project."""
     # Basic checks
-    import sys
-    if sys.version_info < (3, 11):
-        console.print("[red]Error: Python 3.11+ required[/red]")
-        raise typer.Exit(code=1)
 
     # Check Docker availability (warn but don't block)
     try:
         import subprocess
-        subprocess.run(["docker", "--version"], capture_output=True, check=True, timeout=5)
+        subprocess.run(["docker", "--version"], capture_output=True, check=True, timeout=5)  # noqa: S607
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
-        console.print("[yellow]Warning: Docker not available - sandboxed code execution disabled[/yellow]")
+        console.print(
+            "[yellow]Warning: Docker not available - sandboxed code execution disabled[/yellow]"
+        )
 
     project_dir = Path(path) / name
     project_dir.mkdir(parents=True, exist_ok=True)
@@ -162,7 +160,7 @@ def sprint_start(
     from os import getenv
     has_openai = getenv("OPENAI_API_KEY")
     has_anthropic = getenv("ANTHROPIC_API_KEY")
-    
+
     if not has_openai and not has_anthropic:
         console.print("[red]Error: No LLM API keys found.[/red]")
         console.print("Set at least one of:")
@@ -174,10 +172,10 @@ def sprint_start(
         asyncio.run(_run_sprint(project_dir, goal))
     except KeyboardInterrupt:
         console.print("\n[yellow]Sprint interrupted by user[/yellow]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     except Exception as e:
         console.print(f"[red]Sprint failed: {e}[/red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 @app.command()
@@ -202,30 +200,26 @@ def serve(
 @app.command()
 def doctor() -> None:
     """Check system prerequisites and configuration."""
-    import sys
     import subprocess
+    import sys
     from os import getenv
-    
+
     console.print("[bold]🏥 FoundrAI System Health Check[/bold]\n")
-    
+
     issues = []
-    
+
     # Python version
-    if sys.version_info >= (3, 11):
-        console.print("[green]✓[/green] Python version: " + sys.version.split()[0])
-    else:
-        console.print("[red]✗[/red] Python version: " + sys.version.split()[0] + " (3.11+ required)")
-        issues.append("Python 3.11+ required")
-    
+    console.print("[green]✓[/green] Python version: " + sys.version.split()[0])
+
     # Docker
     try:
-        result = subprocess.run(["docker", "--version"], capture_output=True, check=True, timeout=5)
+        result = subprocess.run(["docker", "--version"], capture_output=True, check=True, timeout=5)  # noqa: S607
         docker_version = result.stdout.decode().strip()
         console.print(f"[green]✓[/green] Docker: {docker_version}")
-        
+
         # Check if Docker daemon is running
         try:
-            subprocess.run(["docker", "ps"], capture_output=True, check=True, timeout=5)
+            subprocess.run(["docker", "ps"], capture_output=True, check=True, timeout=5)  # noqa: S607
             console.print("[green]✓[/green] Docker daemon: Running")
         except subprocess.CalledProcessError:
             console.print("[yellow]⚠[/yellow] Docker daemon: Not running")
@@ -233,7 +227,7 @@ def doctor() -> None:
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
         console.print("[red]✗[/red] Docker: Not available")
         issues.append("Docker not installed or not in PATH")
-    
+
     # API Keys
     api_keys = []
     if getenv("OPENAI_API_KEY"):
@@ -241,16 +235,16 @@ def doctor() -> None:
         api_keys.append("OpenAI")
     else:
         console.print("[yellow]⚠[/yellow] OpenAI API key: Not set")
-    
+
     if getenv("ANTHROPIC_API_KEY"):
         console.print("[green]✓[/green] Anthropic API key: Set")
         api_keys.append("Anthropic")
     else:
         console.print("[yellow]⚠[/yellow] Anthropic API key: Not set")
-    
+
     if not api_keys:
         issues.append("No LLM API keys configured")
-    
+
     # Dependencies
     try:
         import fastapi
@@ -258,7 +252,7 @@ def doctor() -> None:
     except ImportError:
         console.print("[red]✗[/red] FastAPI: Not installed")
         issues.append("FastAPI not installed")
-    
+
     try:
         import langgraph
         # Try to get version, fall back to just "installed" if no version attr
@@ -270,7 +264,7 @@ def doctor() -> None:
     except ImportError:
         console.print("[red]✗[/red] LangGraph: Not installed")
         issues.append("LangGraph not installed")
-    
+
     # Summary
     console.print()
     if issues:
@@ -284,13 +278,18 @@ def doctor() -> None:
         if "Docker" in str(issues):
             console.print("  • Install Docker Desktop or Docker Engine")
         if "API keys" in str(issues):
-            console.print("  • Set API keys: export OPENAI_API_KEY=sk-... or ANTHROPIC_API_KEY=sk-ant-...")
+            console.print(
+                "  • Set API keys: export OPENAI_API_KEY=sk-... or ANTHROPIC_API_KEY=sk-ant-..."
+            )
         if any("not installed" in issue for issue in issues):
             console.print("  • Run: pip install foundrai")
         raise typer.Exit(code=1)
     else:
         console.print("[green]✅ All systems operational![/green]")
-        console.print(f"Ready to orchestrate AI teams with {', '.join(api_keys)} LLM{'s' if len(api_keys) > 1 else ''}")
+        console.print(
+            f"Ready to orchestrate AI teams with {', '.join(api_keys)} "
+            f"LLM{'s' if len(api_keys) > 1 else ''}"
+        )
 
 
 async def _show_status(project_dir: Path) -> None:
@@ -458,12 +457,15 @@ async def _run_sprint(project_dir: Path, goal: str) -> None:
 
         # Add timeout to prevent hanging
         try:
-            result = await asyncio.wait_for(engine.run_sprint(goal, project_id), timeout=3600)  # 1 hour timeout
+            # 1 hour timeout
+            result = await asyncio.wait_for(engine.run_sprint(goal, project_id), timeout=3600)
             _print_summary(result)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             console.print("[red]Sprint timed out after 1 hour[/red]")
-            console.print("This may indicate an issue with LLM connectivity or model responsiveness.")
-            raise typer.Exit(code=1)
+            console.print(
+                "This may indicate an issue with LLM connectivity or model responsiveness."
+            )
+            raise typer.Exit(code=1) from None
 
     finally:
         await db.close()

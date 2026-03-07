@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from foundrai.models.team import CrossTeamDependency, DependencyStatus, Team
 
@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 
 class TeamStore:
     """Storage for teams and cross-team dependencies."""
-    
+
     def __init__(self, db: Database) -> None:
         """Initialize team store."""
         self.db = db
-    
+
     async def create_team(self, team: Team) -> Team:
         """Create a new team."""
         await self.db.conn.execute("""
@@ -41,10 +41,10 @@ class TeamStore:
             team.created_at.isoformat(),
             team.updated_at.isoformat()
         ))
-        
+
         await self.db.conn.commit()
         return team
-    
+
     async def get_team(self, team_id: str) -> Team | None:
         """Get team by ID."""
         cursor = await self.db.conn.execute("""
@@ -53,13 +53,13 @@ class TeamStore:
                    created_at, updated_at
             FROM teams WHERE id = ?
         """, (team_id,))
-        
+
         row = await cursor.fetchone()
         if not row:
             return None
-            
+
         return self._row_to_team(row)
-    
+
     async def list_teams(self, project_id: str | None = None) -> list[Team]:
         """List teams with optional project filtering."""
         if project_id:
@@ -78,14 +78,14 @@ class TeamStore:
                 FROM teams
                 ORDER BY created_at DESC
             """)
-        
+
         rows = await cursor.fetchall()
         return [self._row_to_team(row) for row in rows]
-    
+
     async def update_team(self, team: Team) -> Team:
         """Update an existing team."""
         team.updated_at = datetime.utcnow()
-        
+
         await self.db.conn.execute("""
             UPDATE teams SET
                 name = ?, description = ?, agents = ?, template_id = ?,
@@ -104,16 +104,16 @@ class TeamStore:
             team.updated_at.isoformat(),
             team.id
         ))
-        
+
         await self.db.conn.commit()
         return team
-    
+
     async def delete_team(self, team_id: str) -> bool:
         """Delete a team."""
         cursor = await self.db.conn.execute("DELETE FROM teams WHERE id = ?", (team_id,))
         await self.db.conn.commit()
         return cursor.rowcount > 0
-    
+
     async def create_dependency(self, dependency: CrossTeamDependency) -> CrossTeamDependency:
         """Create a cross-team dependency."""
         await self.db.conn.execute("""
@@ -137,10 +137,10 @@ class TeamStore:
             dependency.updated_at.isoformat(),
             dependency.resolved_at.isoformat() if dependency.resolved_at else None
         ))
-        
+
         await self.db.conn.commit()
         return dependency
-    
+
     async def get_dependency(self, dependency_id: str) -> CrossTeamDependency | None:
         """Get dependency by ID."""
         cursor = await self.db.conn.execute("""
@@ -149,15 +149,15 @@ class TeamStore:
                    resolution_notes, created_at, updated_at, resolved_at
             FROM cross_team_dependencies WHERE id = ?
         """, (dependency_id,))
-        
+
         row = await cursor.fetchone()
         if not row:
             return None
-            
+
         return self._row_to_dependency(row)
-    
+
     async def list_dependencies(
-        self, 
+        self,
         team_id: str | None = None,
         project_id: str | None = None
     ) -> list[CrossTeamDependency]:
@@ -167,7 +167,7 @@ class TeamStore:
                 SELECT id, dependent_team_id, provider_team_id, dependency_type,
                        title, description, status, due_date, discussion_thread,
                        resolution_notes, created_at, updated_at, resolved_at
-                FROM cross_team_dependencies 
+                FROM cross_team_dependencies
                 WHERE dependent_team_id = ? OR provider_team_id = ?
                 ORDER BY created_at DESC
             """, (team_id, team_id))
@@ -186,17 +186,17 @@ class TeamStore:
                 SELECT id, dependent_team_id, provider_team_id, dependency_type,
                        title, description, status, due_date, discussion_thread,
                        resolution_notes, created_at, updated_at, resolved_at
-                FROM cross_team_dependencies 
+                FROM cross_team_dependencies
                 ORDER BY created_at DESC
             """)
-        
+
         rows = await cursor.fetchall()
         return [self._row_to_dependency(row) for row in rows]
-    
+
     async def update_dependency(self, dependency: CrossTeamDependency) -> CrossTeamDependency:
         """Update a dependency."""
         dependency.updated_at = datetime.utcnow()
-        
+
         await self.db.conn.execute("""
             UPDATE cross_team_dependencies SET
                 dependency_type = ?, title = ?, description = ?, status = ?,
@@ -215,15 +215,15 @@ class TeamStore:
             dependency.resolved_at.isoformat() if dependency.resolved_at else None,
             dependency.id
         ))
-        
+
         await self.db.conn.commit()
         return dependency
-    
-    def _row_to_team(self, row) -> Team:
+
+    def _row_to_team(self, row: Any) -> Team:
         """Convert database row to Team object."""
         agents_data = json.loads(row[4]) if row[4] else []
         sprint_config_data = json.loads(row[8]) if row[8] else {}
-        
+
         return Team(
             id=row[0],
             name=row[1],
@@ -238,8 +238,8 @@ class TeamStore:
             created_at=datetime.fromisoformat(row[10]) if isinstance(row[10], str) else row[10],
             updated_at=datetime.fromisoformat(row[11]) if isinstance(row[11], str) else row[11]
         )
-    
-    def _row_to_dependency(self, row) -> CrossTeamDependency:
+
+    def _row_to_dependency(self, row: Any) -> CrossTeamDependency:
         """Convert database row to CrossTeamDependency object."""
         return CrossTeamDependency(
             id=row[0],
@@ -249,10 +249,18 @@ class TeamStore:
             title=row[4],
             description=row[5] or "",
             status=DependencyStatus(row[6]),
-            due_date=datetime.fromisoformat(row[7]) if row[7] and isinstance(row[7], str) else row[7],
+            due_date=(
+                datetime.fromisoformat(row[7])
+                if row[7] and isinstance(row[7], str)
+                else row[7]
+            ),
             discussion_thread=row[8],
             resolution_notes=row[9],
             created_at=datetime.fromisoformat(row[10]) if isinstance(row[10], str) else row[10],
             updated_at=datetime.fromisoformat(row[11]) if isinstance(row[11], str) else row[11],
-            resolved_at=datetime.fromisoformat(row[12]) if row[12] and isinstance(row[12], str) else row[12]
+            resolved_at=(
+                datetime.fromisoformat(row[12])
+                if row[12] and isinstance(row[12], str)
+                else row[12]
+            )
         )

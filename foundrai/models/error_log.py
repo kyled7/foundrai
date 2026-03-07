@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -14,7 +14,8 @@ class ErrorLog:
     task_id: str | None = None
     sprint_id: str | None = None
     agent_role: str = ""
-    error_type: str = "unknown"  # rate_limit|context_overflow|timeout|tool_error|parse_error|unknown
+    # rate_limit|context_overflow|timeout|tool_error|parse_error|unknown
+    error_type: str = "unknown"
     error_message: str = ""
     traceback: str = ""
     context_json: str = "{}"

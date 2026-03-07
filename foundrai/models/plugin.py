@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 class PluginType(str, Enum):
     """Plugin type enumeration."""
     ROLE = "role"
-    TOOL = "tool" 
+    TOOL = "tool"
     INTEGRATION = "integration"
 
 
@@ -59,22 +59,22 @@ class Plugin(BaseModel):
     plugin_type: PluginType
     author: str = "unknown"
     description: str = ""
-    
+
     # Plugin specifications
     role_spec: RolePluginSpec | None = None
     tool_spec: ToolPluginSpec | None = None
     integration_spec: IntegrationPluginSpec | None = None
-    
+
     # Metadata
     dependencies: list[str] = Field(default_factory=list)
     configuration: dict[str, Any] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
-    
+
     # Status
     status: PluginStatus = PluginStatus.INSTALLED
     installed_at: datetime = Field(default_factory=datetime.utcnow)
     enabled: bool = True
-    
+
     # Repository info
     repository_url: str | None = None
     documentation_url: str | None = None
@@ -95,13 +95,13 @@ class PluginListing(BaseModel):
     tags: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
-    
+
     # Rich metadata
     screenshots: list[str] = Field(default_factory=list)
     documentation_url: str | None = None
     repository_url: str | None = None
     license: str = "MIT"
-    
+
     # Compatibility
     foundrai_version: str = ">=0.4.0"
     dependencies: list[str] = Field(default_factory=list)

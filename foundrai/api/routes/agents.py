@@ -48,7 +48,11 @@ async def list_agent_configs(project_id: str) -> dict:
                 agents_list.append({
                     "project_id": project_id,
                     "agent_role": role,
-                    "autonomy_level": agent_cfg.autonomy.value if hasattr(agent_cfg.autonomy, 'value') else str(agent_cfg.autonomy),
+                    "autonomy_level": (
+                        agent_cfg.autonomy.value
+                        if hasattr(agent_cfg.autonomy, 'value')
+                        else str(agent_cfg.autonomy)
+                    ),
                     "model": agent_cfg.model,
                     "enabled": agent_cfg.enabled,
                 })

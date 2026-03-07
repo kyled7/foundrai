@@ -16,26 +16,26 @@ class TeamTemplate(BaseModel):
     author: str
     version: str = "1.0.0"
     tags: list[str] = Field(default_factory=list)
-    
+
     # Core configuration - stored as dicts to avoid circular imports
     team_config: dict[str, Any]
     sprint_config: dict[str, Any]
-    
+
     # Plugin requirements
     required_plugins: list[str] = Field(default_factory=list)
     recommended_plugins: list[str] = Field(default_factory=list)
-    
+
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     downloads: int = 0
     rating: float = 0.0
     rating_count: int = 0
-    
+
     # Marketplace
     is_public: bool = False
     marketplace_url: str | None = None
-    
+
     # Repository info
     repository_url: str | None = None
     documentation_url: str | None = None
@@ -63,13 +63,13 @@ class TemplateListing(BaseModel):
     tags: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
-    
+
     # Rich metadata
     screenshots: list[str] = Field(default_factory=list)
     documentation_url: str | None = None
     repository_url: str | None = None
     license: str = "MIT"
-    
+
     # Compatibility
     foundrai_version: str = ">=0.4.0"
     required_plugins: list[str] = Field(default_factory=list)

@@ -18,7 +18,11 @@ class TraceStore:
     async def record_trace(self, trace: DecisionTrace) -> int:
         """Record a decision trace. Returns the trace_id."""
         prompt_compressed = zlib.compress(trace.prompt.encode("utf-8")) if trace.prompt else None
-        response_compressed = zlib.compress(trace.response.encode("utf-8")) if trace.response else None
+        response_compressed = (
+            zlib.compress(trace.response.encode("utf-8"))
+            if trace.response
+            else None
+        )
 
         cursor = await self.db.conn.execute(
             """INSERT INTO decision_traces

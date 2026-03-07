@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from foundrai.api.deps import get_db, get_config
+from foundrai.api.deps import get_config, get_db
 from foundrai.models.budget import BudgetConfig
 from foundrai.orchestration.budget_manager import BudgetManager
 from foundrai.persistence.token_store import TokenStore

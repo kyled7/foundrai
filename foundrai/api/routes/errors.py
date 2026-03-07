@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from foundrai.api.deps import get_db
@@ -37,7 +39,7 @@ async def get_task_errors(task_id: str) -> dict:
     }
 
 
-def _error_to_dict(e) -> dict:
+def _error_to_dict(e: Any) -> dict:
     return {
         "error_id": e.error_id,
         "task_id": e.task_id,

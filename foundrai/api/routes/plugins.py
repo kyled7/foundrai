@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from foundrai.models.plugin import Plugin, PluginListing, PluginType
+from foundrai.models.plugin import PluginListing, PluginType
 from foundrai.persistence.database import Database
 from foundrai.persistence.plugin_store import PluginStore
 from foundrai.plugins.loader import PluginLoader
@@ -46,7 +45,6 @@ class TogglePluginRequest(BaseModel):
 def get_plugin_store() -> PluginStore:
     """Get plugin store dependency."""
     # In a real implementation, this would come from dependency injection
-    from foundrai.persistence.database import Database
     db = Database("temp.db")  # This should be injected
     return PluginStore(db)
 
@@ -65,7 +63,7 @@ async def list_plugins(
     """List installed plugins."""
     try:
         plugins = await store.list_plugins(plugin_type=plugin_type, enabled_only=enabled_only)
-        
+
         return [
             PluginInfo(
                 id=plugin.id,
@@ -82,7 +80,7 @@ async def list_plugins(
         ]
     except Exception as e:
         logger.error(f"Failed to list plugins: {e}")
-        raise HTTPException(status_code=500, detail="Failed to list plugins")
+        raise HTTPException(status_code=500, detail="Failed to list plugins") from e
 
 
 @router.post("/plugins/install", response_model=PluginInfo)
@@ -97,14 +95,14 @@ async def install_plugin(
             # Load plugin from local plugin directory
             loader = PluginLoader()
             plugin = loader.load_plugin(request.identifier)
-            
+
             # Save to database
             await store.create_plugin(plugin)
-            
+
         elif request.source == "marketplace":
             # TODO: Download from marketplace
             raise HTTPException(
-                status_code=501, 
+                status_code=501,
                 detail="Marketplace installation not yet implemented"
             )
         else:
@@ -112,7 +110,7 @@ async def install_plugin(
                 status_code=400,
                 detail=f"Unsupported plugin source: {request.source}"
             )
-        
+
         return PluginInfo(
             id=plugin.id,
             name=plugin.name,
@@ -124,13 +122,13 @@ async def install_plugin(
             dependencies=plugin.dependencies,
             tags=plugin.tags
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to install plugin {request.identifier}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to install plugin: {str(e)}"
-        )
+        ) from e
 
 
 @router.delete("/plugins/{plugin_id}")
@@ -143,9 +141,9 @@ async def uninstall_plugin(
         success = await store.delete_plugin(plugin_id)
         if not success:
             raise HTTPException(status_code=404, detail="Plugin not found")
-            
+
         return {"message": "Plugin uninstalled successfully"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -153,7 +151,7 @@ async def uninstall_plugin(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to uninstall plugin: {str(e)}"
-        )
+        ) from e
 
 
 @router.put("/plugins/{plugin_id}/toggle", response_model=PluginInfo)
@@ -167,12 +165,12 @@ async def toggle_plugin(
         success = await store.toggle_plugin(plugin_id, request.enabled)
         if not success:
             raise HTTPException(status_code=404, detail="Plugin not found")
-        
+
         # Get updated plugin
         plugin = await store.get_plugin(plugin_id)
         if not plugin:
             raise HTTPException(status_code=404, detail="Plugin not found")
-        
+
         return PluginInfo(
             id=plugin.id,
             name=plugin.name,
@@ -184,7 +182,7 @@ async def toggle_plugin(
             dependencies=plugin.dependencies,
             tags=plugin.tags
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -192,7 +190,7 @@ async def toggle_plugin(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to toggle plugin: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/plugins/marketplace", response_model=list[PluginListing])
@@ -206,7 +204,7 @@ async def browse_marketplace(
         # For now, return empty list
         logger.warning("Marketplace browsing not yet implemented")
         return []
-        
+
     except Exception as e:
         logger.error(f"Failed to browse marketplace: {e}")
-        raise HTTPException(status_code=500, detail="Failed to browse marketplace")
+        raise HTTPException(status_code=500, detail="Failed to browse marketplace") from e

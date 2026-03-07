@@ -32,16 +32,16 @@ class IntegrationConfig(BaseModel):
     name: str  # 'github', 'jira', 'slack'
     project_id: str
     integration_type: IntegrationType
-    
+
     # Configuration
     config: dict[str, Any] = Field(default_factory=dict)
     encrypted_config: dict[str, str] = Field(default_factory=dict)  # Sensitive data
-    
+
     # Status
     status: IntegrationStatus = IntegrationStatus.DISABLED
     enabled: bool = True
     last_sync: datetime | None = None
-    
+
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -55,11 +55,12 @@ class ExternalTaskMapping(BaseModel):
     external_system: str  # 'jira', 'linear', 'github'
     external_task_id: str
     external_url: str | None = None
-    
+
     # Sync tracking
     last_sync: datetime | None = None
-    sync_direction: str = "bidirectional"  # "foundrai_to_external", "external_to_foundrai", "bidirectional"
-    
+    # "foundrai_to_external", "external_to_foundrai", "bidirectional"
+    sync_direction: str = "bidirectional"
+
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
