@@ -111,14 +111,15 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=config.server.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # CORS — skip in desktop mode (same-origin webview)
+    if not config.desktop_mode:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=config.server.cors_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     # API routes
     from foundrai.api.routes import (
@@ -128,11 +129,13 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
         artifacts,
         errors,
         events,
+        execution,
         integrations,
         learnings,
         plugins,
         projects,
         replay,
+        settings,
         sprints,
         tasks,
         teams,
@@ -152,6 +155,12 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
     app.include_router(traces.router, prefix="/api")
     app.include_router(errors.router, prefix="/api")
     app.include_router(replay.router, prefix="/api")
+
+    # Sprint execution routes
+    app.include_router(execution.router, prefix="/api")
+
+    # Settings routes (API key management for desktop mode)
+    app.include_router(settings.router, prefix="/api")
 
     # Phase 4 routes
     app.include_router(plugins.router, prefix="/api")

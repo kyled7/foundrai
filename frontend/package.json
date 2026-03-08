@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build --outDir ../foundrai/frontend/dist",
+    "build:desktop": "tsc && BUILD_MODE=desktop vite build --outDir ../foundrai/frontend/dist --base ./",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

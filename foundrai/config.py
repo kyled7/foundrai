@@ -105,6 +105,7 @@ class FoundrAIConfig(BaseModel):
     server: ServerConfig = Field(default_factory=ServerConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     budget: BudgetConfigModel = Field(default_factory=BudgetConfigModel)
+    desktop_mode: bool = False
 
 
 def load_config(project_dir: str = ".") -> FoundrAIConfig:

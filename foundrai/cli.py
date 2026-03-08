@@ -353,13 +353,7 @@ async def _run_sprint(project_dir: Path, goal: str) -> None:
     config = load_config(str(project_dir))
 
     from foundrai.agents.context import SprintContext
-    from foundrai.agents.llm import LLMClient, LLMConfig
-    from foundrai.agents.personas.developer import DeveloperAgent
-    from foundrai.agents.personas.product_manager import ProductManagerAgent
-    from foundrai.agents.personas.qa_engineer import QAEngineerAgent
-    from foundrai.agents.roles import get_role
-    from foundrai.agents.runtime import AgentRuntime
-    from foundrai.models.enums import AgentRoleName
+    from foundrai.orchestration.agent_factory import create_agents
     from foundrai.orchestration.engine import SprintEngine
     from foundrai.orchestration.message_bus import MessageBus
     from foundrai.orchestration.task_graph import TaskGraph
@@ -391,47 +385,12 @@ async def _run_sprint(project_dir: Path, goal: str) -> None:
             sprint_number=await sprint_store.next_sprint_number(project_id),
         )
 
-        # Create agents
-        agents: dict[str, object] = {}
-
-        if config.team.product_manager.enabled:
-            pm_llm = LLMClient(LLMConfig(model=config.team.product_manager.model))
-            pm_runtime = AgentRuntime(llm_client=pm_llm, event_log=event_log)
-            agents[AgentRoleName.PRODUCT_MANAGER.value] = ProductManagerAgent(
-                role=get_role(AgentRoleName.PRODUCT_MANAGER),
-                model=config.team.product_manager.model,
-                tools=[],
-                message_bus=message_bus,
-                sprint_context=sprint_context,
-                runtime=pm_runtime,
-            )
-            message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
-
-        if config.team.developer.enabled:
-            dev_llm = LLMClient(LLMConfig(model=config.team.developer.model))
-            dev_runtime = AgentRuntime(llm_client=dev_llm, event_log=event_log)
-            agents[AgentRoleName.DEVELOPER.value] = DeveloperAgent(
-                role=get_role(AgentRoleName.DEVELOPER),
-                model=config.team.developer.model,
-                tools=[],
-                message_bus=message_bus,
-                sprint_context=sprint_context,
-                runtime=dev_runtime,
-            )
-            message_bus.register_agent(AgentRoleName.DEVELOPER.value)
-
-        if config.team.qa_engineer.enabled:
-            qa_llm = LLMClient(LLMConfig(model=config.team.qa_engineer.model))
-            qa_runtime = AgentRuntime(llm_client=qa_llm, event_log=event_log)
-            agents[AgentRoleName.QA_ENGINEER.value] = QAEngineerAgent(
-                role=get_role(AgentRoleName.QA_ENGINEER),
-                model=config.team.qa_engineer.model,
-                tools=[],
-                message_bus=message_bus,
-                sprint_context=sprint_context,
-                runtime=qa_runtime,
-            )
-            message_bus.register_agent(AgentRoleName.QA_ENGINEER.value)
+        agents = create_agents(
+            config=config,
+            sprint_context=sprint_context,
+            message_bus=message_bus,
+            event_log=event_log,
+        )
 
         # Live output
         async def on_event(event_type: str, data: dict) -> None:

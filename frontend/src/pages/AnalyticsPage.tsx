@@ -6,17 +6,50 @@ import { AgentPerformanceTable } from '../components/analytics/AgentPerformanceT
 import { BudgetMeter } from '../components/analytics/BudgetMeter';
 import { CommGraph } from '../components/analytics/CommGraph';
 import { SprintComparison } from '../components/analytics/SprintComparison';
+import { listProjects } from '../api/projects';
+import { listSprints } from '../api/sprints';
+import { getProjectCost, getSprintBudget } from '../api/analytics';
 import type { CostBreakdown, BudgetStatus } from '../api/analytics';
 
 export function AnalyticsPage() {
-  const [projectCost, _setProjectCost] = useState<CostBreakdown | null>(null);
-  const [budget, _setBudget] = useState<BudgetStatus | null>(null);
-  const [error, _setError] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [latestSprintId, setLatestSprintId] = useState<string | null>(null);
+  const [projectCost, setProjectCost] = useState<CostBreakdown | null>(null);
+  const [budget, setBudget] = useState<BudgetStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  // Load first project + its sprints automatically
   useEffect(() => {
-    // In a real app, project/sprint IDs would come from context/params
-    // For now, show placeholder state
+    listProjects()
+      .then((data) => {
+        if (data.projects.length > 0) {
+          const pid = data.projects[0].project_id;
+          setProjectId(pid);
+        }
+      })
+      .catch((e) => setError(e.message));
   }, []);
+
+  // Load project cost and latest sprint when project changes
+  useEffect(() => {
+    if (!projectId) return;
+
+    getProjectCost(projectId)
+      .then(setProjectCost)
+      .catch(() => setProjectCost(null));
+
+    listSprints(projectId)
+      .then((data) => {
+        if (data.sprints.length > 0) {
+          const sid = data.sprints[0].sprint_id;
+          setLatestSprintId(sid);
+          getSprintBudget(sid)
+            .then(setBudget)
+            .catch(() => setBudget(null));
+        }
+      })
+      .catch(() => {});
+  }, [projectId]);
 
   const agentRows = projectCost
     ? Object.entries(projectCost.by_agent).map(([agent, v]) => ({
@@ -87,14 +120,14 @@ export function AnalyticsPage() {
       <AgentPerformanceTable agents={agentRows} />
 
       {/* Communication Graph */}
-      <CommGraph sprintId={null} />
+      <CommGraph sprintId={latestSprintId} />
 
       {/* Sprint Comparison */}
-      <SprintComparison projectId={null} />
+      <SprintComparison projectId={projectId} />
 
       {!projectCost && !error && (
         <p className="text-gray-400 text-sm text-center py-8">
-          Select a project to view analytics. Cost data will appear as agents run sprints.
+          No analytics data yet. Cost data will appear as agents run sprints.
         </p>
       )}
     </div>

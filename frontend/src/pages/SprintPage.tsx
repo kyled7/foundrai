@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSprint, listEvents } from '../api/sprints';
 import { listApprovals } from '../api/approvals';
+import { executeSprint, cancelSprint, getExecutionStatus } from '../api/execution';
 import { useSprintStore } from '../stores/sprintStore';
 import { useEventStore } from '../stores/eventStore';
 import { useApprovalStore } from '../stores/approvalStore';
@@ -21,6 +22,8 @@ type Tab = 'board' | 'feed' | 'tree' | 'approvals' | 'team' | 'retro';
 export function SprintPage() {
   const { sprintId } = useParams<{ sprintId: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('board');
+  const [executing, setExecuting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const sprint = useSprintStore((s) => s.sprint);
   const setSprint = useSprintStore((s) => s.setSprint);
   const setLoading = useSprintStore((s) => s.setLoading);
@@ -32,17 +35,22 @@ export function SprintPage() {
   const addApproval = useApprovalStore((s) => s.addApproval);
   const resolveApproval = useApprovalStore((s) => s.resolveApproval);
 
+  const loadSprint = useCallback(() => {
+    if (!sprintId) return;
+    getSprint(sprintId).then((data) => {
+      setSprint(data);
+      setLoading(false);
+    }).catch(() => {
+      setLoading(false);
+    });
+  }, [sprintId, setSprint, setLoading]);
+
   // Load sprint data
   useEffect(() => {
     if (!sprintId) return;
     setLoading(true);
     clearEvents();
-
-    getSprint(sprintId).then((data) => {
-      setSprint(data);
-    }).catch(() => {
-      setLoading(false);
-    });
+    loadSprint();
 
     // Load historical events from API
     listEvents(sprintId).then((data) => {
@@ -79,8 +87,12 @@ export function SprintPage() {
       case 'approval.resolved':
         resolveApproval(d.approval_id as string, d.status as ApprovalRequestType['status']);
         break;
+      case 'sprint.status_changed':
+        // Reload sprint data on status change to get updated metrics/tasks
+        loadSprint();
+        break;
     }
-  }, [addEvent, updateTaskStatus, addTask, addApproval, resolveApproval]);
+  }, [addEvent, updateTaskStatus, addTask, addApproval, resolveApproval, loadSprint]);
 
   useSprintWebSocket({
     sprintId: sprintId ?? '',
@@ -88,7 +100,37 @@ export function SprintPage() {
     enabled: !!sprintId,
   });
 
+  const handleExecute = async () => {
+    if (!sprintId) return;
+    setExecuting(true);
+    try {
+      await executeSprint(sprintId);
+      loadSprint();
+    } catch {
+      // Could show error toast
+    } finally {
+      setExecuting(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!sprintId) return;
+    setCancelling(true);
+    try {
+      await cancelSprint(sprintId);
+      loadSprint();
+    } catch {
+      // Could show error toast
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (!sprintId) return <div className="p-6">No sprint selected</div>;
+
+  const isCreated = sprint?.status === 'created';
+  const isFailed = sprint?.status === 'failed';
+  const isRunning = sprint?.status === 'planning' || sprint?.status === 'executing' || sprint?.status === 'reviewing';
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'board', label: 'Board' },
@@ -102,6 +144,36 @@ export function SprintPage() {
   return (
     <div className="flex flex-col h-full">
       <ApprovalBanner onReview={() => setActiveTab('approvals')} />
+
+      {/* Sprint header with action buttons */}
+      {sprint && (isCreated || isFailed || isRunning) && (
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="text-sm">
+            <span className="font-medium">Sprint #{sprint.sprint_number}</span>
+            <span className="text-gray-500 ml-2">{sprint.goal}</span>
+          </div>
+          <div className="flex gap-2">
+            {(isCreated || isFailed) && (
+              <button
+                onClick={handleExecute}
+                disabled={executing}
+                className="px-4 py-1.5 text-sm rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {executing ? 'Starting...' : isFailed ? 'Retry Sprint' : 'Execute Sprint'}
+              </button>
+            )}
+            {isRunning && (
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="px-4 py-1.5 text-sm rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancelling ? 'Cancelling...' : 'Cancel'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex border-b border-gray-200 dark:border-gray-700 px-4">
         {tabs.map((tab) => (

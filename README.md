@@ -10,7 +10,7 @@
 [![Python 3.11+](https://img.shields.io/pypi/pyversions/foundrai.svg)](https://pypi.org/project/foundrai/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Getting Started](#getting-started) · [Documentation](./docs/) · [Roadmap](./docs/ROADMAP.md) · [Contributing](#contributing)
+[Desktop App](#desktop-app) · [Getting Started](#getting-started) · [Documentation](./docs/) · [Roadmap](./docs/ROADMAP.md) · [Contributing](#contributing)
 
 ---
 
@@ -79,15 +79,34 @@ FoundrAI is an open-source platform that orchestrates multiple AI agents as an a
 ![404](./docs/screenshots/07-404.jpg)
 *Clean error page with navigation back to dashboard*
 
+## Desktop App
+
+The easiest way to use FoundrAI — download, install, double-click. No terminal required.
+
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon & Intel) | [FoundrAI.dmg](../../releases/latest) |
+| Windows | [FoundrAI.msi](../../releases/latest) |
+
+On first launch the app will prompt you to enter an API key for at least one LLM provider (Anthropic, OpenAI, or Google). After that you're ready to create a project and start your first sprint.
+
+Under the hood the desktop app bundles the full Python backend (via PyInstaller) as a sidecar process inside a native Tauri v2 window. The server binds to `127.0.0.1` only — nothing is exposed to the network.
+
 ## Getting Started
 
-### Prerequisites
+### Option A: Desktop App (Recommended)
+
+Download the latest release for your platform from the [Releases page](../../releases/latest) and run the installer. That's it.
+
+### Option B: From Source
+
+#### Prerequisites
 - Python 3.11+
 - Node.js 18+ & npm (for the web dashboard)
 - Docker (for sandboxed code execution)
 - An API key for at least one LLM provider (OpenAI, Anthropic, etc.)
 
-### Installation
+#### Installation
 
 ```bash
 # Clone the repo
@@ -101,11 +120,11 @@ pip install foundrai
 pip install -e ".[dev]"
 
 # Install frontend dependencies
-cd frontend-v2
+cd frontend
 npm install
 ```
 
-### Quick Start
+#### Quick Start
 
 ```bash
 # Configure your LLM provider(s)
@@ -114,7 +133,7 @@ export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
 
 # Start the web dashboard (recommended)
-cd frontend-v2
+cd frontend
 npm run dev
 # → Open http://localhost:5173
 
@@ -146,6 +165,8 @@ foundrai serve           # Launch the web dashboard on port 8420
 
 ```
 ┌─────────────────────────────────────────────────────┐
+│         Desktop Shell (Tauri v2 / Browser)           │
+├─────────────────────────────────────────────────────┤
 │              Frontend (React + TypeScript)            │
 │  Sprint Board │ Agent Feed │ Goal Tree │ Metrics     │
 ├─────────────────────────────────────────────────────┤
@@ -198,6 +219,24 @@ sprint:
   token_budget: 100000
 ```
 
+## Building the Desktop App
+
+To build the desktop app from source you need Rust and the Tauri CLI in addition to the standard prerequisites.
+
+```bash
+# Install Tauri CLI
+cargo install tauri-cli --version "^2"
+
+# Build the sidecar (frontend + PyInstaller)
+pip install pyinstaller
+python desktop/build_sidecar.py
+
+# Build the native installer (.dmg / .msi)
+cd desktop && cargo tauri build
+```
+
+The installer will be in `desktop/src-tauri/target/release/bundle/`.
+
 ## Roadmap
 
 - **v0.1** ✅ Core agent engine + CLI (Foundation, Visual Layer, Agile Engine, Observability, Ecosystem)
@@ -207,7 +246,8 @@ sprint:
   - v0.2.2 ✅ Sprint Command Center (realtime feed, WebSocket, approvals)
   - v0.2.3 ✅ Analytics & Insights (charts, cost tracking, sprint replay)
   - v0.2.4 ✅ Settings & Polish (settings page, error handling, accessibility)
-- **v0.3** 🔨 Backend Integration — Connect frontend to live backend
+- **v0.3** ✅ Native Desktop App — Tauri v2 + PyInstaller sidecar, API key settings UI, CI/CD releases
+- **v0.4** ✅ Backend Integration — Sprint execution from web, agent factory, analytics wiring, retrospectives
 
 See [full roadmap](./docs/ROADMAP.md) for details.
 

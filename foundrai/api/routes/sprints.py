@@ -15,11 +15,12 @@ router = APIRouter()
 
 class SprintCreate(BaseModel):
     goal: str = Field(..., min_length=1, max_length=1000)
+    auto_execute: bool = False
 
 
 @router.post("/projects/{project_id}/sprints", status_code=201)
 async def create_sprint(project_id: str, body: SprintCreate) -> dict:
-    """Create a new sprint."""
+    """Create a new sprint, optionally auto-executing it."""
     db = await get_db()
 
     # Check project exists
@@ -54,17 +55,28 @@ async def create_sprint(project_id: str, body: SprintCreate) -> dict:
     )
     await db.conn.commit()
 
-    return {
+    result = {
         "sprint_id": sprint_id,
         "project_id": project_id,
         "sprint_number": sprint_number,
         "goal": body.goal,
         "status": "created",
         "tasks": [],
-        "metrics": {"total_tasks": 0, "completed_tasks": 0, "failed_tasks": 0,
-                     "total_tokens": 0, "total_llm_calls": 0, "duration_seconds": 0,
-                     "completion_rate": 0},
+        "metrics": {
+            "total_tasks": 0, "completed_tasks": 0, "failed_tasks": 0,
+            "total_tokens": 0, "total_llm_calls": 0, "duration_seconds": 0,
+            "completion_rate": 0,
+        },
     }
+
+    # Auto-execute if requested
+    if body.auto_execute:
+        from foundrai.api.routes.execution import ExecuteRequest, execute_sprint
+
+        await execute_sprint(sprint_id, ExecuteRequest(goal=body.goal))
+        result["status"] = "executing"
+
+    return result
 
 
 @router.get("/projects/{project_id}/sprints")
@@ -84,19 +96,21 @@ async def list_sprints(project_id: str) -> dict:
     rows = await cursor.fetchall()
     sprints = []
     for row in rows:
+        metrics = json.loads(row["metrics_json"] or "{}")
         sprints.append({
             "sprint_id": row["sprint_id"],
             "project_id": row["project_id"],
             "sprint_number": row["sprint_number"],
             "goal": row["goal"],
             "status": row["status"],
+            "metrics": metrics,
         })
     return {"sprints": sprints, "total": len(sprints)}
 
 
 @router.get("/sprints/{sprint_id}")
 async def get_sprint(sprint_id: str) -> dict:
-    """Get sprint details."""
+    """Get sprint details including tasks."""
     db = await get_db()
     cursor = await db.conn.execute(
         "SELECT * FROM sprints WHERE sprint_id = ?", (sprint_id,)
@@ -105,13 +119,43 @@ async def get_sprint(sprint_id: str) -> dict:
     if not row:
         raise HTTPException(status_code=404, detail="Sprint not found")
 
+    # Fetch tasks for this sprint
+    task_cursor = await db.conn.execute(
+        "SELECT * FROM tasks WHERE sprint_id = ? ORDER BY priority, created_at",
+        (sprint_id,),
+    )
+    task_rows = await task_cursor.fetchall()
+    tasks = []
+    for t in task_rows:
+        tasks.append({
+            "task_id": t["task_id"],
+            "title": t["title"],
+            "description": t["description"],
+            "acceptance_criteria": json.loads(
+                t["acceptance_criteria_json"] or "[]"
+            ),
+            "assigned_to": t["assigned_to"],
+            "priority": t["priority"],
+            "status": t["status"],
+            "dependencies": json.loads(t["dependencies_json"] or "[]"),
+            "result": json.loads(t["result_json"]) if t["result_json"] else None,
+            "review": json.loads(t["review_json"]) if t["review_json"] else None,
+            "created_at": t["created_at"],
+            "updated_at": t["updated_at"],
+        })
+
+    metrics = json.loads(row["metrics_json"] or "{}")
     return {
         "sprint_id": row["sprint_id"],
         "project_id": row["project_id"],
         "sprint_number": row["sprint_number"],
         "goal": row["goal"],
         "status": row["status"],
-        "metrics": json.loads(row["metrics_json"] or "{}"),
+        "tasks": tasks,
+        "metrics": metrics,
+        "created_at": row["created_at"],
+        "completed_at": row.get("completed_at"),
+        "error": row.get("error"),
     }
 
 
@@ -149,11 +193,97 @@ async def start_multi_sprint(project_id: str, body: SprintCreate) -> dict:
     )
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Create the first sprint
+    result = await create_sprint(
+        project_id,
+        SprintCreate(goal=body.goal, auto_execute=True),
+    )
     return {
-        "status": "multi_sprint_queued",
+        "status": "multi_sprint_started",
         "project_id": project_id,
+        "sprint_id": result["sprint_id"],
         "goal": body.goal,
-        "message": "Multi-sprint execution queued. Monitor via WebSocket or events API.",
+        "message": "First sprint is executing. Monitor via WebSocket.",
+    }
+
+
+@router.get("/sprints/{sprint_id}/retrospective")
+async def get_retrospective(sprint_id: str) -> dict:
+    """Get sprint retrospective data.
+
+    Generates a retrospective summary from completed sprint data.
+    """
+    db = await get_db()
+    cursor = await db.conn.execute(
+        "SELECT * FROM sprints WHERE sprint_id = ?", (sprint_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    if row["status"] not in ("completed", "failed"):
+        raise HTTPException(
+            status_code=400,
+            detail="Retrospective is only available for completed or failed sprints",
+        )
+
+    # Gather task stats
+    task_cursor = await db.conn.execute(
+        "SELECT status, COUNT(*) as cnt FROM tasks WHERE sprint_id = ? GROUP BY status",
+        (sprint_id,),
+    )
+    status_counts: dict[str, int] = {}
+    for t in await task_cursor.fetchall():
+        status_counts[t["status"]] = t["cnt"]
+
+    done = status_counts.get("done", 0)
+    failed = status_counts.get("failed", 0)
+    total = sum(status_counts.values())
+    rate = done / total if total > 0 else 0
+
+    # Build went_well / went_wrong from task outcomes
+    went_well: list[str] = []
+    went_wrong: list[str] = []
+    action_items: list[str] = []
+
+    if done > 0:
+        went_well.append(f"{done} of {total} tasks completed successfully")
+    if rate >= 0.8:
+        went_well.append("High task completion rate")
+    if failed > 0:
+        went_wrong.append(f"{failed} task(s) failed during execution")
+        action_items.append(
+            "Review failed tasks and refine acceptance criteria for next sprint"
+        )
+    if status_counts.get("blocked", 0) > 0:
+        went_wrong.append(
+            f"{status_counts['blocked']} task(s) were blocked by approval timeouts"
+        )
+        action_items.append("Review approval policies to reduce bottlenecks")
+    if rate < 0.5 and total > 0:
+        went_wrong.append("Less than half the tasks were completed")
+        action_items.append(
+            "Consider breaking goal into smaller, more achievable sprints"
+        )
+
+    # Check for learnings in DB
+    learnings_count = 0
+    try:
+        lc = await db.conn.execute(
+            "SELECT COUNT(*) as cnt FROM learnings WHERE sprint_id = ?",
+            (sprint_id,),
+        )
+        lr = await lc.fetchone()
+        learnings_count = lr["cnt"] if lr else 0
+    except Exception:
+        pass
+
+    return {
+        "went_well": went_well,
+        "went_wrong": went_wrong,
+        "action_items": action_items,
+        "learnings_count": learnings_count,
     }
 
 
@@ -186,6 +316,10 @@ async def get_goal_tree(sprint_id: str) -> dict:
             "assigned_to": task["assigned_to"],
             "metadata": {},
         })
-        edges.append({"source": sprint_id, "target": task["task_id"], "type": "decomposition"})
+        edges.append({
+            "source": sprint_id,
+            "target": task["task_id"],
+            "type": "decomposition",
+        })
 
     return {"nodes": nodes, "edges": edges}

@@ -59,13 +59,20 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="p-3">
+      <div className="p-3 space-y-1">
         <Link
           to="/analytics"
           className="flex items-center gap-2 px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <span>📊</span>
           <span>Analytics</span>
+        </Link>
+        <Link
+          to="/settings"
+          className="flex items-center gap-2 px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          <span>⚙️</span>
+          <span>Settings</span>
         </Link>
       </div>
 
