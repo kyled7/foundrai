@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSprint, listEvents } from '../api/sprints';
 import { listApprovals } from '../api/approvals';
-import { executeSprint, cancelSprint, getExecutionStatus } from '../api/execution';
+import { executeSprint, cancelSprint } from '../api/execution';
 import { useSprintStore } from '../stores/sprintStore';
 import { useEventStore } from '../stores/eventStore';
 import { useApprovalStore } from '../stores/approvalStore';
