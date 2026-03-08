@@ -83,8 +83,18 @@ def stage_binary() -> None:
 
 
 def main() -> None:
-    build_frontend()
-    build_pyinstaller()
+    import os
+
+    if not os.environ.get("SKIP_FRONTEND"):
+        build_frontend()
+    else:
+        print("==> Skipping frontend build (SKIP_FRONTEND set)")
+
+    if not os.environ.get("SKIP_PYINSTALLER"):
+        build_pyinstaller()
+    else:
+        print("==> Skipping PyInstaller build (SKIP_PYINSTALLER set)")
+
     stage_binary()
     print("==> Build complete! Run 'cargo tauri build' from desktop/ to create installer.")
 

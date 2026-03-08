@@ -40,6 +40,8 @@ jobs:
         run: |
           npm ci
           npm run build:desktop
+        env:
+          BUILD_MODE: desktop
 
       - name: Build sidecar with PyInstaller
         working-directory: desktop
@@ -102,6 +104,8 @@ jobs:
         run: |
           npm ci
           npm run build:desktop
+        env:
+          BUILD_MODE: desktop
 
       - name: Build sidecar with PyInstaller
         working-directory: desktop
