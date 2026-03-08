@@ -105,7 +105,7 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
 
     app = FastAPI(
         title="FoundrAI",
-        version="0.2.4",
+        version="0.5.0",
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         lifespan=lifespan,
