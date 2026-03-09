@@ -90,6 +90,11 @@ The easiest way to use FoundrAI — download, install, double-click. No terminal
 
 On first launch the app will prompt you to enter an API key for at least one LLM provider (Anthropic, OpenAI, or Google). After that you're ready to create a project and start your first sprint.
 
+> **macOS note:** The app is not code-signed yet. After copying to `/Applications`, macOS may show *"FoundrAI is damaged and can't be opened."* To fix this, run once in Terminal:
+> ```bash
+> xattr -cr /Applications/FoundrAI.app
+> ```
+
 Under the hood the desktop app bundles the full Python backend (via PyInstaller) as a sidecar process inside a native Tauri v2 window. The server binds to `127.0.0.1` only — nothing is exposed to the network.
 
 ## Getting Started
