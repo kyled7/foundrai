@@ -3,8 +3,11 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
+const isDesktop = process.env.BUILD_MODE === 'desktop';
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  base: isDesktop ? './' : '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -14,13 +17,17 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8420',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: 'ws://localhost:8420',
         ws: true,
       },
     },
+  },
+  build: {
+    outDir: '../foundrai/frontend/dist',
+    emptyOutDir: true,
   },
 })
