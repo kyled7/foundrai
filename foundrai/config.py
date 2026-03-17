@@ -58,6 +58,7 @@ class SprintConfig(BaseModel):
     max_sprints: int = 5
     auto_start_next: bool = False
     max_task_retries: int = 3
+    task_timeout_seconds: int = 300
 
 
 class PersistenceConfig(BaseModel):

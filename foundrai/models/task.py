@@ -51,6 +51,7 @@ class Task(BaseModel):
     result: TaskResult | None = None
     review: ReviewResult | None = None
     estimated_tokens: int = 0
+    timeout_seconds: int | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
