@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from foundrai.agents.roles import AgentRole
     from foundrai.config import FoundrAIConfig
+    from foundrai.models.enums import AgentRoleName
     from foundrai.tools.base import BaseTool
 
 
@@ -30,6 +31,23 @@ class ToolRegistry:
     def get_tools_for_role(self, role: AgentRole) -> list[BaseTool]:
         """Return tool instances matching the role's tool list."""
         return [self._tools[name] for name in role.tools if name in self._tools]
+
+    def get_tools_for_agent(self, role_name: AgentRoleName) -> list[BaseTool]:
+        """Return tool instances for an agent by role name.
+
+        Args:
+            role_name: The agent's role name
+
+        Returns:
+            List of tool instances for that role
+
+        Raises:
+            KeyError: If the role is not found
+        """
+        from foundrai.agents.roles import get_role
+
+        role = get_role(role_name)
+        return self.get_tools_for_role(role)
 
 
 def create_tool_registry(config: FoundrAIConfig, project_path: str | Path) -> ToolRegistry:
