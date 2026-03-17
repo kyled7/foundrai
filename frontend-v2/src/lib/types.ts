@@ -299,3 +299,14 @@ export interface ListResponse<T> {
   items: T[];
   total: number;
 }
+
+// === Store Type Aliases (for compatibility with legacy stores) ===
+export interface SprintResponse extends Sprint {
+  tasks: Task[];
+  metrics?: SprintMetrics;
+  error?: string | null;
+}
+
+export type TaskResponse = Task;
+export type ApprovalRequest = Approval;
+export type WSMessage = WSEvent;
