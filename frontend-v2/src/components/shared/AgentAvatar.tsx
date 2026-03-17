@@ -1,27 +1,38 @@
 import { cn } from '@/lib/utils';
 
-const roleConfig: Record<string, { icon: string; color: string }> = {
-  product_manager: { icon: '📋', color: 'bg-blue-500/20' },
-  developer: { icon: '💻', color: 'bg-green-500/20' },
-  qa_engineer: { icon: '🧪', color: 'bg-purple-500/20' },
-  architect: { icon: '🏗️', color: 'bg-orange-500/20' },
-  designer: { icon: '🎨', color: 'bg-pink-500/20' },
-  devops: { icon: '⚙️', color: 'bg-yellow-500/20' },
+const AGENT_COLORS: Record<string, { bg: string; emoji: string }> = {
+  product_manager: { bg: 'bg-purple-500', emoji: '📋' },
+  developer:       { bg: 'bg-blue-500',   emoji: '💻' },
+  qa_engineer:     { bg: 'bg-green-500',  emoji: '🧪' },
+  architect:       { bg: 'bg-amber-500',  emoji: '🏗️' },
+  designer:        { bg: 'bg-pink-500',   emoji: '🎨' },
+  devops:          { bg: 'bg-indigo-500', emoji: '🚀' },
 };
 
-interface AgentAvatarProps {
+const sizes = {
+  xs: 'w-5 h-5 text-xs',
+  sm: 'w-6 h-6 text-xs',
+  md: 'w-8 h-8 text-sm',
+};
+
+interface Props {
   role: string;
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  size?: 'xs' | 'sm' | 'md';
 }
 
-const sizeMap = { sm: 'w-6 h-6 text-xs', md: 'w-8 h-8 text-sm', lg: 'w-10 h-10 text-base' };
+export function AgentAvatar({ role, size = 'md' }: Props) {
+  const config = AGENT_COLORS[role] ?? AGENT_COLORS.developer;
 
-export function AgentAvatar({ role, size = 'md', className }: AgentAvatarProps) {
-  const config = roleConfig[role] ?? { icon: '🤖', color: 'bg-gray-500/20' };
   return (
-    <div className={cn('rounded-full flex items-center justify-center', config.color, sizeMap[size], className)}>
-      {config.icon}
+    <div
+      className={cn(
+        'rounded-full flex items-center justify-center text-white',
+        config.bg,
+        sizes[size]
+      )}
+      title={role.replace('_', ' ')}
+    >
+      {config.emoji}
     </div>
   );
 }

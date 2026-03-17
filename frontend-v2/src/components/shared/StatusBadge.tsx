@@ -1,27 +1,41 @@
 import { cn } from '@/lib/utils';
 
-const statusConfig: Record<string, { color: string; label: string }> = {
-  created: { color: 'bg-gray-500/20 text-gray-400', label: 'Created' },
-  planning: { color: 'bg-blue-500/20 text-blue-400', label: 'Planning' },
-  in_progress: { color: 'bg-yellow-500/20 text-yellow-400', label: 'In Progress' },
-  review: { color: 'bg-purple-500/20 text-purple-400', label: 'Review' },
-  completed: { color: 'bg-green-500/20 text-green-400', label: 'Completed' },
-  failed: { color: 'bg-red-500/20 text-red-400', label: 'Failed' },
-  cancelled: { color: 'bg-gray-500/20 text-gray-500', label: 'Cancelled' },
-  pending: { color: 'bg-gray-500/20 text-gray-400', label: 'Pending' },
-  blocked: { color: 'bg-orange-500/20 text-orange-400', label: 'Blocked' },
+const STATUS_STYLES: Record<string, string> = {
+  backlog: 'bg-gray-100 text-gray-700',
+  in_progress: 'bg-blue-100 text-blue-700',
+  in_review: 'bg-yellow-100 text-yellow-700',
+  done: 'bg-green-100 text-green-700',
+  failed: 'bg-red-100 text-red-700',
+  blocked: 'bg-gray-200 text-gray-600',
+  created: 'bg-gray-100 text-gray-700',
+  planning: 'bg-purple-100 text-purple-700',
+  executing: 'bg-blue-100 text-blue-700',
+  reviewing: 'bg-yellow-100 text-yellow-700',
+  completed: 'bg-green-100 text-green-700',
+  cancelled: 'bg-gray-200 text-gray-600',
+  pending: 'bg-amber-100 text-amber-700',
+  approved: 'bg-green-100 text-green-700',
+  rejected: 'bg-red-100 text-red-700',
 };
 
-interface StatusBadgeProps {
+interface Props {
   status: string;
+  size?: 'sm' | 'md';
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfig[status] ?? { color: 'bg-gray-500/20 text-gray-400', label: status };
+export function StatusBadge({ status, size = 'sm', className }: Props) {
   return (
-    <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', config.color, className)}>
-      {config.label}
+    <span
+      role="status"
+      className={cn(
+        'inline-flex items-center rounded-full font-medium capitalize',
+        size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm',
+        STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-700',
+        className
+      )}
+    >
+      {status.replace('_', ' ')}
     </span>
   );
 }

@@ -41,7 +41,9 @@ export function ProjectCard({ project, lastSprint, agentCount = 0, totalCost = 0
         </span>
         <span>{project.sprint_count} sprints</span>
         {totalCost > 0 && <CostDisplay costUsd={totalCost} className="text-xs" />}
-        <TimeAgo date={project.created_at} className="text-xs ml-auto" />
+        <span className="ml-auto">
+          <TimeAgo timestamp={project.created_at} />
+        </span>
       </div>
 
       <div className="mt-3 pt-3 border-t border-border">

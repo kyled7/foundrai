@@ -76,7 +76,7 @@ export function FeedEntry({ event }: Props) {
           <span>{config.icon}</span>
           <span className="font-medium capitalize">{agentId.replace('_', ' ')}</span>
           <span className="text-gray-400">·</span>
-          <TimeAgo date={event.timestamp} />
+          <TimeAgo timestamp={event.timestamp} />
         </div>
 
         <div className="mt-1 text-gray-700 dark:text-gray-300">

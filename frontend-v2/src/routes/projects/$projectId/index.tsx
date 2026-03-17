@@ -77,7 +77,9 @@ export function ProjectDetailPage() {
                     <p className="text-foreground text-sm truncate">{s.goal}</p>
                   </div>
                   <StatusBadge status={s.status} />
-                  <TimeAgo date={s.created_at} className="text-muted text-xs" />
+                  <span className="text-muted text-xs">
+                    <TimeAgo timestamp={s.created_at} />
+                  </span>
                 </div>
               ))}
             </div>
@@ -129,7 +131,9 @@ export function ProjectDetailPage() {
                   <p className="text-foreground text-sm">{l.content}</p>
                   <div className="flex gap-2 mt-2">
                     <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{l.category}</span>
-                    <TimeAgo date={l.created_at} className="text-muted text-xs" />
+                    <span className="text-muted text-xs">
+                      <TimeAgo timestamp={l.created_at} />
+                    </span>
                   </div>
                 </div>
               ))}
