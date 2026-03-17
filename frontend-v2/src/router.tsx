@@ -15,6 +15,9 @@ import { TemplatesPage } from '@/routes/templates';
 const AnalyticsPage = lazy(() =>
   import('@/routes/projects/$projectId/analytics').then((m) => ({ default: m.AnalyticsPage }))
 );
+const SprintDetailPage = lazy(() =>
+  import('@/routes/projects/$projectId/sprint/$sprintId/index').then((m) => ({ default: m.SprintDetailPage }))
+);
 const SprintReplayPage = lazy(() =>
   import('@/routes/projects/$projectId/sprint/$sprintId/replay').then((m) => ({ default: m.SprintReplayPage }))
 );
@@ -90,6 +93,16 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
+const sprintDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId/sprint/$sprintId',
+  component: () => (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <SprintDetailPage />
+    </Suspense>
+  ),
+});
+
 const sprintReplayRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects/$projectId/sprint/$sprintId/replay',
@@ -105,11 +118,12 @@ const routeTree = rootRoute.addChildren([
   newProjectRoute,
   projectDetailRoute,
   sprintRoute,
+  sprintDetailRoute,
+  sprintReplayRoute,
   analyticsRoute,
   teamRoute,
   templatesRoute,
   settingsRoute,
-  sprintReplayRoute,
 ]);
 
 export const router = createRouter({ routeTree });
