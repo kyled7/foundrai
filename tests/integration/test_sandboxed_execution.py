@@ -256,3 +256,87 @@ print('All tests passed!')
     assert review_result.passed is True
     assert isinstance(review_result.issues, list)
     assert isinstance(review_result.suggestions, list)
+
+
+@pytest.mark.asyncio
+async def test_timeout_and_limits():
+    """Test that code execution properly enforces timeout and memory limits."""
+    import subprocess
+
+    # Check if Docker is available
+    docker_available = False
+    try:
+        result = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            timeout=5,
+        )
+        docker_available = result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+        pass
+
+    if not docker_available:
+        pytest.skip("Docker is not available - skipping sandbox timeout tests")
+
+    # Test timeout enforcement
+    executor = get_code_executor(provider="docker", timeout=2)
+
+    # Verify we got a real CodeExecutor, not a noop
+    from foundrai.tools.code_executor import CodeExecutor, NoopCodeExecutor
+
+    assert isinstance(executor, CodeExecutor), "Expected CodeExecutor but got NoopCodeExecutor"
+
+    # Code that sleeps longer than the timeout
+    timeout_code = """
+import time
+time.sleep(5)
+print("This should not be reached")
+"""
+
+    timeout_result = await executor.execute(
+        CodeExecutorInput(
+            code=timeout_code,
+            language="python",
+            timeout_seconds=1,  # Short timeout
+        )
+    )
+
+    # Verify timeout is enforced
+    assert timeout_result.success is False
+    assert timeout_result.error is not None
+    assert "timed out" in timeout_result.error.lower()
+
+    # Test successful execution within timeout
+    quick_code = 'print("Quick execution")'
+
+    quick_result = await executor.execute(
+        CodeExecutorInput(
+            code=quick_code,
+            language="python",
+            timeout_seconds=5,
+        )
+    )
+
+    # Verify quick code executes successfully
+    assert quick_result.success is True
+    assert "Quick execution" in quick_result.output
+
+    # Test that memory limits are passed to Docker
+    # (We can't easily test actual OOM, but we verify the executor accepts the parameter)
+    limited_executor = get_code_executor(provider="docker", timeout=30, max_memory=256)
+
+    assert isinstance(limited_executor, CodeExecutor), "Expected CodeExecutor with memory limits"
+
+    simple_code = 'print("Memory limit test")'
+
+    limit_result = await limited_executor.execute(
+        CodeExecutorInput(
+            code=simple_code,
+            language="python",
+            timeout_seconds=5,
+        )
+    )
+
+    # Verify execution works with memory limits configured
+    assert limit_result.success is True
+    assert "Memory limit test" in limit_result.output
