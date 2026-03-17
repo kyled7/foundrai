@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
 
 interface ErrorEntry {
   error_id: number;

@@ -96,11 +96,15 @@ export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 export interface Approval {
   approval_id: string;
   sprint_id: string;
+  task_id: string | null;
   agent_id: string;
   action_type: string;
   title: string;
+  description: string;
+  context: Record<string, unknown>;
   status: ApprovalStatus;
   created_at: string;
+  resolved_at: string | null;
 }
 
 export interface ApprovalDecision {
@@ -208,8 +212,10 @@ export interface Learning {
 // === WebSocket Events ===
 export type WSEventType =
   | 'sprint.started' | 'sprint.paused' | 'sprint.completed' | 'sprint.failed'
-  | 'task.created' | 'task.started' | 'task.completed' | 'task.failed'
-  | 'agent.thinking' | 'agent.action' | 'agent.message'
+  | 'sprint.status_changed' | 'sprint.planning_started' | 'sprint.planning_completed'
+  | 'sprint.review_completed' | 'sprint.retrospective_started' | 'sprint.retrospective_completed'
+  | 'task.created' | 'task.started' | 'task.completed' | 'task.failed' | 'task.status_changed'
+  | 'agent.thinking' | 'agent.action' | 'agent.message' | 'agent.tool_call' | 'agent.tool_result'
   | 'artifact.created' | 'artifact.updated'
   | 'approval.requested' | 'approval.resolved'
   | 'budget.warning' | 'budget.exceeded'

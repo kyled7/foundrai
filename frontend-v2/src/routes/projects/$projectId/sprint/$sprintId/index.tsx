@@ -64,10 +64,29 @@ export function SprintDetailPage() {
   // Sync sprint data to store when loaded
   useEffect(() => {
     if (sprint) {
-      setSprint(sprint);
-      setLoading(false);
+      // Load tasks for the sprint
+      api.tasks.list(sprintId).then((tasks) => {
+        // Construct SprintResponse with tasks
+        const sprintResponse = {
+          ...sprint,
+          tasks,
+          metrics: undefined,
+          error: null,
+        };
+        setSprint(sprintResponse);
+        setLoading(false);
+      }).catch(() => {
+        // If tasks fail to load, still set the sprint with empty tasks
+        setSprint({
+          ...sprint,
+          tasks: [],
+          metrics: undefined,
+          error: null,
+        });
+        setLoading(false);
+      });
     }
-  }, [sprint, setSprint, setLoading]);
+  }, [sprint, sprintId, setSprint, setLoading]);
 
   // Handle WebSocket events
   const handleEvent = useCallback((event: WSMessage) => {
@@ -109,7 +128,7 @@ export function SprintDetailPage() {
     await cancelSprint.mutateAsync(sprintId);
   };
 
-  if (isLoading || !sprint) return <PageSkeleton />;
+  if (isLoading || !sprint) return <PageSkeleton layout="detail" />;
 
   const isCreated = sprint.status === 'created';
   const isFailed = sprint.status === 'failed';
