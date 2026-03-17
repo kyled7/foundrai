@@ -31,7 +31,7 @@ export function SprintBoard() {
     setActiveTask(task || null);
   }
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveTask(null);
 
@@ -46,8 +46,13 @@ export function SprintBoard() {
 
     const newStatus = targetColumn.statuses[0];
 
-    // Update task status in store
-    updateTaskStatus(taskId, newStatus);
+    try {
+      // Update task status in store and persist to backend
+      await updateTaskStatus(taskId, newStatus);
+    } catch (error) {
+      // Error is already handled in the store (optimistic update reverted)
+      // TODO: Show user-facing error notification
+    }
   }
 
   function handleDragCancel() {
