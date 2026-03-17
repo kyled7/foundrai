@@ -17,6 +17,7 @@ from foundrai.orchestration.task_graph import TaskGraph
 from foundrai.persistence.artifact_store import ArtifactStore
 from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
+from foundrai.utils.retry import retry_async
 
 logger = logging.getLogger(__name__)
 
@@ -268,7 +269,15 @@ class SprintEngine:
                     await self._emit_task_status(task)
 
                     try:
-                        result = await agent.execute_task(task)
+                        # Wrap task execution with retry logic
+                        max_retries = self.config.sprint.max_task_retries
+                        result = await retry_async(
+                            fn=lambda: agent.execute_task(task),
+                            max_retries=max_retries,
+                            backoff_base=1.0,
+                            retryable_exceptions=(Exception,),
+                            auto_classify_retryable=True,
+                        )
                         task.result = result
                         task.status = TaskStatus.IN_REVIEW if result.success else TaskStatus.FAILED
 

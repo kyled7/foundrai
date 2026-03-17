@@ -270,3 +270,43 @@ async def test_engine_event_listener(db, ctx, infra):
     assert "sprint.started" in events_captured
     assert "sprint.status_changed" in events_captured
     assert "task.status_changed" in events_captured
+
+
+@pytest.mark.asyncio
+async def test_engine_retries_failed_tasks(db, ctx, infra):
+    """When a task fails with a retryable error (rate_limit, timeout),
+    it should be retried up to max_task_retries times."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+    agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+
+    # Mock dev to fail twice with a retryable error, then succeed
+    call_count = 0
+
+    async def side_effect_fn(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            # First two calls: raise a retryable error (timeout)
+            raise RuntimeError("Request timed out after 30 seconds")
+        # Third call: succeed
+        return RuntimeResult(
+            output="Success", parsed=None, artifacts=[], tokens_used=50, success=True,
+        )
+
+    agents[AgentRoleName.DEVELOPER.value].runtime.run = AsyncMock(
+        side_effect=side_effect_fn
+    )
+
+    config = FoundrAIConfig()
+    config.sprint.max_task_retries = 3
+    engine = SprintEngine(
+        config=config, agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+    result = await engine.run_sprint("retry test", "proj")
+
+    # Should succeed after retries
+    assert result["status"] == SprintStatus.COMPLETED
+    assert result["tasks"][0].status == TaskStatus.DONE
+    assert call_count == 3  # Failed twice, succeeded on third attempt
