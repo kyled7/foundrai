@@ -22,6 +22,7 @@ class AgentConfig(BaseModel):
     max_tokens_per_action: int = 4096
     persona_override: str | None = None
     approval_conditions: dict | None = None
+    max_retries: int = 3
 
 
 class TeamConfig(BaseModel):
@@ -56,6 +57,7 @@ class SprintConfig(BaseModel):
     token_budget: int = 100000
     max_sprints: int = 5
     auto_start_next: bool = False
+    max_task_retries: int = 3
 
 
 class PersistenceConfig(BaseModel):
