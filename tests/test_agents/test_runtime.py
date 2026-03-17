@@ -163,3 +163,34 @@ async def test_runtime_retries_on_failure():
     assert result.success
     assert result.output == "Success"
     assert call_count == 3  # 2 failures + 1 success
+
+
+async def test_runtime_respects_timeout():
+    """Test that AgentRuntime respects timeout and fails gracefully."""
+    import asyncio
+
+    llm = MagicMock()
+    event_log = MagicMock()
+    event_log.append = MagicMock(return_value=None)
+
+    # Mock LLM to take longer than timeout
+    async def mock_completion(*args, **kwargs):
+        await asyncio.sleep(2)  # Sleep for 2 seconds
+        response = MagicMock()
+        response.content = "This should not be reached"
+        response.total_tokens = 100
+        response.tool_calls = None
+        return response
+
+    llm.completion = mock_completion
+
+    # Set timeout to 0.5 seconds (much shorter than the 2 second sleep)
+    runtime = AgentRuntime(llm_client=llm, event_log=event_log, timeout=0.5)
+    messages = [{"role": "user", "content": "test"}]
+
+    result = await runtime.run(messages)
+
+    # Should fail due to timeout
+    assert not result.success
+    assert "timeout" in result.output.lower() or "timed out" in result.output.lower()
+    assert result.tokens_used == 0

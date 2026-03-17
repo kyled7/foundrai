@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -41,6 +42,7 @@ class AgentRuntime:
         sprint_id: str = "",
         project_id: str = "",
         task_id: str | None = None,
+        timeout: float | None = None,
     ) -> None:
         self.llm_client = llm_client
         self.event_log = event_log
@@ -52,6 +54,7 @@ class AgentRuntime:
         self.sprint_id = sprint_id
         self.project_id = project_id
         self.task_id = task_id
+        self.timeout = timeout
 
     async def run(
         self,
@@ -67,6 +70,35 @@ class AgentRuntime:
         2. If LLM returns tool_calls, execute them and append results
         3. Repeat until LLM returns a final text response (no tool_calls)
         """
+        # Apply timeout if configured
+        if self.timeout is not None:
+            try:
+                return await asyncio.wait_for(
+                    self._run_internal(messages, tools, response_format),
+                    timeout=self.timeout,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Agent %s execution timed out after %s seconds for task %s",
+                    self.agent_role, self.timeout, self.task_id,
+                )
+                return RuntimeResult(
+                    output=f"Task execution timed out after {self.timeout} seconds.",
+                    parsed=None,
+                    artifacts=[],
+                    tokens_used=0,
+                    success=False,
+                )
+        else:
+            return await self._run_internal(messages, tools, response_format)
+
+    async def _run_internal(
+        self,
+        messages: list[dict],
+        tools: list[Any] | None = None,
+        response_format: str | None = None,
+    ) -> RuntimeResult:
+        """Internal execution logic for the ReAct loop."""
         # Budget check before LLM call
         if self.budget_manager and self.sprint_id:
             allowed = await self.budget_manager.enforce_budget(
