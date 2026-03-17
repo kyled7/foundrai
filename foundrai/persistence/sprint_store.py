@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from typing import TYPE_CHECKING
 
 from foundrai.models.enums import SprintStatus
@@ -186,3 +187,90 @@ class SprintStore:
             (project_id,),
         )
         return await cursor.fetchone() is not None
+
+    async def save_checkpoint(
+        self, sprint_id: str, checkpoint_name: str, state: SprintState
+    ) -> str:
+        """Save a sprint checkpoint and return the checkpoint ID."""
+        checkpoint_id = f"cp_{uuid.uuid4().hex[:12]}"
+        state_json = json.dumps({
+            "sprint_id": state["sprint_id"],
+            "project_id": state["project_id"],
+            "sprint_number": state.get("sprint_number", 1),
+            "goal": state["goal"],
+            "status": state["status"].value if hasattr(state["status"], "value") else state["status"],
+            "tasks": [
+                {
+                    "id": task.id,
+                    "title": task.title,
+                    "description": task.description,
+                    "acceptance_criteria": task.acceptance_criteria,
+                    "assigned_to": task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
+                    "priority": task.priority,
+                    "status": task.status if isinstance(task.status, str) else task.status.value,
+                    "dependencies": task.dependencies,
+                }
+                for task in state.get("tasks", [])
+            ],
+            "metrics": (
+                state["metrics"].model_dump()
+                if isinstance(state.get("metrics"), SprintMetrics)
+                else state.get("metrics", {})
+            ),
+            "error": state.get("error"),
+        })
+        await self.db.conn.execute(
+            "INSERT INTO checkpoints (checkpoint_id, sprint_id, checkpoint_name, state_json)"
+            " VALUES (?, ?, ?, ?)",
+            (checkpoint_id, sprint_id, checkpoint_name, state_json),
+        )
+        await self.db.conn.commit()
+        return checkpoint_id
+
+    async def load_checkpoint(self, checkpoint_id: str) -> SprintState | None:
+        """Load a checkpoint by ID."""
+        cursor = await self.db.conn.execute(
+            "SELECT state_json FROM checkpoints WHERE checkpoint_id = ?",
+            (checkpoint_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+
+        state_data = json.loads(row["state_json"])
+        return SprintState(
+            sprint_id=state_data["sprint_id"],
+            project_id=state_data["project_id"],
+            sprint_number=state_data.get("sprint_number", 1),
+            goal=state_data["goal"],
+            status=SprintStatus(state_data["status"]),
+            tasks=[
+                Task(
+                    id=task_data["id"],
+                    title=task_data["title"],
+                    description=task_data["description"],
+                    acceptance_criteria=task_data.get("acceptance_criteria", []),
+                    assigned_to=task_data["assigned_to"],
+                    priority=task_data.get("priority", 3),
+                    status=task_data["status"],
+                    dependencies=task_data.get("dependencies", []),
+                )
+                for task_data in state_data.get("tasks", [])
+            ],
+            messages=[],
+            artifacts=[],
+            metrics=SprintMetrics(**state_data.get("metrics", {})),
+            error=state_data.get("error"),
+        )
+
+    async def get_latest_checkpoint(self, sprint_id: str) -> SprintState | None:
+        """Get the most recent checkpoint for a sprint."""
+        cursor = await self.db.conn.execute(
+            "SELECT checkpoint_id FROM checkpoints WHERE sprint_id = ?"
+            " ORDER BY created_at DESC LIMIT 1",
+            (sprint_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return await self.load_checkpoint(row["checkpoint_id"])
