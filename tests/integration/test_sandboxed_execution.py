@@ -340,3 +340,122 @@ print("This should not be reached")
     # Verify execution works with memory limits configured
     assert limit_result.success is True
     assert "Memory limit test" in limit_result.output
+
+
+@pytest.mark.asyncio
+async def test_e2b_fallback_when_docker_unavailable(monkeypatch):
+    """Test that E2B is used as fallback when Docker is unavailable but E2B_API_KEY is set."""
+    import os
+    import subprocess
+    from unittest.mock import MagicMock, Mock
+
+    from foundrai.tools.code_executor import E2BCodeExecutor, NoopCodeExecutor
+
+    # Mock Docker as unavailable
+    original_run = subprocess.run
+
+    def mock_docker_unavailable(*args, **kwargs):
+        # If checking docker info, raise FileNotFoundError (Docker not installed)
+        if args and "docker" in args[0]:
+            raise FileNotFoundError("docker command not found")
+        return original_run(*args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", mock_docker_unavailable)
+
+    # Set E2B_API_KEY environment variable
+    test_api_key = "test-e2b-api-key-12345"
+    monkeypatch.setenv("E2B_API_KEY", test_api_key)
+
+    # Get code executor - should fallback to E2B
+    executor = get_code_executor(provider="docker", timeout=30)
+
+    # Verify we got E2BCodeExecutor, not Docker or Noop
+    assert isinstance(executor, E2BCodeExecutor), (
+        f"Expected E2BCodeExecutor when Docker unavailable but E2B_API_KEY set, "
+        f"got {type(executor).__name__}"
+    )
+    assert executor.api_key == test_api_key
+
+    # Mock E2B Sandbox to test execution without actual API call
+    mock_sandbox = MagicMock()
+    mock_result = Mock()
+    mock_result.exit_code = 0
+    mock_result.stdout = "E2B execution success!\n"
+    mock_result.stderr = ""
+    mock_sandbox.process.start_and_wait.return_value = mock_result
+    mock_sandbox.filesystem.write = Mock()
+
+    # Mock the Sandbox class import
+    mock_sandbox_class = Mock(return_value=mock_sandbox)
+
+    # Test execution with mocked E2B
+    with monkeypatch.context() as m:
+        # Mock the e2b import
+        import sys
+
+        mock_e2b_module = MagicMock()
+        mock_e2b_module.Sandbox = mock_sandbox_class
+        m.setitem(sys.modules, "e2b", mock_e2b_module)
+
+        # Execute code
+        test_code = 'print("E2B execution success!")'
+        result = await executor.execute(
+            CodeExecutorInput(
+                code=test_code,
+                language="python",
+                timeout_seconds=10,
+            )
+        )
+
+        # Verify execution succeeded through E2B
+        assert result.success is True
+        assert "E2B execution success!" in result.output
+        assert result.error is None
+
+        # Verify E2B Sandbox was created with correct parameters
+        mock_sandbox_class.assert_called_once()
+        call_kwargs = mock_sandbox_class.call_args.kwargs
+        assert call_kwargs.get("template") == "python3"
+        assert call_kwargs.get("api_key") == test_api_key
+
+
+@pytest.mark.asyncio
+async def test_noop_fallback_when_no_sandbox_available(monkeypatch):
+    """Test that NoopCodeExecutor is used when neither Docker nor E2B are available."""
+    import subprocess
+
+    from foundrai.tools.code_executor import NoopCodeExecutor
+
+    # Mock Docker as unavailable
+    def mock_docker_unavailable(*args, **kwargs):
+        if args and "docker" in args[0]:
+            raise FileNotFoundError("docker command not found")
+        return subprocess.run(*args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", mock_docker_unavailable)
+
+    # Ensure E2B_API_KEY is not set
+    monkeypatch.delenv("E2B_API_KEY", raising=False)
+
+    # Get code executor - should fallback to Noop
+    executor = get_code_executor(provider="docker", timeout=30)
+
+    # Verify we got NoopCodeExecutor
+    assert isinstance(executor, NoopCodeExecutor), (
+        f"Expected NoopCodeExecutor when no sandbox available, got {type(executor).__name__}"
+    )
+
+    # Execute code - should return sandbox unavailable message
+    test_code = 'print("This will not execute")'
+    result = await executor.execute(
+        CodeExecutorInput(
+            code=test_code,
+            language="python",
+            timeout_seconds=10,
+        )
+    )
+
+    # Verify noop behavior
+    assert result.success is True
+    assert "Sandbox unavailable" in result.output
+    assert "code not executed" in result.output.lower()
