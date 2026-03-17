@@ -60,6 +60,11 @@ npm run dev
 ### TypeScript / React
 - Functional components with hooks only
 - TypeScript strict mode
+- TanStack Router for routing (type-safe, file-based routes in `src/routes/`)
+- TanStack Query for server state (queries, mutations, caching)
+- Zustand for client state (stores in `src/stores/`)
+- React Flow for interactive diagrams
+- Recharts for analytics visualizations
 - Format with Prettier
 - Lint with ESLint
 
@@ -113,6 +118,30 @@ chore: update dependencies
 3. Register in the ToolKit
 4. Add to relevant role configs
 5. Add tests in `tests/tools/test_your_tool.py`
+
+### Frontend Architecture
+The frontend uses a modern React stack with type-safe routing and server state management:
+
+**Directory Structure:**
+- `frontend/src/routes/` — TanStack Router file-based routes
+- `frontend/src/components/` — Reusable UI components organized by domain
+- `frontend/src/api/` — API client modules (sprints, events, approvals, etc.)
+- `frontend/src/stores/` — Zustand stores for global client state
+- `frontend/src/hooks/` — Custom React hooks (WebSocket, queries, etc.)
+- `frontend/src/lib/` — Utilities, types, and constants
+
+**Key Patterns:**
+- Use TanStack Router's `createRoute` for new pages (see `src/routes/` for examples)
+- Use TanStack Query's `useQuery` and `useMutation` for API calls
+- WebSocket connections via `useSprintWebSocket` hook
+- Zustand stores for real-time state from WebSocket events
+- API proxy configured in `vite.config.ts` (`/api` → `localhost:8000`)
+
+**Adding a New Page:**
+1. Create route file in `frontend/src/routes/your-page/index.tsx`
+2. Use `createRoute` with parent and path
+3. Export component with TanStack Query hooks for data fetching
+4. Register route in `frontend/src/router.tsx`
 
 ## Areas Where Help is Needed
 
