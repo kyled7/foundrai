@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { WSMessage } from '../types';
+import type { WSMessage } from '../lib/types';
 
 interface EventStore {
   events: WSMessage[];

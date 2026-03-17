@@ -1,12 +1,11 @@
-import { useSprintStore } from '../../stores/sprintStore';
+import { useSprintStore } from '@/stores/sprintStore';
 import { KanbanColumn } from './KanbanColumn';
-import type { TaskStatus } from '../../types';
+import type { TaskStatus } from '@/lib/types';
 
 const COLUMNS: { key: string; title: string; statuses: TaskStatus[]; color: string }[] = [
-  { key: 'backlog',     title: 'Backlog',     statuses: ['backlog', 'blocked'], color: 'gray' },
+  { key: 'backlog',     title: 'Backlog',     statuses: ['pending', 'blocked'], color: 'gray' },
   { key: 'in_progress', title: 'In Progress', statuses: ['in_progress'],        color: 'blue' },
-  { key: 'in_review',   title: 'In Review',   statuses: ['in_review'],          color: 'yellow' },
-  { key: 'done',        title: 'Done',        statuses: ['done'],               color: 'green' },
+  { key: 'completed',   title: 'Completed',   statuses: ['completed'],          color: 'green' },
   { key: 'failed',      title: 'Failed',      statuses: ['failed'],             color: 'red' },
 ];
 

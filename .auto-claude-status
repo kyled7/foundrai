@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "001-frontend-codebase-consolidation",
+  "state": "building",
+  "subtasks": {
+    "completed": 18,
+    "total": 21,
+    "in_progress": 1,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Archive Old Frontend",
+    "id": null,
+    "total": 3
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 20,
+    "started_at": "2026-03-17T23:02:21.746535"
+  },
+  "last_update": "2026-03-18T00:05:45.185138"
+}

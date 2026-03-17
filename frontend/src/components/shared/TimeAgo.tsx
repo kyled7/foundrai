@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { timeAgo } from '../../utils/formatters';
+import { timeAgo } from '@/lib/utils';
 
 interface Props {
   timestamp: string;

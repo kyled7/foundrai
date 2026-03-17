@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import type { TaskResponse } from '../../types';
-import { AgentAvatar } from '../shared/AgentAvatar';
-import { StatusBadge } from '../shared/StatusBadge';
-import { cn } from '../../utils/cn';
+import type { Task } from '@/lib/types';
+import { AgentAvatar } from '@/components/shared/AgentAvatar';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { cn } from '@/lib/utils';
 
 interface Props {
-  task: TaskResponse;
+  task: Task;
 }
 
 export function TaskCard({ task }: Props) {
@@ -51,7 +51,7 @@ export function TaskCard({ task }: Props) {
           {task.result && (
             <div className="bg-gray-50 dark:bg-gray-900 rounded p-2 mt-2">
               <span className="font-medium">Result:</span>
-              <pre className="whitespace-pre-wrap mt-1">{task.result.output}</pre>
+              <pre className="whitespace-pre-wrap mt-1">{JSON.stringify(task.result, null, 2)}</pre>
             </div>
           )}
         </div>
