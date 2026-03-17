@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
-import { useState } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import type { TaskResponse } from '../../types';
 import { AgentAvatar } from '../shared/AgentAvatar';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -10,7 +10,7 @@ interface Props {
   isDragging?: boolean;
 }
 
-export function TaskCard({ task, isDragging = false }: Props) {
+export const TaskCard = memo(function TaskCard({ task, isDragging = false }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, isDragging: isBeingDragged } = useDraggable({
@@ -18,11 +18,29 @@ export function TaskCard({ task, isDragging = false }: Props) {
     disabled: isDragging,
   });
 
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      }
-    : undefined;
+  const style = useMemo(
+    () =>
+      transform
+        ? {
+            transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+          }
+        : undefined,
+    [transform]
+  );
+
+  const priorityDots = useMemo(
+    () => Array.from({ length: Math.max(1, 6 - task.priority) }, (_, i) => i),
+    [task.priority]
+  );
+
+  const assignedToLabel = useMemo(
+    () => task.assigned_to.replace('_', ' '),
+    [task.assigned_to]
+  );
+
+  const toggleExpanded = useCallback(() => {
+    setExpanded((prev) => !prev);
+  }, []);
 
   return (
     <div
@@ -36,7 +54,7 @@ export function TaskCard({ task, isDragging = false }: Props) {
         task.status === 'failed' && 'border-red-300',
         isBeingDragged && 'opacity-30'
       )}
-      onClick={() => setExpanded(!expanded)}
+      onClick={toggleExpanded}
     >
       <div className="flex items-start justify-between gap-2">
         <h4 className="text-sm font-medium leading-tight">{task.title}</h4>
@@ -46,12 +64,12 @@ export function TaskCard({ task, isDragging = false }: Props) {
       <div className="flex items-center gap-1.5 mt-2">
         <AgentAvatar role={task.assigned_to} size="sm" />
         <span className="text-xs text-gray-500 capitalize">
-          {task.assigned_to.replace('_', ' ')}
+          {assignedToLabel}
         </span>
       </div>
 
       <div className="flex items-center gap-1 mt-2">
-        {Array.from({ length: Math.max(1, 6 - task.priority) }, (_, i) => (
+        {priorityDots.map((i) => (
           <div key={i} className="w-1.5 h-1.5 rounded-full bg-orange-400" />
         ))}
       </div>
@@ -76,4 +94,4 @@ export function TaskCard({ task, isDragging = false }: Props) {
       )}
     </div>
   );
-}
+});

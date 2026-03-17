@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import type { WSMessage } from '../../types';
 import { AgentAvatar } from '../shared/AgentAvatar';
 import { TimeAgo } from '../shared/TimeAgo';
@@ -58,11 +58,52 @@ interface Props {
   event: WSMessage;
 }
 
-export function FeedEntry({ event }: Props) {
+export const FeedEntry = memo(function FeedEntry({ event }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
-  const config = EVENT_CONFIG[event.type] ?? { icon: '📌', label: event.type };
-  const agentId = String((event.data as Record<string, unknown>).agent_id ?? (event.data as Record<string, unknown>).from_agent ?? 'system');
+
+  const config = useMemo(
+    () => EVENT_CONFIG[event.type] ?? { icon: '📌', label: event.type },
+    [event.type]
+  );
+
+  const agentId = useMemo(
+    () => String((event.data as Record<string, unknown>).agent_id ?? (event.data as Record<string, unknown>).from_agent ?? 'system'),
+    [event.data]
+  );
+
+  const agentLabel = useMemo(
+    () => agentId.replace('_', ' '),
+    [agentId]
+  );
+
+  const content = useMemo(
+    () => renderContent(event),
+    [event]
+  );
+
+  const hasTrace = useMemo(
+    () => Boolean((event.data as Record<string, unknown>).trace_id),
+    [event.data]
+  );
+
+  const traceId = useMemo(
+    () => (event.data as Record<string, unknown>).trace_id as number,
+    [event.data]
+  );
+
+  const showDetailsButton = useMemo(
+    () => event.type === 'agent.thinking' || event.type === 'agent.tool_call',
+    [event.type]
+  );
+
+  const toggleExpanded = useCallback(() => {
+    setExpanded((prev) => !prev);
+  }, []);
+
+  const toggleTrace = useCallback(() => {
+    setShowTrace((prev) => !prev);
+  }, []);
 
   return (
     <div className="flex gap-3 text-sm">
@@ -74,18 +115,18 @@ export function FeedEntry({ event }: Props) {
       <div className="flex-1 pb-4">
         <div className="flex items-center gap-2">
           <span>{config.icon}</span>
-          <span className="font-medium capitalize">{agentId.replace('_', ' ')}</span>
+          <span className="font-medium capitalize">{agentLabel}</span>
           <span className="text-gray-400">·</span>
           <TimeAgo timestamp={event.timestamp} />
         </div>
 
         <div className="mt-1 text-gray-700 dark:text-gray-300">
-          {renderContent(event)}
+          {content}
         </div>
 
-        {(event.type === 'agent.thinking' || event.type === 'agent.tool_call') && (
+        {showDetailsButton && (
           <button
-            onClick={() => setExpanded(!expanded)}
+            onClick={toggleExpanded}
             className="text-xs text-blue-500 mt-1 hover:underline"
           >
             {expanded ? 'Collapse' : 'Show details'}
@@ -97,18 +138,18 @@ export function FeedEntry({ event }: Props) {
           </pre>
         )}
 
-        {Boolean((event.data as Record<string, unknown>).trace_id) && (
+        {hasTrace && (
           <button
-            onClick={() => setShowTrace(!showTrace)}
+            onClick={toggleTrace}
             className="text-xs text-purple-500 mt-1 hover:underline"
           >
             {showTrace ? 'Hide reasoning' : '🧠 Show reasoning'}
           </button>
         )}
-        {showTrace && Boolean((event.data as Record<string, unknown>).trace_id) && (
-          <TraceViewer traceId={(event.data as Record<string, unknown>).trace_id as number} />
+        {showTrace && hasTrace && (
+          <TraceViewer traceId={traceId} />
         )}
       </div>
     </div>
   );
-}
+});
