@@ -29,4 +29,9 @@ export default defineConfig({
     outDir: '../foundrai/frontend/dist',
     emptyOutDir: true,
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+  },
 });
