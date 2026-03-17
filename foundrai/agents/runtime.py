@@ -11,6 +11,8 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from foundrai.utils.retry import retry_async
+
 logger = logging.getLogger(__name__)
 
 
@@ -94,8 +96,12 @@ class AgentRuntime:
 
         for iteration in range(self.max_iterations):
             _start_time = time.monotonic()
-            response = await self.llm_client.completion(
-                working_messages, tools=tool_schemas
+            # Wrap LLM call with retry logic for transient failures
+            response = await retry_async(
+                lambda: self.llm_client.completion(working_messages, tools=tool_schemas),
+                max_retries=3,
+                backoff_base=1.0,
+                auto_classify_retryable=True,
             )
             _duration_ms = int((time.monotonic() - _start_time) * 1000)
             total_tokens += response.total_tokens

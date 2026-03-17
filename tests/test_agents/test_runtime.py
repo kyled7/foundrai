@@ -127,3 +127,39 @@ class TestCollectArtifacts:
     def test_returns_empty(self):
         runtime = AgentRuntime(llm_client=MagicMock(), event_log=MagicMock())
         assert runtime._collect_artifacts({"messages": []}) == []
+
+
+async def test_runtime_retries_on_failure():
+    """Test that AgentRuntime retries on transient failures."""
+    llm = MagicMock()
+    event_log = MagicMock()
+    event_log.append = MagicMock(return_value=None)
+
+    # Mock LLM to fail twice with rate limit, then succeed
+    call_count = 0
+
+    async def mock_completion(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count <= 2:
+            raise Exception("Rate limit exceeded: 429")
+        # Third call succeeds
+        response = MagicMock()
+        response.content = "Success"
+        response.total_tokens = 100
+        response.prompt_tokens = 50
+        response.completion_tokens = 50
+        response.tool_calls = None
+        return response
+
+    llm.completion = mock_completion
+
+    runtime = AgentRuntime(llm_client=llm, event_log=event_log)
+    messages = [{"role": "user", "content": "test"}]
+
+    result = await runtime.run(messages)
+
+    # Should succeed after retries
+    assert result.success
+    assert result.output == "Success"
+    assert call_count == 3  # 2 failures + 1 success
