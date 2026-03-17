@@ -43,12 +43,33 @@ interface Props {
   sprintId: string;
 }
 
+function TreeSkeleton() {
+  return (
+    <div className="h-full w-full flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="flex justify-center gap-4">
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        </div>
+        <div className="flex justify-center gap-4">
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        </div>
+        <p className="text-sm text-gray-400 mt-4">Loading goal tree...</p>
+      </div>
+    </div>
+  );
+}
+
 export function GoalTree({ sprintId }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [loading, setLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
 
   const loadTree = useCallback(async () => {
+    setLoading(true);
     try {
       const data: GoalTreeResponse = await getGoalTree(sprintId);
       const rfNodes: Node[] = data.nodes.map((n) => ({
@@ -72,12 +93,14 @@ export function GoalTree({ sprintId }: Props) {
         setIsEmpty(true);
       } else {
         setIsEmpty(false);
+        const laid = layoutTree(rfNodes, rfEdges);
+        setNodes(laid.nodes);
+        setEdges(laid.edges);
       }
-      const laid = layoutTree(rfNodes, rfEdges);
-      setNodes(laid.nodes);
-      setEdges(laid.edges);
     } catch {
       setIsEmpty(true);
+    } finally {
+      setLoading(false);
     }
   }, [sprintId, setNodes, setEdges]);
 
@@ -86,6 +109,10 @@ export function GoalTree({ sprintId }: Props) {
   }, [loadTree]);
 
   const memoNodeTypes = useMemo(() => nodeTypes, []);
+
+  if (loading) {
+    return <TreeSkeleton />;
+  }
 
   if (isEmpty) {
     return (

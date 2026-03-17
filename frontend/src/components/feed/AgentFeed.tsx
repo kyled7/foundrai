@@ -4,12 +4,44 @@ import { useEventStore } from '../../stores/eventStore';
 import { FeedFilters } from './FeedFilters';
 import { FeedEntry } from './FeedEntry';
 
+function FeedSkeleton() {
+  return (
+    <div className="p-4 space-y-4">
+      {[1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 animate-pulse"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function AgentFeed() {
   const filteredEvents = useEventStore((s) => s.filteredEvents());
+  const allEvents = useEventStore((s) => s.events);
   const listRef = useRef<List>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [listHeight, setListHeight] = useState(600);
+  const [loading, setLoading] = useState(true);
+
+  // Show loading state for first 2 seconds or until first event arrives
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 2000);
+    if (allEvents.length > 0) {
+      setLoading(false);
+    }
+    return () => clearTimeout(timer);
+  }, [allEvents.length]);
 
   // Update list height based on container size
   useEffect(() => {
@@ -57,6 +89,17 @@ export function AgentFeed() {
       </div>
     );
   }, [filteredEvents]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full relative" aria-label="Agent activity feed">
+        <FeedFilters />
+        <div className="flex-1 overflow-y-auto">
+          <FeedSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   if (filteredEvents.length === 0) {
     return (

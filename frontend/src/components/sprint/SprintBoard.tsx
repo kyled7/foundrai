@@ -13,8 +13,32 @@ const COLUMNS: { key: string; title: string; statuses: TaskStatus[]; color: stri
   { key: 'failed',      title: 'Failed',      statuses: ['failed'],             color: 'red' },
 ];
 
+function BoardSkeleton() {
+  return (
+    <div className="flex gap-4 overflow-x-auto p-4 h-full" role="region" aria-label="Loading sprint board">
+      {COLUMNS.map((col) => (
+        <div
+          key={col.key}
+          className="flex-shrink-0 w-80 bg-gray-50 dark:bg-gray-800 rounded-lg p-4"
+        >
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4 animate-pulse" />
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-32 bg-white dark:bg-gray-900 rounded-lg shadow animate-pulse"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SprintBoard() {
   const tasks = useSprintStore((s) => s.tasks);
+  const loading = useSprintStore((s) => s.loading);
   const updateTaskStatus = useSprintStore((s) => s.updateTaskStatus);
   const [activeTask, setActiveTask] = useState<TaskResponse | null>(null);
 
@@ -57,6 +81,10 @@ export function SprintBoard() {
 
   function handleDragCancel() {
     setActiveTask(null);
+  }
+
+  if (loading) {
+    return <BoardSkeleton />;
   }
 
   return (
