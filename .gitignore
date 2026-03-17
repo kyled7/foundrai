@@ -34,3 +34,6 @@ Thumbs.db
 # Node
 node_modules/
 frontend/node_modules/
+
+# Auto Claude data directory
+.auto-claude/

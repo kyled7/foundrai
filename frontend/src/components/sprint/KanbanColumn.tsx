@@ -1,3 +1,4 @@
+import { useDroppable } from '@dnd-kit/core';
 import type { TaskResponse } from '../../types';
 import { TaskCard } from './TaskCard';
 import { cn } from '../../utils/cn';
@@ -11,13 +12,18 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 interface Props {
+  columnId: string;
   title: string;
   color: string;
   tasks: TaskResponse[];
   count: number;
 }
 
-export function KanbanColumn({ title, color, tasks, count }: Props) {
+export function KanbanColumn({ columnId, title, color, tasks, count }: Props) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: columnId,
+  });
+
   return (
     <div className={cn(
       'flex-1 min-w-[220px] max-w-[300px] bg-gray-100 dark:bg-gray-900 rounded-lg border-t-2 flex flex-col',
@@ -29,7 +35,13 @@ export function KanbanColumn({ title, color, tasks, count }: Props) {
           {count}
         </span>
       </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          'flex-1 overflow-y-auto p-2 space-y-2 transition-colors',
+          isOver && 'bg-blue-50 dark:bg-blue-900/20'
+        )}
+      >
         {tasks.map((task) => (
           <TaskCard key={task.task_id} task={task} />
         ))}

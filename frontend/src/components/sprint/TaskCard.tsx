@@ -1,3 +1,4 @@
+import { useDraggable } from '@dnd-kit/core';
 import { useState } from 'react';
 import type { TaskResponse } from '../../types';
 import { AgentAvatar } from '../shared/AgentAvatar';
@@ -6,17 +7,34 @@ import { cn } from '../../utils/cn';
 
 interface Props {
   task: TaskResponse;
+  isDragging?: boolean;
 }
 
-export function TaskCard({ task }: Props) {
+export function TaskCard({ task, isDragging = false }: Props) {
   const [expanded, setExpanded] = useState(false);
+
+  const { attributes, listeners, setNodeRef, transform, isDragging: isBeingDragged } = useDraggable({
+    id: task.task_id,
+    disabled: isDragging,
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
       className={cn(
         'bg-white dark:bg-gray-800 rounded-lg border p-3 shadow-sm',
         'hover:shadow-md transition-shadow cursor-pointer',
-        task.status === 'failed' && 'border-red-300'
+        task.status === 'failed' && 'border-red-300',
+        isBeingDragged && 'opacity-30'
       )}
       onClick={() => setExpanded(!expanded)}
     >
