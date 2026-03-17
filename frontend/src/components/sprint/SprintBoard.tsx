@@ -15,11 +15,11 @@ const COLUMNS: { key: string; title: string; statuses: TaskStatus[]; color: stri
 
 function BoardSkeleton() {
   return (
-    <div className="flex gap-4 overflow-x-auto p-4 h-full" role="region" aria-label="Loading sprint board">
+    <div className="flex gap-2 md:gap-3 xl:gap-4 overflow-x-auto p-2 md:p-3 xl:p-4 h-full" role="region" aria-label="Loading sprint board">
       {COLUMNS.map((col) => (
         <div
           key={col.key}
-          className="flex-shrink-0 w-80 bg-gray-50 dark:bg-gray-800 rounded-lg p-4"
+          className="flex-shrink-0 w-60 md:w-72 xl:w-80 bg-gray-50 dark:bg-gray-800 rounded-lg p-4"
         >
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4 animate-pulse" />
           <div className="space-y-3">
@@ -94,7 +94,7 @@ export function SprintBoard() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex gap-4 overflow-x-auto p-4 h-full" role="region" aria-label="Sprint task board">
+      <div className="flex gap-2 md:gap-3 xl:gap-4 overflow-x-auto p-2 md:p-3 xl:p-4 h-full" role="region" aria-label="Sprint task board">
         {COLUMNS.map((col) => {
           const filtered = tasks.filter((t) => col.statuses.includes(t.status));
           return (

@@ -26,7 +26,7 @@ export function KanbanColumn({ columnId, title, color, tasks, count }: Props) {
 
   return (
     <div className={cn(
-      'flex-1 min-w-[220px] max-w-[300px] bg-gray-100 dark:bg-gray-900 rounded-lg border-t-2 flex flex-col',
+      'flex-shrink-0 w-[240px] md:w-[280px] xl:flex-1 xl:min-w-[220px] xl:max-w-[320px] bg-gray-100 dark:bg-gray-900 rounded-lg border-t-2 flex flex-col',
       COLOR_MAP[color] ?? 'border-t-gray-400'
     )}>
       <div className="p-3 flex items-center justify-between">
