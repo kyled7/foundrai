@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { SprintResponse, TaskResponse, TaskStatus } from '../types';
+import type { SprintResponse, TaskResponse, TaskStatus } from '../lib/types';
 
 interface SprintStore {
   sprint: SprintResponse | null;

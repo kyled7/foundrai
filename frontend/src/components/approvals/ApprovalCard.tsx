@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import type { ApprovalRequest as ApprovalRequestType } from '../../types';
+import type { ApprovalRequest } from '../../lib/types';
 import { approveRequest, rejectRequest } from '../../api/approvals';
 import { useApprovalStore } from '../../stores/approvalStore';
 import { AgentAvatar } from '../shared/AgentAvatar';
 
 interface Props {
-  approval: ApprovalRequestType;
+  approval: ApprovalRequest;
 }
 
 export function ApprovalCard({ approval }: Props) {

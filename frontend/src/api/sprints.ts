@@ -20,14 +20,3 @@ export async function getSprintMetrics(sprintId: string): Promise<SprintMetricsR
 export async function getGoalTree(sprintId: string): Promise<GoalTreeResponse> {
   return api.get(`/sprints/${sprintId}/goal-tree`);
 }
-
-export interface EventResponse {
-  event_id: number;
-  event_type: string;
-  data: Record<string, unknown>;
-  timestamp: string;
-}
-
-export async function listEvents(sprintId: string, limit = 200): Promise<{ events: EventResponse[] }> {
-  return api.get(`/sprints/${sprintId}/events?limit=${limit}`);
-}

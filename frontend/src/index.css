@@ -1,20 +1,23 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-body {
-  margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+*:focus-visible {
+  outline: 2px solid hsl(239 84% 67%);
+  outline-offset: 2px;
 }
 
-/* Task card animation */
-.task-card-enter {
-  animation: slideIn 300ms ease-out;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
+@theme {
+  --color-primary: #6366f1;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1e1b4b;
+  --color-muted: #6b7280;
+  --color-accent: #8b5cf6;
+  --color-destructive: #ef4444;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-background: #0f0f23;
+  --color-foreground: #e2e8f0;
+  --color-card: #1a1a2e;
+  --color-border: #2d2d44;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
