@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoundrAI Dashboard - Performance Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f9fafb;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #111827;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 30px;
+    }
+    .button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .button:hover {
+      background: #2563eb;
+    }
+    .button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .results {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f9fafb;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .metric:last-child {
+      border-bottom: none;
+    }
+    .metric-label {
+      color: #374151;
+      font-weight: 500;
+    }
+    .metric-value {
+      color: #6b7280;
+      font-family: monospace;
+    }
+    .pass {
+      color: #10b981;
+      font-weight: 600;
+    }
+    .fail {
+      color: #ef4444;
+      font-weight: 600;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .status.pass {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+    }
+    .status.fail {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
+    }
+    .instructions {
+      margin-top: 30px;
+      padding: 20px;
+      background: #eff6ff;
+      border-radius: 6px;
+      border-left: 4px solid #3b82f6;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #1e40af;
+    }
+    .instructions ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .instructions li {
+      margin: 8px 0;
+      color: #1e40af;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Dashboard Performance Test</h1>
+    <p class="subtitle">Automated performance verification for FoundrAI sprint dashboard</p>
+
+    <div>
+      <button id="runTest" class="button">Run Performance Test</button>
+      <button id="runWithNav" class="button">Test with Navigation</button>
+      <button id="clearResults" class="button" disabled>Clear Results</button>
+    </div>
+
+    <div id="results" style="display: none;" class="results">
+      <h3>Performance Metrics</h3>
+      <div id="metrics"></div>
+      <div id="status"></div>
+    </div>
+
+    <div class="instructions">
+      <h3>📋 Testing Instructions</h3>
+      <ol>
+        <li><strong>Ensure services are running:</strong>
+          <ul>
+            <li>Backend: <code>http://localhost:8000</code></li>
+            <li>Frontend: <code>http://localhost:5173</code></li>
+          </ul>
+        </li>
+        <li><strong>Option 1 - Current Page Test:</strong> Click "Run Performance Test" to test the current page load metrics</li>
+        <li><strong>Option 2 - Navigation Test:</strong> Click "Test with Navigation" to navigate to a sprint page and measure load time</li>
+        <li><strong>Target:</strong> Total load time should be <strong>&lt; 2 seconds</strong></li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    function formatTime(ms) {
+      if (ms < 1000) {
+        return `${Math.round(ms)}ms`;
+      }
+      return `${(ms / 1000).toFixed(2)}s`;
+    }
+
+    function analyzePerformance() {
+      const perfData = performance.getEntriesByType('navigation')[0];
+
+      if (!perfData) {
+        return {
+          error: 'No navigation timing data available. Try refreshing the page or using "Test with Navigation" button.'
+        };
+      }
+
+      const metrics = {
+        dnsLookup: perfData.domainLookupEnd - perfData.domainLookupStart,
+        tcpConnection: perfData.connectEnd - perfData.connectStart,
+        requestTime: perfData.responseStart - perfData.requestStart,
+        responseTime: perfData.responseEnd - perfData.responseStart,
+        domProcessing: perfData.domComplete - perfData.domLoading,
+        totalLoadTime: perfData.loadEventEnd - perfData.fetchStart,
+        domContentLoaded: perfData.domContentLoadedEventEnd - perfData.fetchStart,
+      };
+
+      // Get resource timing
+      const resources = performance.getEntriesByType('resource');
+      const jsResources = resources.filter(r => r.name.includes('.js'));
+      const cssResources = resources.filter(r => r.name.includes('.css'));
+
+      metrics.totalResources = resources.length;
+      metrics.jsFiles = jsResources.length;
+      metrics.cssFiles = cssResources.length;
+      metrics.totalJsSize = jsResources.reduce((acc, r) => acc + (r.transferSize || 0), 0);
+
+      // Check Web Vitals if available
+      if (performance.getEntriesByType) {
+        const paintEntries = performance.getEntriesByType('paint');
+        const fcp = paintEntries.find(entry => entry.name === 'first-contentful-paint');
+        const lcp = performance.getEntriesByType('largest-contentful-paint')[0];
+
+        if (fcp) metrics.firstContentfulPaint = fcp.startTime;
+        if (lcp) metrics.largestContentfulPaint = lcp.startTime;
+      }
+
+      return { metrics, perfData };
+    }
+
+    function displayResults(result) {
+      const resultsDiv = document.getElementById('results');
+      const metricsDiv = document.getElementById('metrics');
+      const statusDiv = document.getElementById('status');
+
+      resultsDiv.style.display = 'block';
+      metricsDiv.innerHTML = '';
+      statusDiv.innerHTML = '';
+
+      if (result.error) {
+        metricsDiv.innerHTML = `<p style="color: #ef4444;">${result.error}</p>`;
+        return;
+      }
+
+      const { metrics } = result;
+
+      // Display metrics
+      const metricItems = [
+        { label: 'DNS Lookup', value: metrics.dnsLookup, unit: 'ms' },
+        { label: 'TCP Connection', value: metrics.tcpConnection, unit: 'ms' },
+        { label: 'Request Time', value: metrics.requestTime, unit: 'ms' },
+        { label: 'Response Time', value: metrics.responseTime, unit: 'ms' },
+        { label: 'DOM Processing', value: metrics.domProcessing, unit: 'ms' },
+        { label: 'DOMContentLoaded', value: metrics.domContentLoaded, unit: 'ms', threshold: 1000 },
+        { label: 'Total Load Time', value: metrics.totalLoadTime, unit: 'ms', threshold: 2000, critical: true },
+      ];
+
+      if (metrics.firstContentfulPaint) {
+        metricItems.push({ label: 'First Contentful Paint (FCP)', value: metrics.firstContentfulPaint, unit: 'ms', threshold: 1000 });
+      }
+
+      if (metrics.largestContentfulPaint) {
+        metricItems.push({ label: 'Largest Contentful Paint (LCP)', value: metrics.largestContentfulPaint, unit: 'ms', threshold: 1500 });
+      }
+
+      metricItems.push(
+        { label: 'Total Resources', value: metrics.totalResources, unit: '' },
+        { label: 'JavaScript Files', value: metrics.jsFiles, unit: '' },
+        { label: 'CSS Files', value: metrics.cssFiles, unit: '' },
+        { label: 'Total JS Size', value: Math.round(metrics.totalJsSize / 1024), unit: 'KB' }
+      );
+
+      metricItems.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'metric';
+
+        const label = document.createElement('span');
+        label.className = 'metric-label';
+        label.textContent = item.label;
+
+        const value = document.createElement('span');
+        value.className = 'metric-value';
+
+        let valueText = item.unit === 'ms' ? formatTime(item.value) : `${item.value}${item.unit}`;
+
+        if (item.threshold && item.value) {
+          const passed = item.value < item.threshold;
+          value.classList.add(passed ? 'pass' : 'fail');
+          valueText += passed ? ' ✓' : ' ✗';
+        }
+
+        value.textContent = valueText;
+
+        div.appendChild(label);
+        div.appendChild(value);
+        metricsDiv.appendChild(div);
+      });
+
+      // Overall status
+      const passed = metrics.totalLoadTime < 2000;
+      const statusHTML = `
+        <div class="status ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✅ PASS' : '❌ FAIL'}: Dashboard loaded in ${formatTime(metrics.totalLoadTime)}
+          ${passed ? '(Under 2 second target)' : '(Exceeds 2 second target)'}
+        </div>
+      `;
+      statusDiv.innerHTML = statusHTML;
+
+      document.getElementById('clearResults').disabled = false;
+
+      // Log to console for debugging
+      console.log('Performance Test Results:', metrics);
+    }
+
+    // Event listeners
+    document.getElementById('runTest').addEventListener('click', () => {
+      const result = analyzePerformance();
+      displayResults(result);
+    });
+
+    document.getElementById('runWithNav').addEventListener('click', () => {
+      // Prompt for sprint ID
+      const sprintId = prompt('Enter Sprint ID to test (or leave blank for demo sprint):', '1');
+      if (sprintId === null) return; // User cancelled
+
+      const targetUrl = sprintId
+        ? `http://localhost:5173/sprints/${sprintId}`
+        : 'http://localhost:5173';
+
+      // Navigate to the sprint page
+      window.location.href = targetUrl;
+    });
+
+    document.getElementById('clearResults').addEventListener('click', () => {
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('clearResults').disabled = true;
+    });
+
+    // Auto-run test if we just navigated here
+    if (performance.getEntriesByType('navigation')[0] &&
+        window.location.search.includes('autorun=true')) {
+      setTimeout(() => {
+        const result = analyzePerformance();
+        displayResults(result);
+      }, 100);
+    }
+  </script>
+</body>
+</html>
