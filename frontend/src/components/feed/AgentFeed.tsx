@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { useEventStore } from '../../stores/eventStore';
+import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { FeedFilters } from './FeedFilters';
 import { FeedEntry } from './FeedEntry';
 
@@ -25,7 +26,7 @@ function FeedSkeleton() {
   );
 }
 
-export function AgentFeed() {
+function AgentFeedContent() {
   const filteredEvents = useEventStore((s) => s.filteredEvents());
   const allEvents = useEventStore((s) => s.events);
   const listRef = useRef<List>(null);
@@ -136,5 +137,13 @@ export function AgentFeed() {
         </button>
       )}
     </div>
+  );
+}
+
+export function AgentFeed() {
+  return (
+    <ErrorBoundary>
+      <AgentFeedContent />
+    </ErrorBoundary>
   );
 }

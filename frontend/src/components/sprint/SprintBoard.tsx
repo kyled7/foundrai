@@ -1,6 +1,7 @@
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useState } from 'react';
 import { useSprintStore } from '../../stores/sprintStore';
+import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
 import type { TaskStatus, TaskResponse } from '../../types';
@@ -36,10 +37,12 @@ function BoardSkeleton() {
   );
 }
 
-export function SprintBoard() {
+function SprintBoardContent() {
   const tasks = useSprintStore((s) => s.tasks);
   const loading = useSprintStore((s) => s.loading);
+  const error = useSprintStore((s) => s.error);
   const updateTaskStatus = useSprintStore((s) => s.updateTaskStatus);
+  const clear = useSprintStore((s) => s.clear);
   const [activeTask, setActiveTask] = useState<TaskResponse | null>(null);
 
   const sensors = useSensors(
@@ -87,6 +90,24 @@ export function SprintBoard() {
     return <BoardSkeleton />;
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <div className="text-red-500 text-lg font-semibold mb-2">Failed to load sprint board</div>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{error}</p>
+        <button
+          onClick={() => {
+            clear();
+            window.location.reload();
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -117,5 +138,13 @@ export function SprintBoard() {
         ) : null}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+export function SprintBoard() {
+  return (
+    <ErrorBoundary>
+      <SprintBoardContent />
+    </ErrorBoundary>
   );
 }
