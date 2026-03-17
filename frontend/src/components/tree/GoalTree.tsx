@@ -45,7 +45,7 @@ interface Props {
 
 function TreeSkeleton() {
   return (
-    <div className="h-full w-full flex items-center justify-center">
+    <div className="h-full w-full flex items-center justify-center bg-white dark:bg-gray-900">
       <div className="text-center space-y-4">
         <div className="flex justify-center gap-4">
           <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -56,7 +56,7 @@ function TreeSkeleton() {
           <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
           <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
         </div>
-        <p className="text-sm text-gray-400 mt-4">Loading goal tree...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Loading goal tree...</p>
       </div>
     </div>
   );
@@ -116,18 +116,18 @@ export function GoalTree({ sprintId }: Props) {
 
   if (isEmpty) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-gray-400">
+      <div className="h-full w-full flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
           <p className="text-4xl mb-2">🌳</p>
-          <p className="text-lg font-medium">No task decomposition yet</p>
-          <p className="text-sm">Tasks will appear here once planning is complete.</p>
+          <p className="text-lg font-medium text-gray-600 dark:text-gray-400">No task decomposition yet</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">Tasks will appear here once planning is complete.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full bg-white dark:bg-gray-900">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -137,9 +137,9 @@ export function GoalTree({ sprintId }: Props) {
         fitView
         proOptions={{ hideAttribution: true }}
       >
-        <Background />
+        <Background className="dark:bg-gray-900" />
         <Controls />
-        <MiniMap />
+        <MiniMap className="dark:bg-gray-800" />
       </ReactFlow>
     </div>
   );
