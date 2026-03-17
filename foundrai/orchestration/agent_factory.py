@@ -66,6 +66,10 @@ def create_agents(
         if not agent_config.enabled:
             continue
 
+        # Get role definition and associated tools
+        role = get_role(AgentRoleName(role_name))
+        tools = tool_registry.get_tools_for_role(role)
+
         llm = LLMClient(LLMConfig(model=agent_config.model))
         runtime = AgentRuntime(
             llm_client=llm,
@@ -78,9 +82,9 @@ def create_agents(
             project_id=project_id,
         )
         agent = agent_class(
-            role=get_role(AgentRoleName(role_name)),
+            role=role,
             model=agent_config.model,
-            tools=[],
+            tools=tools,
             message_bus=message_bus,
             sprint_context=sprint_context,
             runtime=runtime,
