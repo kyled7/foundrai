@@ -310,3 +310,35 @@ async def test_engine_retries_failed_tasks(db, ctx, infra):
     assert result["status"] == SprintStatus.COMPLETED
     assert result["tasks"][0].status == TaskStatus.DONE
     assert call_count == 3  # Failed twice, succeeded on third attempt
+
+
+@pytest.mark.asyncio
+async def test_engine_times_out_long_tasks(db, ctx, infra):
+    """When a task exceeds the configured timeout, it should be marked as failed."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+    agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+
+    # Mock dev to take longer than the timeout
+    async def slow_task(*args, **kwargs):
+        # Sleep for longer than the timeout
+        await asyncio.sleep(2.0)
+        return RuntimeResult(
+            output="Should not complete", parsed=None, artifacts=[], tokens_used=50, success=True,
+        )
+
+    agents[AgentRoleName.DEVELOPER.value].execute_task = AsyncMock(
+        side_effect=slow_task
+    )
+
+    config = FoundrAIConfig()
+    config.sprint.task_timeout_seconds = 1  # 1 second timeout
+    engine = SprintEngine(
+        config=config, agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+    result = await engine.run_sprint("timeout test", "proj")
+
+    # Task should fail due to timeout
+    assert result["status"] == SprintStatus.COMPLETED
+    assert result["tasks"][0].status == TaskStatus.FAILED

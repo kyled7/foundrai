@@ -269,21 +269,45 @@ class SprintEngine:
                     await self._emit_task_status(task)
 
                     try:
-                        # Wrap task execution with retry logic
+                        # Determine timeout: use task-specific or fall back to config default
+                        timeout = task.timeout_seconds or self.config.sprint.task_timeout_seconds
+
+                        # Wrap task execution with retry logic and timeout enforcement
                         max_retries = self.config.sprint.max_task_retries
-                        result = await retry_async(
-                            fn=lambda: agent.execute_task(task),
-                            max_retries=max_retries,
-                            backoff_base=1.0,
-                            retryable_exceptions=(Exception,),
-                            auto_classify_retryable=True,
-                        )
+
+                        async def execute_with_timeout() -> Any:
+                            """Execute task with timeout enforcement."""
+                            return await asyncio.wait_for(
+                                retry_async(
+                                    fn=lambda: agent.execute_task(task),
+                                    max_retries=max_retries,
+                                    backoff_base=1.0,
+                                    retryable_exceptions=(Exception,),
+                                    auto_classify_retryable=True,
+                                ),
+                                timeout=timeout,
+                            )
+
+                        result = await execute_with_timeout()
                         task.result = result
                         task.status = TaskStatus.IN_REVIEW if result.success else TaskStatus.FAILED
 
                         for artifact in result.artifacts:
                             await self.artifact_store.save(artifact)
                             state["artifacts"].append(artifact)
+                    except asyncio.TimeoutError:
+                        # Task execution timed out
+                        task.status = TaskStatus.FAILED
+                        logger.warning(
+                            "Task %s timed out after %s seconds in sprint %s",
+                            task.id, timeout, state["sprint_id"],
+                        )
+                        await self.event_log.append("task.timeout", {
+                            "task_id": task.id,
+                            "sprint_id": state["sprint_id"],
+                            "timeout_seconds": timeout,
+                            "task_title": task.title,
+                        })
                     except Exception as exc:
                         task.status = TaskStatus.FAILED
                         await self._record_error(
