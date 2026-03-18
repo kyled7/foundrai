@@ -125,3 +125,87 @@ async def test_checkpoint_create_and_load(db):
     assert latest is not None
     assert latest["sprint_id"] == "s1"
     assert latest["goal"] == "Test checkpoint"
+
+
+@pytest.mark.asyncio
+async def test_store_concurrent_updates(db):
+    """Test that concurrent database operations don't cause race conditions."""
+    import asyncio
+
+    store = SprintStore(db)
+
+    # Create a sprint
+    state: SprintState = {
+        "sprint_id": "concurrent_test",
+        "project_id": "proj1",
+        "sprint_number": 1,
+        "goal": "Test concurrent updates",
+        "status": SprintStatus.EXECUTING,
+        "tasks": [],
+        "messages": [],
+        "artifacts": [],
+        "metrics": SprintMetrics(),
+    }
+    await store.create_sprint(state)
+
+    # Test 1: Concurrent task creations
+    tasks = [
+        Task(id=f"task_{i}", title=f"Task {i}", description=f"Task {i} description")
+        for i in range(10)
+    ]
+
+    async def create_task_wrapper(task):
+        await store.create_task("concurrent_test", task)
+
+    # Create tasks concurrently
+    await asyncio.gather(*[create_task_wrapper(task) for task in tasks])
+
+    # Verify all tasks were created
+    retrieved_tasks = await store.get_tasks("concurrent_test")
+    assert len(retrieved_tasks) == 10
+
+    # Test 2: Concurrent task updates
+    async def update_task_status(task_id):
+        task = Task(id=task_id, title="Updated", description="Updated", status="done")
+        await store.update_task(task)
+
+    # Update tasks concurrently
+    task_ids = [f"task_{i}" for i in range(10)]
+    await asyncio.gather(*[update_task_status(task_id) for task_id in task_ids])
+
+    # Verify all tasks were updated
+    updated_tasks = await store.get_tasks("concurrent_test")
+    assert all(task.status == "done" for task in updated_tasks)
+
+    # Test 3: Concurrent sprint status updates
+    async def update_status():
+        await store.update_sprint_status("concurrent_test", SprintStatus.EXECUTING)
+
+    # Multiple concurrent status updates (should be safe with locking)
+    await asyncio.gather(*[update_status() for _ in range(5)])
+
+    # Verify sprint status is consistent
+    sprint = await store.get_sprint("concurrent_test")
+    assert sprint["status"] == SprintStatus.EXECUTING
+
+    # Test 4: Concurrent checkpoint saves
+    async def save_checkpoint(i):
+        checkpoint_state = {
+            "sprint_id": "concurrent_test",
+            "project_id": "proj1",
+            "sprint_number": 1,
+            "goal": "Test concurrent updates",
+            "status": SprintStatus.EXECUTING,
+            "tasks": [],
+            "messages": [],
+            "artifacts": [],
+            "metrics": SprintMetrics(total_tasks=i),
+        }
+        return await store.save_checkpoint("concurrent_test", f"checkpoint_{i}", checkpoint_state)
+
+    # Save multiple checkpoints concurrently
+    checkpoint_ids = await asyncio.gather(*[save_checkpoint(i) for i in range(5)])
+
+    # Verify all checkpoints were created with unique IDs
+    assert len(checkpoint_ids) == 5
+    assert len(set(checkpoint_ids)) == 5  # All unique
