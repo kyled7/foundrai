@@ -373,3 +373,51 @@ async def test_engine_creates_checkpoints(db, ctx, infra):
     assert "after_execution" in checkpoint_names
     assert "after_review" in checkpoint_names
     assert "after_retrospective" in checkpoint_names
+
+
+@pytest.mark.asyncio
+async def test_engine_resumes_from_checkpoint(db, ctx, infra):
+    """Verify that sprints can be resumed from a checkpoint after failure."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+    agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+
+    # Create initial engine and run sprint until planning completes
+    engine = SprintEngine(
+        config=FoundrAIConfig(), agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+
+    # Run a sprint that will create checkpoints
+    result = await engine.run_sprint("resume test", "proj")
+    sprint_id = result["sprint_id"]
+
+    # Verify sprint completed and checkpoint was created
+    assert result["status"] == SprintStatus.COMPLETED
+
+    # Get the checkpoint ID to resume from
+    cursor = await db.conn.execute(
+        "SELECT checkpoint_id FROM checkpoints WHERE sprint_id = ? AND checkpoint_name = ?",
+        (sprint_id, "after_planning"),
+    )
+    row = await cursor.fetchone()
+    assert row is not None
+    checkpoint_id = row["checkpoint_id"]
+
+    # Reset task graph for resume test
+    tg.reset()
+
+    # Create new engine with fresh agents (simulating restart)
+    agents2 = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+    engine2 = SprintEngine(
+        config=FoundrAIConfig(), agents=agents2, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+
+    # Resume from the checkpoint using checkpoint_id
+    resumed_result = await engine2.resume_sprint(checkpoint_id)
+
+    # Verify resume completed successfully
+    assert resumed_result["status"] == SprintStatus.COMPLETED
+    assert resumed_result["sprint_id"] == sprint_id
+    assert len(resumed_result["tasks"]) == 1

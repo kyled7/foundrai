@@ -170,6 +170,73 @@ class SprintEngine:
 
         return sprint_results
 
+    async def resume_sprint(self, checkpoint_id: str) -> SprintState:
+        """Resume a sprint from a specific checkpoint.
+
+        Loads the specified checkpoint and continues execution from the phase
+        immediately following that checkpoint.
+
+        Args:
+            checkpoint_id: The ID of the checkpoint to resume from
+
+        Returns:
+            The final sprint state after completion
+
+        Raises:
+            ValueError: If checkpoint cannot be found or loaded
+        """
+        # Get the checkpoint name and sprint_id for routing
+        cursor = await self.sprint_store.db.conn.execute(
+            "SELECT checkpoint_name, sprint_id FROM checkpoints WHERE checkpoint_id = ?",
+            (checkpoint_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            raise ValueError(f"Checkpoint {checkpoint_id} not found")
+
+        checkpoint_name = row["checkpoint_name"]
+        sprint_id = row["sprint_id"]
+
+        logger.info(
+            "Resuming sprint %s from checkpoint %s (%s)",
+            sprint_id, checkpoint_id, checkpoint_name,
+        )
+
+        # Load the state
+        state = await self.sprint_store.load_checkpoint(checkpoint_id)
+        if not state:
+            raise ValueError(f"Failed to load checkpoint {checkpoint_id}")
+
+        await self.event_log.append("sprint.resumed", {
+            "sprint_id": sprint_id,
+            "checkpoint_name": checkpoint_name,
+            "checkpoint_id": checkpoint_id,
+        })
+
+        # Resume from the appropriate phase based on checkpoint name
+        if checkpoint_name == "after_planning":
+            # Resume from execution
+            state = await self._execute_node(state)
+            state = await self._review_node(state)
+            state = await self._retrospective_node(state)
+            state = await self._complete_node(state)
+        elif checkpoint_name == "after_execution":
+            # Resume from review
+            state = await self._review_node(state)
+            state = await self._retrospective_node(state)
+            state = await self._complete_node(state)
+        elif checkpoint_name == "after_review":
+            # Resume from retrospective
+            state = await self._retrospective_node(state)
+            state = await self._complete_node(state)
+        elif checkpoint_name == "after_retrospective":
+            # Just complete
+            state = await self._complete_node(state)
+        else:
+            raise ValueError(f"Unknown checkpoint name: {checkpoint_name}")
+
+        return state
+
     async def _plan_node(self, state: SprintState) -> SprintState:
         """PLANNING node: PM decomposes goal into tasks."""
         state["status"] = SprintStatus.PLANNING
