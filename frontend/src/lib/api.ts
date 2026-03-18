@@ -29,7 +29,7 @@ import type {
   Task, AgentConfig, AgentConfigUpdate, Approval, ApprovalDecision,
   SprintEvent, AgentMessage, Artifact, CostBreakdown, BudgetStatus,
   TeamTemplate, CreateTemplateRequest, Team, CreateTeamRequest, Learning,
-  SprintCostPoint, SprintSummary, AgentMetrics, GlobalAnalytics,
+  SprintCostPoint, SprintSummary, SprintComparison, AgentMetrics, GlobalAnalytics,
   GlobalSettings, ApiKeyInfo,
 } from './types';
 
@@ -112,6 +112,8 @@ export const api = {
       request<SprintCostPoint[]>(`/projects/${projectId}/analytics/cost-over-time`),
     sprintHistory: (projectId: string) =>
       request<SprintSummary[]>(`/projects/${projectId}/analytics/sprint-history`),
+    sprintComparison: (projectId: string) =>
+      request<{ sprints: SprintComparison[] }>(`/projects/${projectId}/sprint-comparison`),
     agentPerformance: (projectId: string) =>
       request<AgentMetrics[]>(`/projects/${projectId}/analytics/agent-performance`),
     global: () => request<GlobalAnalytics>('/analytics/global'),

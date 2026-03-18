@@ -255,6 +255,19 @@ export interface SprintSummary {
   completed_at: string | null;
 }
 
+export interface SprintComparison {
+  sprint_id: string;
+  sprint_number: number;
+  goal: string;
+  task_count: number;
+  completed_count: number;
+  failed_count: number;
+  pass_rate: number;
+  total_tokens: number;
+  total_cost: number;
+  duration_seconds: number;
+}
+
 export interface AgentMetrics {
   agent_role: string;
   tasks_completed: number;

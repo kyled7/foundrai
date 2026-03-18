@@ -89,6 +89,14 @@ export function useSprintHistory(projectId: string) {
   });
 }
 
+export function useSprintComparison(projectId: string) {
+  return useQuery({
+    queryKey: ['project', projectId, 'sprint-comparison'],
+    queryFn: () => api.analytics.sprintComparison(projectId),
+    enabled: !!projectId,
+  });
+}
+
 export function useAgentPerformance(projectId: string) {
   return useQuery({
     queryKey: ['project', projectId, 'agent-performance'],
