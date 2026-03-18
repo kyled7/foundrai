@@ -3,6 +3,7 @@ import type { ApprovalRequest } from '../../lib/types';
 import { approveRequest, rejectRequest } from '../../api/approvals';
 import { useApprovalStore } from '../../stores/approvalStore';
 import { AgentAvatar } from '../shared/AgentAvatar';
+import { ContextRenderer } from './ContextRenderer';
 import { Clock } from 'lucide-react';
 
 interface Props {
@@ -72,27 +73,7 @@ export function ApprovalCard({ approval }: Props) {
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{approval.description}</p>
 
-          {Object.keys(approval.context).length > 0 && (
-            <details className="mt-2">
-              <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
-                View context ({Object.keys(approval.context).length} {Object.keys(approval.context).length === 1 ? 'item' : 'items'})
-              </summary>
-              <div className="mt-2 bg-white dark:bg-gray-900 rounded p-3 border border-gray-200 dark:border-gray-700">
-                {Object.entries(approval.context).map(([key, value]) => (
-                  <div key={key} className="mb-2 last:mb-0">
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{key}:</span>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                      {typeof value === 'string' ? (
-                        <span className="break-words">{value}</span>
-                      ) : (
-                        <pre className="overflow-x-auto font-mono">{JSON.stringify(value, null, 2)}</pre>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
+          <ContextRenderer context={approval.context} actionType={approval.action_type} />
 
           <textarea
             value={comment}
