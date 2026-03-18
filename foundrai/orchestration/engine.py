@@ -469,8 +469,9 @@ class SprintEngine:
         })
 
         # Poll for approval decision
+        approval_timeout = self._get_approval_timeout(agent_role)
         elapsed = 0.0
-        while elapsed < APPROVAL_TIMEOUT:
+        while elapsed < approval_timeout:
             await asyncio.sleep(APPROVAL_POLL_INTERVAL)
             elapsed += APPROVAL_POLL_INTERVAL
 
@@ -513,6 +514,19 @@ class SprintEngine:
         if agent_config and hasattr(agent_config, "autonomy"):
             return agent_config.autonomy
         return AutonomyLevel.NOTIFY
+
+    def _get_approval_timeout(self, agent_role: str) -> int:
+        """Get the approval timeout for an agent role from config.
+
+        Returns the agent-specific approval_timeout_seconds if configured,
+        otherwise returns the default APPROVAL_TIMEOUT.
+        """
+        agent_config = getattr(self.config.team, agent_role, None)
+        if agent_config and hasattr(agent_config, "approval_timeout_seconds"):
+            timeout = agent_config.approval_timeout_seconds
+            if timeout is not None:
+                return timeout
+        return APPROVAL_TIMEOUT
 
     async def _review_node(self, state: SprintState) -> SprintState:
         """REVIEWING node: QA reviews completed tasks."""
