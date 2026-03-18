@@ -218,7 +218,7 @@ export type WSEventType =
   | 'agent.thinking' | 'agent.action' | 'agent.message' | 'agent.tool_call' | 'agent.tool_result'
   | 'artifact.created' | 'artifact.updated'
   | 'approval.requested' | 'approval.resolved'
-  | 'budget.warning' | 'budget.exceeded'
+  | 'cost_updated' | 'budget.warning' | 'budget.exceeded'
   | 'connection.established';
 
 export interface WSEvent {
