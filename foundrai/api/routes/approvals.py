@@ -41,6 +41,30 @@ async def list_approvals(sprint_id: str) -> dict:
     return {"approvals": approvals, "pending_count": pending, "total": len(approvals)}
 
 
+@router.get("/approvals/{approval_id}")
+async def get_approval(approval_id: str) -> dict:
+    """Get approval details."""
+    db = await get_db()
+    cursor = await db.conn.execute(
+        "SELECT * FROM approvals WHERE approval_id = ?", (approval_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Approval not found")
+
+    return {
+        "approval_id": row["approval_id"],
+        "sprint_id": row["sprint_id"],
+        "agent_id": row["agent_id"],
+        "action_type": row["action_type"],
+        "title": row["title"],
+        "status": row["status"],
+        "comment": row["comment"],
+        "created_at": row["created_at"],
+        "resolved_at": row.get("resolved_at"),
+    }
+
+
 @router.post("/approvals/{approval_id}/approve")
 async def approve(approval_id: str, body: ApprovalDecision) -> dict:
     """Approve a pending approval."""
