@@ -17,6 +17,7 @@ from foundrai.orchestration.task_graph import TaskGraph
 from foundrai.persistence.artifact_store import ArtifactStore
 from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
+from foundrai.utils.retry import retry_async
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ class SprintEngine:
         self.vector_memory = vector_memory
         self.error_store = error_store
         self.db = db
+        self._task_status_lock = asyncio.Lock()
         self.graph = self._build_graph()
 
     def _build_graph(self) -> object:
@@ -165,9 +167,82 @@ class SprintEngine:
             })
 
             # Reset task graph for next sprint
-            self.task_graph.reset()
+            await self.task_graph.reset()
 
         return sprint_results
+
+    async def resume_sprint(self, checkpoint_id: str) -> SprintState:
+        """Resume a sprint from a specific checkpoint.
+
+        Loads the specified checkpoint and continues execution from the phase
+        immediately following that checkpoint.
+
+        Args:
+            checkpoint_id: The ID of the checkpoint to resume from
+
+        Returns:
+            The final sprint state after completion
+
+        Raises:
+            ValueError: If checkpoint cannot be found or loaded
+        """
+        # Get the checkpoint name and sprint_id for routing
+        cursor = await self.sprint_store.db.conn.execute(
+            "SELECT checkpoint_name, sprint_id FROM checkpoints WHERE checkpoint_id = ?",
+            (checkpoint_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            raise ValueError(f"Checkpoint {checkpoint_id} not found")
+
+        checkpoint_name = row["checkpoint_name"]
+        sprint_id = row["sprint_id"]
+
+        logger.info(
+            "Resuming sprint %s from checkpoint %s (%s)",
+            sprint_id, checkpoint_id, checkpoint_name,
+        )
+
+        # Load the state
+        state = await self.sprint_store.load_checkpoint(checkpoint_id)
+        if not state:
+            raise ValueError(f"Failed to load checkpoint {checkpoint_id}")
+
+        # Rebuild task graph from loaded state if tasks exist
+        if state.get("tasks"):
+            await self.task_graph.reset()
+            for task in state["tasks"]:
+                await self.task_graph.add_task(task, depends_on=task.dependencies)
+
+        await self.event_log.append("sprint.resumed", {
+            "sprint_id": sprint_id,
+            "checkpoint_name": checkpoint_name,
+            "checkpoint_id": checkpoint_id,
+        })
+
+        # Resume from the appropriate phase based on checkpoint name
+        if checkpoint_name == "after_planning":
+            # Resume from execution
+            state = await self._execute_node(state)
+            state = await self._review_node(state)
+            state = await self._retrospective_node(state)
+            state = await self._complete_node(state)
+        elif checkpoint_name == "after_execution":
+            # Resume from review
+            state = await self._review_node(state)
+            state = await self._retrospective_node(state)
+            state = await self._complete_node(state)
+        elif checkpoint_name == "after_review":
+            # Resume from retrospective
+            state = await self._retrospective_node(state)
+            state = await self._complete_node(state)
+        elif checkpoint_name == "after_retrospective":
+            # Just complete
+            state = await self._complete_node(state)
+        else:
+            raise ValueError(f"Unknown checkpoint name: {checkpoint_name}")
+
+        return state
 
     async def _plan_node(self, state: SprintState) -> SprintState:
         """PLANNING node: PM decomposes goal into tasks."""
@@ -202,9 +277,9 @@ class SprintEngine:
             task.dependencies = resolved_deps
 
         # Build task graph
-        self.task_graph.reset()
+        await self.task_graph.reset()
         for task in tasks:
-            self.task_graph.add_task(task, depends_on=task.dependencies)
+            await self.task_graph.add_task(task, depends_on=task.dependencies)
 
         state["tasks"] = tasks
         await self.sprint_store.update_tasks(state["sprint_id"], tasks)
@@ -213,6 +288,11 @@ class SprintEngine:
             "sprint_id": state["sprint_id"],
             "task_count": len(tasks),
         })
+
+        # Create checkpoint after planning
+        await self.sprint_store.save_checkpoint(
+            state["sprint_id"], "after_planning", state
+        )
 
         return state
 
@@ -225,7 +305,7 @@ class SprintEngine:
 
         # Execute in waves based on dependency graph
         while True:
-            ready = self.task_graph.get_ready_tasks()
+            ready = await self.task_graph.get_ready_tasks()
             if not ready:
                 break
 
@@ -241,7 +321,7 @@ class SprintEngine:
                 else:
                     # No agent available for this role — mark as failed
                     t.status = TaskStatus.FAILED
-                    self.task_graph.mark_completed(t.id)
+                    await self.task_graph.mark_completed(t.id)
                     await self._emit_task_status(t)
 
             if not executable_tasks:
@@ -260,7 +340,7 @@ class SprintEngine:
                     )
                     if not approved:
                         task.status = TaskStatus.BLOCKED
-                        self.task_graph.mark_completed(task.id)
+                        await self.task_graph.mark_completed(task.id)
                         await self._emit_task_status(task)
                         return
 
@@ -268,13 +348,46 @@ class SprintEngine:
                     await self._emit_task_status(task)
 
                     try:
-                        result = await agent.execute_task(task)
+                        # Determine timeout: use task-specific or fall back to config default
+                        timeout = task.timeout_seconds or self.config.sprint.task_timeout_seconds
+
+                        # Wrap task execution with retry logic and timeout enforcement
+                        max_retries = self.config.sprint.max_task_retries
+
+                        async def execute_with_timeout() -> Any:
+                            """Execute task with timeout enforcement."""
+                            return await asyncio.wait_for(
+                                retry_async(
+                                    fn=lambda: agent.execute_task(task),
+                                    max_retries=max_retries,
+                                    backoff_base=1.0,
+                                    retryable_exceptions=(Exception,),
+                                    auto_classify_retryable=True,
+                                ),
+                                timeout=timeout,
+                            )
+
+                        result = await execute_with_timeout()
                         task.result = result
                         task.status = TaskStatus.IN_REVIEW if result.success else TaskStatus.FAILED
 
                         for artifact in result.artifacts:
                             await self.artifact_store.save(artifact)
-                            state["artifacts"].append(artifact)
+                            async with self._task_status_lock:
+                                state["artifacts"].append(artifact)
+                    except asyncio.TimeoutError:
+                        # Task execution timed out
+                        task.status = TaskStatus.FAILED
+                        logger.warning(
+                            "Task %s timed out after %s seconds in sprint %s",
+                            task.id, timeout, state["sprint_id"],
+                        )
+                        await self.event_log.append("task.timeout", {
+                            "task_id": task.id,
+                            "sprint_id": state["sprint_id"],
+                            "timeout_seconds": timeout,
+                            "task_title": task.title,
+                        })
                     except Exception as exc:
                         task.status = TaskStatus.FAILED
                         await self._record_error(
@@ -283,13 +396,18 @@ class SprintEngine:
                             agent_role=role_name,
                         )
 
-                    self.task_graph.mark_completed(task.id)
+                    await self.task_graph.mark_completed(task.id)
                     await self._emit_task_status(task)
 
             await asyncio.gather(
                 *[execute_one(t, agent, role) for t, agent, role in executable_tasks],
                 return_exceptions=True,
             )
+
+        # Create checkpoint after execution
+        await self.sprint_store.save_checkpoint(
+            state["sprint_id"], "after_execution", state
+        )
 
         return state
 
@@ -436,6 +554,11 @@ class SprintEngine:
 
             await self._emit_task_status(task)
 
+        # Create checkpoint after review
+        await self.sprint_store.save_checkpoint(
+            state["sprint_id"], "after_review", state
+        )
+
         return state
 
     async def _retrospective_node(self, state: SprintState) -> SprintState:
@@ -450,6 +573,12 @@ class SprintEngine:
         await self.event_log.append("sprint.retrospective_completed", {
             "sprint_id": state["sprint_id"],
         })
+
+        # Create checkpoint after retrospective
+        await self.sprint_store.save_checkpoint(
+            state["sprint_id"], "after_retrospective", state
+        )
+
         return state
 
     async def _complete_node(self, state: SprintState) -> SprintState:
@@ -532,10 +661,15 @@ class SprintEngine:
             pass
 
     async def _emit_task_status(self, task: Task) -> None:
-        """Emit a task status change event and persist to DB."""
+        """Emit a task status change event and persist to DB with synchronization."""
         status_val = task.status if isinstance(task.status, str) else task.status.value
+
+        # Emit event (not under lock to avoid deadlock with listeners)
         await self.event_log.append(
             "task.status_changed",
             {"task_id": task.id, "status": status_val, "task_title": task.title},
         )
-        await self.sprint_store.update_task(task)
+
+        # Synchronize database updates to prevent race conditions
+        async with self._task_status_lock:
+            await self.sprint_store.update_task(task)

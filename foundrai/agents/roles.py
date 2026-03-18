@@ -21,6 +21,7 @@ class AgentRole(BaseModel):
     autonomy_level: AutonomyLevel = AutonomyLevel.NOTIFY
     max_tokens_per_action: int = 4096
     persona_override: str | None = None
+    max_retries: int = 3
 
 
 def register_role(role: AgentRole) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import AsyncMock
 
@@ -270,3 +271,204 @@ async def test_engine_event_listener(db, ctx, infra):
     assert "sprint.started" in events_captured
     assert "sprint.status_changed" in events_captured
     assert "task.status_changed" in events_captured
+
+
+@pytest.mark.asyncio
+async def test_engine_retries_failed_tasks(db, ctx, infra):
+    """When a task fails with a retryable error (rate_limit, timeout),
+    it should be retried up to max_task_retries times."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+    agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+
+    # Mock dev to fail twice with a retryable error, then succeed
+    call_count = 0
+
+    async def side_effect_fn(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            # First two calls: raise a retryable error (timeout)
+            raise RuntimeError("Request timed out after 30 seconds")
+        # Third call: succeed
+        return RuntimeResult(
+            output="Success", parsed=None, artifacts=[], tokens_used=50, success=True,
+        )
+
+    agents[AgentRoleName.DEVELOPER.value].runtime.run = AsyncMock(
+        side_effect=side_effect_fn
+    )
+
+    config = FoundrAIConfig()
+    config.sprint.max_task_retries = 3
+    engine = SprintEngine(
+        config=config, agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+    result = await engine.run_sprint("retry test", "proj")
+
+    # Should succeed after retries
+    assert result["status"] == SprintStatus.COMPLETED
+    assert result["tasks"][0].status == TaskStatus.DONE
+    assert call_count == 3  # Failed twice, succeeded on third attempt
+
+
+@pytest.mark.asyncio
+async def test_engine_times_out_long_tasks(db, ctx, infra):
+    """When a task exceeds the configured timeout, it should be marked as failed."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+    agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+
+    # Mock dev to take longer than the timeout
+    async def slow_task(*args, **kwargs):
+        # Sleep for longer than the timeout
+        await asyncio.sleep(2.0)
+        return RuntimeResult(
+            output="Should not complete", parsed=None, artifacts=[], tokens_used=50, success=True,
+        )
+
+    agents[AgentRoleName.DEVELOPER.value].execute_task = AsyncMock(
+        side_effect=slow_task
+    )
+
+    config = FoundrAIConfig()
+    config.sprint.task_timeout_seconds = 1  # 1 second timeout
+    engine = SprintEngine(
+        config=config, agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+    result = await engine.run_sprint("timeout test", "proj")
+
+    # Task should fail due to timeout
+    assert result["status"] == SprintStatus.COMPLETED
+    assert result["tasks"][0].status == TaskStatus.FAILED
+
+
+@pytest.mark.asyncio
+async def test_engine_creates_checkpoints(db, ctx, infra):
+    """Verify that checkpoints are created at each sprint phase transition."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+    agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+
+    engine = SprintEngine(
+        config=FoundrAIConfig(), agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+    result = await engine.run_sprint("checkpoint test", "proj")
+
+    # Verify sprint completed successfully
+    assert result["status"] == SprintStatus.COMPLETED
+
+    # Verify checkpoints were created for each phase transition
+    # Expected checkpoints: after_planning, after_execution, after_review, after_retrospective
+    cursor = await db.conn.execute(
+        "SELECT checkpoint_name FROM checkpoints WHERE sprint_id = ? ORDER BY created_at",
+        (result["sprint_id"],),
+    )
+    rows = await cursor.fetchall()
+    checkpoint_names = [row["checkpoint_name"] for row in rows]
+
+    assert "after_planning" in checkpoint_names
+    assert "after_execution" in checkpoint_names
+    assert "after_review" in checkpoint_names
+    assert "after_retrospective" in checkpoint_names
+
+
+@pytest.mark.asyncio
+async def test_engine_resumes_from_checkpoint(db, ctx, infra):
+    """Verify that sprints can be resumed from a checkpoint after failure."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+    agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+
+    # Create initial engine and run sprint until planning completes
+    engine = SprintEngine(
+        config=FoundrAIConfig(), agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+
+    # Run a sprint that will create checkpoints
+    result = await engine.run_sprint("resume test", "proj")
+    sprint_id = result["sprint_id"]
+
+    # Verify sprint completed and checkpoint was created
+    assert result["status"] == SprintStatus.COMPLETED
+
+    # Get the checkpoint ID to resume from
+    cursor = await db.conn.execute(
+        "SELECT checkpoint_id FROM checkpoints WHERE sprint_id = ? AND checkpoint_name = ?",
+        (sprint_id, "after_planning"),
+    )
+    row = await cursor.fetchone()
+    assert row is not None
+    checkpoint_id = row["checkpoint_id"]
+
+    # Reset task graph for resume test
+    await tg.reset()
+
+    # Create new engine with fresh agents (simulating restart)
+    agents2 = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+    engine2 = SprintEngine(
+        config=FoundrAIConfig(), agents=agents2, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+
+    # Resume from the checkpoint using checkpoint_id
+    resumed_result = await engine2.resume_sprint(checkpoint_id)
+
+    # Verify resume completed successfully
+    assert resumed_result["status"] == SprintStatus.COMPLETED
+    assert resumed_result["sprint_id"] == sprint_id
+    assert len(resumed_result["tasks"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_engine_parallel_task_updates(db, ctx, infra):
+    """Verify that parallel task status updates don't cause race conditions."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+
+    # Create 5 tasks that can all run in parallel
+    many_tasks = json.dumps([
+        {"title": f"Task{i}", "description": f"Do {i}", "acceptance_criteria": [],
+         "dependencies": [], "assigned_to": "developer", "priority": i}
+        for i in range(5)
+    ])
+
+    agents = _make_agents(mb, ctx, many_tasks, qa_resp=qa_pass)
+
+    # Each task will take a bit of time to simulate real work
+    async def slow_execute(*args, **kwargs):
+        await asyncio.sleep(0.05)  # Small delay to ensure parallel execution
+        return RuntimeResult(
+            output="Done", parsed=None, artifacts=[], tokens_used=10, success=True,
+        )
+
+    agents[AgentRoleName.DEVELOPER.value].execute_task = AsyncMock(
+        side_effect=slow_execute
+    )
+
+    config = FoundrAIConfig()
+    config.sprint.max_tasks_parallel = 5  # Allow all tasks to run in parallel
+
+    engine = SprintEngine(
+        config=config, agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+
+    result = await engine.run_sprint("parallel test", "proj")
+
+    # All tasks should complete successfully without race conditions
+    assert result["status"] == SprintStatus.COMPLETED
+    assert len(result["tasks"]) == 5
+
+    # Verify all tasks reached the DONE status
+    done_count = sum(1 for t in result["tasks"] if t.status == TaskStatus.DONE)
+    assert done_count == 5
+
+    # Verify no task status corruption (all should be in valid states)
+    valid_statuses = {TaskStatus.DONE, TaskStatus.FAILED, TaskStatus.IN_REVIEW}
+    for task in result["tasks"]:
+        assert task.status in valid_statuses or task.status in ("done", "failed", "in_review")

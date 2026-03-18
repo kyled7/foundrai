@@ -1,15 +1,15 @@
 {
   "active": true,
-  "spec": "001-frontend-codebase-consolidation",
+  "spec": "003-end-to-end-sprint-flow-hardening",
   "state": "building",
   "subtasks": {
-    "completed": 18,
-    "total": 21,
+    "completed": 13,
+    "total": 20,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Archive Old Frontend",
+    "current": "Add Race Condition Protection",
     "id": null,
     "total": 3
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 20,
-    "started_at": "2026-03-17T23:02:21.746535"
+    "number": 7,
+    "started_at": "2026-03-18T21:17:26.402042"
   },
-  "last_update": "2026-03-18T00:05:45.185138"
+  "last_update": "2026-03-18T21:36:56.424991"
 }
