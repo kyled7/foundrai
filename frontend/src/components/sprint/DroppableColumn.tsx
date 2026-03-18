@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
-import type { Task } from '@/lib/types';
+import type { TaskResponse } from '../../types';
 import { TaskCard } from './TaskCard';
-import { cn } from '@/lib/utils';
+import { cn } from '../../utils/cn';
 
 const COLOR_MAP: Record<string, string> = {
   gray: 'border-t-gray-400',
@@ -12,36 +12,34 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 interface Props {
-  columnId: string;
+  id: string;
   title: string;
   color: string;
-  tasks: Task[];
+  tasks: TaskResponse[];
   count: number;
 }
 
-export function KanbanColumn({ columnId, title, color, tasks, count }: Props) {
+export function DroppableColumn({ id, title, color, tasks, count }: Props) {
   const { setNodeRef, isOver } = useDroppable({
-    id: columnId,
+    id,
   });
 
   return (
-    <div className={cn(
-      'flex-shrink-0 w-[240px] md:w-[280px] xl:flex-1 xl:min-w-[220px] xl:max-w-[320px] bg-gray-100 dark:bg-gray-900 rounded-lg border-t-2 flex flex-col',
-      COLOR_MAP[color] ?? 'border-t-gray-400'
-    )}>
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex-1 min-w-[220px] max-w-[300px] bg-gray-100 dark:bg-gray-900 rounded-lg border-t-2 flex flex-col transition-colors',
+        COLOR_MAP[color] ?? 'border-t-gray-400',
+        isOver && 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50 dark:bg-blue-900/20'
+      )}
+    >
       <div className="p-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold">{title}</h3>
         <span className="text-xs bg-gray-200 dark:bg-gray-700 rounded-full px-2 py-0.5">
           {count}
         </span>
       </div>
-      <div
-        ref={setNodeRef}
-        className={cn(
-          'flex-1 overflow-y-auto p-2 space-y-2 transition-colors',
-          isOver && 'bg-blue-50 dark:bg-blue-900/20'
-        )}
-      >
+      <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {tasks.map((task) => (
           <TaskCard key={task.task_id} task={task} />
         ))}

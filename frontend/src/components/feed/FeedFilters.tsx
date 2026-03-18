@@ -9,7 +9,7 @@ export function FeedFilters() {
       <select
         value={filters.agentId ?? ''}
         onChange={(e) => setFilters({ agentId: e.target.value || undefined })}
-        className="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800"
+        className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
       >
         <option value="">All Agents</option>
         <option value="product_manager">Product Manager</option>
@@ -22,7 +22,7 @@ export function FeedFilters() {
       <select
         value={filters.eventType ?? ''}
         onChange={(e) => setFilters({ eventType: e.target.value || undefined })}
-        className="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800"
+        className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
       >
         <option value="">All Events</option>
         <option value="agent.message">Messages</option>

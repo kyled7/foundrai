@@ -27,6 +27,7 @@ export function SprintPage() {
   const sprint = useSprintStore((s) => s.sprint);
   const setSprint = useSprintStore((s) => s.setSprint);
   const setLoading = useSprintStore((s) => s.setLoading);
+  const setError = useSprintStore((s) => s.setError);
   const updateTaskStatus = useSprintStore((s) => s.updateTaskStatus);
   const addTask = useSprintStore((s) => s.addTask);
   const addEvent = useEventStore((s) => s.addEvent);
@@ -40,10 +41,10 @@ export function SprintPage() {
     getSprint(sprintId).then((data) => {
       setSprint(data);
       setLoading(false);
-    }).catch(() => {
-      setLoading(false);
+    }).catch((err) => {
+      setError(err?.message || 'Failed to load sprint data');
     });
-  }, [sprintId, setSprint, setLoading]);
+  }, [sprintId, setSprint, setLoading, setError]);
 
   // Load sprint data
   useEffect(() => {

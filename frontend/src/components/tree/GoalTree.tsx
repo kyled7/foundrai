@@ -43,12 +43,33 @@ interface Props {
   sprintId: string;
 }
 
+function TreeSkeleton() {
+  return (
+    <div className="h-full w-full flex items-center justify-center bg-white dark:bg-gray-900">
+      <div className="text-center space-y-4">
+        <div className="flex justify-center gap-4">
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        </div>
+        <div className="flex justify-center gap-4">
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-32 h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Loading goal tree...</p>
+      </div>
+    </div>
+  );
+}
+
 export function GoalTree({ sprintId }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [loading, setLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
 
   const loadTree = useCallback(async () => {
+    setLoading(true);
     try {
       const data: GoalTreeResponse = await getGoalTree(sprintId);
       const rfNodes: Node[] = data.nodes.map((n) => ({
@@ -72,12 +93,14 @@ export function GoalTree({ sprintId }: Props) {
         setIsEmpty(true);
       } else {
         setIsEmpty(false);
+        const laid = layoutTree(rfNodes, rfEdges);
+        setNodes(laid.nodes);
+        setEdges(laid.edges);
       }
-      const laid = layoutTree(rfNodes, rfEdges);
-      setNodes(laid.nodes);
-      setEdges(laid.edges);
     } catch {
       setIsEmpty(true);
+    } finally {
+      setLoading(false);
     }
   }, [sprintId, setNodes, setEdges]);
 
@@ -87,20 +110,24 @@ export function GoalTree({ sprintId }: Props) {
 
   const memoNodeTypes = useMemo(() => nodeTypes, []);
 
+  if (loading) {
+    return <TreeSkeleton />;
+  }
+
   if (isEmpty) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-gray-400">
+      <div className="h-full w-full flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
           <p className="text-4xl mb-2">🌳</p>
-          <p className="text-lg font-medium">No task decomposition yet</p>
-          <p className="text-sm">Tasks will appear here once planning is complete.</p>
+          <p className="text-lg font-medium text-gray-600 dark:text-gray-400">No task decomposition yet</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">Tasks will appear here once planning is complete.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full bg-white dark:bg-gray-900">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -110,9 +137,9 @@ export function GoalTree({ sprintId }: Props) {
         fitView
         proOptions={{ hideAttribution: true }}
       >
-        <Background />
+        <Background className="dark:bg-gray-900" />
         <Controls />
-        <MiniMap />
+        <MiniMap className="dark:bg-gray-800" />
       </ReactFlow>
     </div>
   );
