@@ -7,7 +7,7 @@ import json
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from foundrai.api.deps import get_config, get_db
+from foundrai.api.deps import get_config, get_db, get_event_log
 from foundrai.models.budget import BudgetConfig
 from foundrai.orchestration.budget_manager import BudgetManager
 from foundrai.persistence.token_store import TokenStore
@@ -23,12 +23,13 @@ async def _get_token_store() -> TokenStore:
 async def _get_budget_manager() -> BudgetManager:
     db = await get_db()
     token_store = TokenStore(db)
+    event_log = await get_event_log()
     config = get_config()
     budget_config = BudgetConfig(
         sprint_budget_usd=config.budget.sprint_budget_usd,
         agent_budgets=config.budget.agent_budgets,
     )
-    return BudgetManager(budget_config, token_store, db)
+    return BudgetManager(budget_config, token_store, db, event_log)
 
 
 # --- Cost routes ---
