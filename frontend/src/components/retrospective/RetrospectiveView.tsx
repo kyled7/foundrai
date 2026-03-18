@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatCost, formatTokens } from '@/lib/utils';
 import type { RetroResponse } from '../../types';
 
 interface RetrospectiveViewProps {
@@ -67,6 +68,71 @@ export function RetrospectiveView({ sprintId }: RetrospectiveViewProps) {
               <li key={i}>{item}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {retro.cost_summary && retro.cost_summary.total_cost > 0 && (
+        <div className="bg-card border border-border rounded-lg p-4">
+          <h3 className="font-medium text-foreground mb-3">💰 Cost Summary</h3>
+
+          {/* Total Cost */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+            <span className="text-sm text-muted">Total Sprint Cost</span>
+            <div className="text-right">
+              <div className="text-lg font-semibold text-foreground">
+                {formatCost(retro.cost_summary.total_cost)}
+              </div>
+              <div className="text-xs text-muted">
+                {formatTokens(retro.cost_summary.total_tokens)} tokens
+              </div>
+            </div>
+          </div>
+
+          {/* Per-Agent Breakdown */}
+          {Object.keys(retro.cost_summary.by_agent).length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-foreground mb-2">By Agent</h4>
+              <div className="space-y-2">
+                {Object.entries(retro.cost_summary.by_agent).map(([agent, data]) => (
+                  <div key={agent} className="flex items-center justify-between text-sm">
+                    <span className="text-muted capitalize">{agent.replace('_', ' ')}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-foreground font-medium">
+                        {formatCost(data.cost_usd)}
+                      </span>
+                      <span className="text-muted text-xs">
+                        ({formatTokens(data.tokens)})
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Per-Task Breakdown */}
+          {Object.keys(retro.cost_summary.by_task).length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-foreground mb-2">By Task</h4>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {Object.entries(retro.cost_summary.by_task)
+                  .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
+                  .map(([taskId, data]) => (
+                    <div key={taskId} className="flex items-center justify-between text-xs">
+                      <span className="text-muted truncate max-w-xs">{taskId}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-foreground">
+                          {formatCost(data.cost_usd)}
+                        </span>
+                        <span className="text-muted">
+                          ({formatTokens(data.tokens)})
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
