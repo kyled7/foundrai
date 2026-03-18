@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { SprintResponse, TaskResponse, TaskStatus } from '../types';
-import { updateTaskStatus as updateTaskStatusApi } from '../api/tasks';
+import type { SprintResponse, TaskResponse, TaskStatus } from '@/lib/types';
+import { api } from '@/lib/api';
 
 interface SprintStore {
   sprint: SprintResponse | null;
@@ -36,7 +36,7 @@ export const useSprintStore = create<SprintStore>((set) => ({
 
     try {
       // Persist to backend
-      await updateTaskStatusApi(taskId, status);
+      await api.tasks.updateStatus(taskId, status);
     } catch (error) {
       // Revert on error
       set({ tasks: previousTasks });

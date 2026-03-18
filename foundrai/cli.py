@@ -178,6 +178,39 @@ def sprint_start(
         raise typer.Exit(code=1) from e
 
 
+@sprint_app.command("resume")
+def sprint_resume(
+    checkpoint_id: str | None = typer.Argument(None, help="Checkpoint ID to resume from (auto-detects latest if not provided)"),
+    project: str = typer.Option(".", "--project", "-p", help="Project directory"),
+) -> None:
+    """Resume a failed or interrupted sprint from a checkpoint."""
+    project_dir = Path(project)
+    if not (project_dir / "foundrai.yaml").exists():
+        console.print(f"[red]Error: foundrai.yaml not found in {project_dir}[/red]")
+        raise typer.Exit(code=1)
+
+    # Check for API keys before starting
+    from os import getenv
+    has_openai = getenv("OPENAI_API_KEY")
+    has_anthropic = getenv("ANTHROPIC_API_KEY")
+
+    if not has_openai and not has_anthropic:
+        console.print("[red]Error: No LLM API keys found.[/red]")
+        console.print("Set at least one of:")
+        console.print("  export OPENAI_API_KEY=sk-...")
+        console.print("  export ANTHROPIC_API_KEY=sk-ant-...")
+        raise typer.Exit(code=1)
+
+    try:
+        asyncio.run(_resume_sprint(project_dir, checkpoint_id))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Sprint resume interrupted by user[/yellow]")
+        raise typer.Exit(code=1) from None
+    except Exception as e:
+        console.print(f"[red]Sprint resume failed: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+
 @app.command()
 def serve(
     project: str = typer.Option(".", "--project", "-p"),
@@ -418,6 +451,130 @@ async def _run_sprint(project_dir: Path, goal: str) -> None:
         try:
             # 1 hour timeout
             result = await asyncio.wait_for(engine.run_sprint(goal, project_id), timeout=3600)
+            _print_summary(result)
+        except TimeoutError:
+            console.print("[red]Sprint timed out after 1 hour[/red]")
+            console.print(
+                "This may indicate an issue with LLM connectivity or model responsiveness."
+            )
+            raise typer.Exit(code=1) from None
+
+    finally:
+        await db.close()
+
+
+async def _resume_sprint(project_dir: Path, checkpoint_id: str | None) -> None:
+    """Resume a sprint from a checkpoint."""
+    from dotenv import load_dotenv
+
+    load_dotenv(project_dir / ".env")
+
+    config = load_config(str(project_dir))
+
+    from foundrai.agents.context import SprintContext
+    from foundrai.orchestration.agent_factory import create_agents
+    from foundrai.orchestration.engine import SprintEngine
+    from foundrai.orchestration.message_bus import MessageBus
+    from foundrai.orchestration.task_graph import TaskGraph
+    from foundrai.persistence.artifact_store import ArtifactStore
+    from foundrai.persistence.database import Database
+    from foundrai.persistence.event_log import EventLog
+    from foundrai.persistence.sprint_store import SprintStore
+
+    db_path = str(project_dir / config.persistence.sqlite_path)
+    if not Path(db_path).exists():
+        console.print("[red]Error: No database found. No sprints to resume.[/red]")
+        raise typer.Exit(code=1)
+
+    db = Database(db_path)
+    await db.connect()
+
+    try:
+        event_log = EventLog(db)
+        sprint_store = SprintStore(db)
+        artifact_store = ArtifactStore(db)
+        message_bus = MessageBus(event_log)
+        task_graph = TaskGraph()
+
+        # If no checkpoint_id provided, find the latest checkpoint
+        if not checkpoint_id:
+            cursor = await db.conn.execute(
+                """
+                SELECT checkpoint_id, checkpoint_name, sprint_id
+                FROM checkpoints
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            )
+            row = await cursor.fetchone()
+            if not row:
+                console.print("[yellow]No checkpoints found to resume from[/yellow]")
+                raise typer.Exit(code=1)
+            checkpoint_id = row["checkpoint_id"]
+            console.print(f"[blue]Auto-detected checkpoint: {row['checkpoint_name']} (sprint {row['sprint_id']})[/blue]")
+
+        # Get sprint info from checkpoint
+        cursor = await db.conn.execute(
+            """
+            SELECT s.goal, s.sprint_number, s.project_id, c.checkpoint_name
+            FROM checkpoints c
+            JOIN sprints s ON c.sprint_id = s.sprint_id
+            WHERE c.checkpoint_id = ?
+            """,
+            (checkpoint_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            console.print(f"[red]Error: Checkpoint {checkpoint_id} not found[/red]")
+            raise typer.Exit(code=1)
+
+        goal = row["goal"]
+        sprint_number = row["sprint_number"]
+        project_id = row["project_id"]
+        checkpoint_name = row["checkpoint_name"]
+
+        # Create sprint context (needed for agents)
+        sprint_context = SprintContext(
+            project_name=config.project.name,
+            project_path=str(project_dir),
+            sprint_goal=goal,
+            sprint_number=sprint_number,
+        )
+
+        agents = create_agents(
+            config=config,
+            sprint_context=sprint_context,
+            message_bus=message_bus,
+            event_log=event_log,
+        )
+
+        # Live output
+        async def on_event(event_type: str, data: dict) -> None:
+            if event_type == "sprint.status_changed":
+                console.print(f"[bold blue]→ {data.get('status', '')}[/bold blue]")
+            elif event_type == "task.status_changed":
+                console.print(f"  Task {data.get('task_id', '')[:8]}... → {data.get('status', '')}")
+
+        event_log.register_listener(on_event)
+
+        console.print("\n[bold]🔄 Resuming Sprint[/bold]")
+        console.print(f"   Sprint #{sprint_number}: {goal}")
+        console.print(f"   From checkpoint: {checkpoint_name}\n")
+
+        engine = SprintEngine(
+            config=config,
+            agents=agents,
+            task_graph=task_graph,
+            message_bus=message_bus,
+            sprint_store=sprint_store,
+            event_log=event_log,
+            artifact_store=artifact_store,
+        )
+
+        # Add timeout to prevent hanging
+        try:
+            # 1 hour timeout
+            result = await asyncio.wait_for(engine.resume_sprint(checkpoint_id), timeout=3600)
             _print_summary(result)
         except TimeoutError:
             console.print("[red]Sprint timed out after 1 hour[/red]")

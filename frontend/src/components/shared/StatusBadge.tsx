@@ -1,4 +1,4 @@
-import { cn } from '../../utils/cn';
+import { cn } from '@/lib/utils';
 
 const STATUS_STYLES: Record<string, string> = {
   backlog: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',

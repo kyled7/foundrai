@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from foundrai.tools.base import BaseTool, ToolInput, ToolOutput
 
 
@@ -111,3 +113,159 @@ class CodeExecutor(BaseTool):
             )
         finally:
             os.unlink(code_path)
+
+
+class E2BCodeExecutor(BaseTool):
+    """Execute code using E2B cloud sandboxes."""
+
+    name = "code_executor"
+    description = "Execute code in a sandboxed environment. Returns stdout and stderr."
+    input_schema = CodeExecutorInput
+
+    TEMPLATE_IDS = {
+        "python": "python3",
+        "javascript": "nodejs",
+        "bash": "base",
+    }
+
+    def __init__(self, timeout: int = 30, max_memory: int = 512) -> None:
+        self.timeout = timeout
+        self.max_memory = max_memory
+        self.api_key = os.getenv("E2B_API_KEY")
+        if not self.api_key:
+            raise ValueError(
+                "E2B_API_KEY environment variable is required for E2BCodeExecutor"
+            )
+
+    async def execute(self, input: CodeExecutorInput) -> ToolOutput:  # type: ignore[override] # noqa: A002
+        """Run code in E2B sandbox."""
+        import asyncio
+
+        try:
+            from e2b import Sandbox
+        except ImportError as e:
+            return ToolOutput(
+                success=False,
+                output="",
+                error=f"E2B SDK not installed: {e}",
+            )
+
+        template_id = self.TEMPLATE_IDS.get(input.language)
+        if not template_id:
+            return ToolOutput(
+                success=False,
+                output="",
+                error=f"Unsupported language: {input.language}",
+            )
+
+        sandbox = None
+        try:
+            # Create sandbox
+            sandbox = Sandbox(template=template_id, api_key=self.api_key)
+
+            # Execute code with timeout
+            ext = {
+                "python": ".py",
+                "javascript": ".js",
+                "bash": ".sh",
+            }.get(input.language, ".py")
+            run_cmd = {
+                "python": "python",
+                "javascript": "node",
+                "bash": "bash",
+            }.get(input.language, "python")
+
+            # Write code to file
+            file_path = f"/tmp/code{ext}"
+            sandbox.filesystem.write(file_path, input.code)
+
+            # Execute with timeout
+            result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    sandbox.process.start_and_wait,
+                    f"{run_cmd} {file_path}",
+                ),
+                timeout=input.timeout_seconds,
+            )
+
+            return ToolOutput(
+                success=result.exit_code == 0,
+                output=result.stdout,
+                error=result.stderr if result.exit_code != 0 else None,
+            )
+
+        except asyncio.TimeoutError:
+            return ToolOutput(
+                success=False,
+                output="",
+                error="Execution timed out",
+            )
+        except Exception as e:
+            return ToolOutput(
+                success=False,
+                output="",
+                error=f"E2B execution failed: {e!s}",
+            )
+        finally:
+            if sandbox:
+                try:
+                    sandbox.close()
+                except Exception:
+                    pass  # Best effort cleanup
+
+
+def get_code_executor(
+    provider: str = "docker",
+    timeout: int = 30,
+    max_memory: int = 512,
+) -> BaseTool:
+    """Get appropriate code executor based on provider and availability.
+
+    Selection order:
+    1. Docker (if provider is "docker" and Docker is available)
+    2. E2B (if E2B_API_KEY environment variable is set)
+    3. Noop (fallback when no sandbox is available)
+
+    Args:
+        provider: Sandbox provider name ("docker", "e2b", or "noop")
+        timeout: Execution timeout in seconds
+        max_memory: Memory limit in MB
+
+    Returns:
+        BaseTool: Code executor instance (CodeExecutor, E2BCodeExecutor, or NoopCodeExecutor)
+    """
+    # If explicitly requesting noop, return it
+    if provider.lower() == "noop":
+        return NoopCodeExecutor()
+
+    # Try Docker first if it's the configured provider
+    if provider.lower() == "docker":
+        try:
+            import subprocess
+
+            # Check if Docker is available
+            result = subprocess.run(
+                ["docker", "info"],
+                capture_output=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                return CodeExecutor(timeout=timeout, max_memory=max_memory)
+        except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+            # Docker not available, try E2B fallback
+            pass
+
+    # Try E2B as fallback or primary if explicitly requested
+    if provider.lower() in ("e2b", "docker"):  # E2B is fallback for docker
+        if os.getenv("E2B_API_KEY"):
+            try:
+                return E2BCodeExecutor(timeout=timeout, max_memory=max_memory)
+            except ValueError:
+                # E2B_API_KEY validation failed in __init__
+                pass
+            except Exception:
+                # E2B instantiation failed
+                pass
+
+    # Fallback to noop if neither Docker nor E2B are available
+    return NoopCodeExecutor()

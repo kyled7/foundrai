@@ -173,6 +173,16 @@ CREATE TABLE IF NOT EXISTS error_logs (
 CREATE INDEX IF NOT EXISTS idx_errors_task ON error_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_errors_sprint ON error_logs(sprint_id);
 
+CREATE TABLE IF NOT EXISTS checkpoints (
+    checkpoint_id TEXT PRIMARY KEY,
+    sprint_id TEXT NOT NULL,
+    checkpoint_name TEXT NOT NULL,
+    state_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_checkpoints_sprint ON checkpoints(sprint_id);
+CREATE INDEX IF NOT EXISTS idx_checkpoints_created ON checkpoints(sprint_id, created_at);
+
 -- Phase 4 tables
 CREATE TABLE IF NOT EXISTS plugins (
     id TEXT PRIMARY KEY,

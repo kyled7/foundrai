@@ -5,6 +5,7 @@ Extracted from CLI so the API layer can also spawn agents for sprint execution.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from foundrai.agents.context import SprintContext
@@ -18,6 +19,7 @@ from foundrai.config import FoundrAIConfig
 from foundrai.models.enums import AgentRoleName
 from foundrai.orchestration.message_bus import MessageBus
 from foundrai.persistence.event_log import EventLog
+from foundrai.tools.registry import create_tool_registry
 
 
 def create_agents(
@@ -25,6 +27,7 @@ def create_agents(
     sprint_context: SprintContext,
     message_bus: MessageBus,
     event_log: EventLog,
+    project_path: str | Path,
     token_store: Any | None = None,
     budget_manager: Any | None = None,
     trace_store: Any | None = None,
@@ -33,8 +36,24 @@ def create_agents(
 ) -> dict[str, Any]:
     """Create agent instances from team configuration.
 
-    Returns a dict mapping agent role name (str) to agent instance.
+    Args:
+        config: FoundrAI configuration
+        sprint_context: Sprint context for agents
+        message_bus: Message bus for agent communication
+        event_log: Event log for tracking agent actions
+        project_path: Path to the project directory
+        token_store: Optional token tracking store
+        budget_manager: Optional budget management
+        trace_store: Optional trace storage
+        sprint_id: Sprint identifier
+        project_id: Project identifier
+
+    Returns:
+        A dict mapping agent role name (str) to agent instance.
     """
+    # Instantiate tool registry with configured sandbox
+    tool_registry = create_tool_registry(config, project_path)
+
     agents: dict[str, Any] = {}
 
     role_map: list[tuple[str, Any, type]] = [
@@ -46,6 +65,10 @@ def create_agents(
     for role_name, agent_config, agent_class in role_map:
         if not agent_config.enabled:
             continue
+
+        # Get role definition and associated tools
+        role = get_role(AgentRoleName(role_name))
+        tools = tool_registry.get_tools_for_role(role)
 
         llm = LLMClient(LLMConfig(model=agent_config.model))
         runtime = AgentRuntime(
@@ -59,9 +82,9 @@ def create_agents(
             project_id=project_id,
         )
         agent = agent_class(
-            role=get_role(AgentRoleName(role_name)),
+            role=role,
             model=agent_config.model,
-            tools=[],
+            tools=tools,
             message_bus=message_bus,
             sprint_context=sprint_context,
             runtime=runtime,

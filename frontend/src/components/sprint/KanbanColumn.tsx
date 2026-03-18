@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
-import type { TaskResponse } from '../../types';
+import type { Task } from '@/lib/types';
 import { TaskCard } from './TaskCard';
-import { cn } from '../../utils/cn';
+import { cn } from '@/lib/utils';
 
 const COLOR_MAP: Record<string, string> = {
   gray: 'border-t-gray-400',
@@ -15,7 +15,7 @@ interface Props {
   columnId: string;
   title: string;
   color: string;
-  tasks: TaskResponse[];
+  tasks: Task[];
   count: number;
 }
 

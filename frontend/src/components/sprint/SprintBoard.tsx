@@ -1,16 +1,15 @@
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useState } from 'react';
-import { useSprintStore } from '../../stores/sprintStore';
+import { useSprintStore } from '@/stores/sprintStore';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
-import type { TaskStatus, TaskResponse } from '../../types';
+import type { TaskStatus, Task } from '@/lib/types';
 
 const COLUMNS: { key: string; title: string; statuses: TaskStatus[]; color: string }[] = [
-  { key: 'backlog',     title: 'Backlog',     statuses: ['backlog', 'blocked'], color: 'gray' },
+  { key: 'backlog',     title: 'Backlog',     statuses: ['pending', 'blocked'], color: 'gray' },
   { key: 'in_progress', title: 'In Progress', statuses: ['in_progress'],        color: 'blue' },
-  { key: 'in_review',   title: 'In Review',   statuses: ['in_review'],          color: 'yellow' },
-  { key: 'done',        title: 'Done',        statuses: ['done'],               color: 'green' },
+  { key: 'completed',   title: 'Completed',   statuses: ['completed'],          color: 'green' },
   { key: 'failed',      title: 'Failed',      statuses: ['failed'],             color: 'red' },
 ];
 
@@ -43,7 +42,7 @@ function SprintBoardContent() {
   const error = useSprintStore((s) => s.error);
   const updateTaskStatus = useSprintStore((s) => s.updateTaskStatus);
   const clear = useSprintStore((s) => s.clear);
-  const [activeTask, setActiveTask] = useState<TaskResponse | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
