@@ -148,10 +148,12 @@ export interface CostBreakdown {
 }
 
 export interface BudgetStatus {
-  sprint_budget_usd: number;
+  budget_usd: number;
   spent_usd: number;
   remaining_usd: number;
   percentage_used: number;
+  is_warning: boolean;
+  is_exceeded: boolean;
 }
 
 // === Templates ===
