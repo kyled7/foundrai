@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
@@ -33,6 +34,7 @@ async def list_approvals(sprint_id: str) -> dict:
             "action_type": r["action_type"],
             "title": r["title"],
             "status": r["status"],
+            "context": json.loads(r["context_json"] or "{}"),
             "created_at": r["created_at"],
         }
         for r in rows
@@ -59,6 +61,7 @@ async def get_approval(approval_id: str) -> dict:
         "action_type": row["action_type"],
         "title": row["title"],
         "status": row["status"],
+        "context": json.loads(row["context_json"] or "{}"),
         "comment": row["comment"],
         "created_at": row["created_at"],
         "resolved_at": row.get("resolved_at"),
