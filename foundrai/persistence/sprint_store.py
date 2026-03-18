@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from typing import TYPE_CHECKING
@@ -19,25 +20,27 @@ class SprintStore:
 
     def __init__(self, db: Database) -> None:
         self.db = db
+        self._lock = asyncio.Lock()
 
     async def create_sprint(self, state: SprintState) -> None:
         """Insert a new sprint record."""
-        metrics = state.get("metrics", SprintMetrics())
-        metrics_json = metrics.model_dump_json() if isinstance(metrics, SprintMetrics) else "{}"
-        await self.db.conn.execute(
-            "INSERT INTO sprints"
-            " (sprint_id, project_id, sprint_number, goal, status, metrics_json)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                state["sprint_id"],
-                state["project_id"],
-                state.get("sprint_number", 1),
-                state["goal"],
-                state["status"].value if hasattr(state["status"], "value") else state["status"],
-                metrics_json,
-            ),
-        )
-        await self.db.conn.commit()
+        async with self._lock:
+            metrics = state.get("metrics", SprintMetrics())
+            metrics_json = metrics.model_dump_json() if isinstance(metrics, SprintMetrics) else "{}"
+            await self.db.conn.execute(
+                "INSERT INTO sprints"
+                " (sprint_id, project_id, sprint_number, goal, status, metrics_json)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    state["sprint_id"],
+                    state["project_id"],
+                    state.get("sprint_number", 1),
+                    state["goal"],
+                    state["status"].value if hasattr(state["status"], "value") else state["status"],
+                    metrics_json,
+                ),
+            )
+            await self.db.conn.commit()
 
     async def get_sprint(self, sprint_id: str) -> SprintState | None:
         """Get a sprint by ID."""
@@ -68,70 +71,75 @@ class SprintStore:
         self, sprint_id: str, status: SprintStatus
     ) -> None:
         """Update sprint status."""
-        status_val = status.value if hasattr(status, "value") else status
-        await self.db.conn.execute(
-            "UPDATE sprints SET status = ? WHERE sprint_id = ?",
-            (status_val, sprint_id),
-        )
-        await self.db.conn.commit()
+        async with self._lock:
+            status_val = status.value if hasattr(status, "value") else status
+            await self.db.conn.execute(
+                "UPDATE sprints SET status = ? WHERE sprint_id = ?",
+                (status_val, sprint_id),
+            )
+            await self.db.conn.commit()
 
     async def complete_sprint(self, state: SprintState) -> None:
         """Mark sprint as completed with metrics."""
-        metrics = state.get("metrics", SprintMetrics())
-        metrics_json = metrics.model_dump_json() if isinstance(metrics, SprintMetrics) else "{}"
-        status = state["status"]
-        status_val = status.value if hasattr(status, "value") else status
-        await self.db.conn.execute(
-            """UPDATE sprints SET status = ?, metrics_json = ?,
-            completed_at = datetime('now'), error = ?
-            WHERE sprint_id = ?""",
-            (status_val, metrics_json, state.get("error"), state["sprint_id"]),
-        )
-        await self.db.conn.commit()
+        async with self._lock:
+            metrics = state.get("metrics", SprintMetrics())
+            metrics_json = metrics.model_dump_json() if isinstance(metrics, SprintMetrics) else "{}"
+            status = state["status"]
+            status_val = status.value if hasattr(status, "value") else status
+            await self.db.conn.execute(
+                """UPDATE sprints SET status = ?, metrics_json = ?,
+                completed_at = datetime('now'), error = ?
+                WHERE sprint_id = ?""",
+                (status_val, metrics_json, state.get("error"), state["sprint_id"]),
+            )
+            await self.db.conn.commit()
 
     async def next_sprint_number(self, project_id: str) -> int:
         """Get the next sprint number for a project."""
-        cursor = await self.db.conn.execute(
-            "SELECT MAX(sprint_number) as max_num FROM sprints WHERE project_id = ?",
-            (project_id,),
-        )
-        row = await cursor.fetchone()
-        if row and row["max_num"] is not None:
-            return row["max_num"] + 1
-        return 1
+        async with self._lock:
+            cursor = await self.db.conn.execute(
+                "SELECT MAX(sprint_number) as max_num FROM sprints WHERE project_id = ?",
+                (project_id,),
+            )
+            row = await cursor.fetchone()
+            if row and row["max_num"] is not None:
+                return row["max_num"] + 1
+            return 1
 
     async def create_task(self, sprint_id: str, task: Task) -> None:
         """Insert a task."""
-        await self.db.conn.execute(
-            """INSERT INTO tasks
-            (task_id, sprint_id, title, description, acceptance_criteria_json,
-             assigned_to, priority, status, dependencies_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                task.id,
-                sprint_id,
-                task.title,
-                task.description,
-                json.dumps(task.acceptance_criteria),
-                task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
-                task.priority,
-                task.status if isinstance(task.status, str) else task.status.value,
-                json.dumps(task.dependencies),
-            ),
-        )
-        await self.db.conn.commit()
+        async with self._lock:
+            await self.db.conn.execute(
+                """INSERT INTO tasks
+                (task_id, sprint_id, title, description, acceptance_criteria_json,
+                 assigned_to, priority, status, dependencies_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    task.id,
+                    sprint_id,
+                    task.title,
+                    task.description,
+                    json.dumps(task.acceptance_criteria),
+                    task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
+                    task.priority,
+                    task.status if isinstance(task.status, str) else task.status.value,
+                    json.dumps(task.dependencies),
+                ),
+            )
+            await self.db.conn.commit()
 
     async def update_task(self, task: Task) -> None:
         """Update a task's status and results."""
-        result_json = task.result.model_dump_json() if task.result else None
-        review_json = task.review.model_dump_json() if task.review else None
-        status_val = task.status if isinstance(task.status, str) else task.status.value
-        await self.db.conn.execute(
-            """UPDATE tasks SET status = ?, result_json = ?, review_json = ?,
-            updated_at = datetime('now') WHERE task_id = ?""",
-            (status_val, result_json, review_json, task.id),
-        )
-        await self.db.conn.commit()
+        async with self._lock:
+            result_json = task.result.model_dump_json() if task.result else None
+            review_json = task.review.model_dump_json() if task.review else None
+            status_val = task.status if isinstance(task.status, str) else task.status.value
+            await self.db.conn.execute(
+                """UPDATE tasks SET status = ?, result_json = ?, review_json = ?,
+                updated_at = datetime('now') WHERE task_id = ?""",
+                (status_val, result_json, review_json, task.id),
+            )
+            await self.db.conn.commit()
 
     async def get_tasks(self, sprint_id: str) -> list[Task]:
         """Get all tasks for a sprint."""
@@ -156,15 +164,43 @@ class SprintStore:
 
     async def update_tasks(self, sprint_id: str, tasks: list[Task]) -> None:
         """Insert or update all tasks for a sprint."""
-        for task in tasks:
-            # Try update first, insert if not exists
-            cursor = await self.db.conn.execute(
-                "SELECT task_id FROM tasks WHERE task_id = ?", (task.id,)
-            )
-            if await cursor.fetchone():
-                await self.update_task(task)
-            else:
-                await self.create_task(sprint_id, task)
+        async with self._lock:
+            for task in tasks:
+                # Try update first, insert if not exists
+                cursor = await self.db.conn.execute(
+                    "SELECT task_id FROM tasks WHERE task_id = ?", (task.id,)
+                )
+                if await cursor.fetchone():
+                    # Call update_task without lock (we already have it)
+                    result_json = task.result.model_dump_json() if task.result else None
+                    review_json = task.review.model_dump_json() if task.review else None
+                    status_val = task.status if isinstance(task.status, str) else task.status.value
+                    await self.db.conn.execute(
+                        """UPDATE tasks SET status = ?, result_json = ?, review_json = ?,
+                        updated_at = datetime('now') WHERE task_id = ?""",
+                        (status_val, result_json, review_json, task.id),
+                    )
+                    await self.db.conn.commit()
+                else:
+                    # Call create_task without lock (we already have it)
+                    await self.db.conn.execute(
+                        """INSERT INTO tasks
+                        (task_id, sprint_id, title, description, acceptance_criteria_json,
+                         assigned_to, priority, status, dependencies_json)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            task.id,
+                            sprint_id,
+                            task.title,
+                            task.description,
+                            json.dumps(task.acceptance_criteria),
+                            task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
+                            task.priority,
+                            task.status if isinstance(task.status, str) else task.status.value,
+                            json.dumps(task.dependencies),
+                        ),
+                    )
+                    await self.db.conn.commit()
 
     async def get_latest_sprint(self, project_id: str) -> SprintState | None:
         """Get the most recent sprint for a project."""
@@ -192,40 +228,41 @@ class SprintStore:
         self, sprint_id: str, checkpoint_name: str, state: SprintState
     ) -> str:
         """Save a sprint checkpoint and return the checkpoint ID."""
-        checkpoint_id = f"cp_{uuid.uuid4().hex[:12]}"
-        state_json = json.dumps({
-            "sprint_id": state["sprint_id"],
-            "project_id": state["project_id"],
-            "sprint_number": state.get("sprint_number", 1),
-            "goal": state["goal"],
-            "status": state["status"].value if hasattr(state["status"], "value") else state["status"],
-            "tasks": [
-                {
-                    "id": task.id,
-                    "title": task.title,
-                    "description": task.description,
-                    "acceptance_criteria": task.acceptance_criteria,
-                    "assigned_to": task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
-                    "priority": task.priority,
-                    "status": task.status if isinstance(task.status, str) else task.status.value,
-                    "dependencies": task.dependencies,
-                }
-                for task in state.get("tasks", [])
-            ],
-            "metrics": (
-                state["metrics"].model_dump()
-                if isinstance(state.get("metrics"), SprintMetrics)
-                else state.get("metrics", {})
-            ),
-            "error": state.get("error"),
-        })
-        await self.db.conn.execute(
-            "INSERT INTO checkpoints (checkpoint_id, sprint_id, checkpoint_name, state_json)"
-            " VALUES (?, ?, ?, ?)",
-            (checkpoint_id, sprint_id, checkpoint_name, state_json),
-        )
-        await self.db.conn.commit()
-        return checkpoint_id
+        async with self._lock:
+            checkpoint_id = f"cp_{uuid.uuid4().hex[:12]}"
+            state_json = json.dumps({
+                "sprint_id": state["sprint_id"],
+                "project_id": state["project_id"],
+                "sprint_number": state.get("sprint_number", 1),
+                "goal": state["goal"],
+                "status": state["status"].value if hasattr(state["status"], "value") else state["status"],
+                "tasks": [
+                    {
+                        "id": task.id,
+                        "title": task.title,
+                        "description": task.description,
+                        "acceptance_criteria": task.acceptance_criteria,
+                        "assigned_to": task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
+                        "priority": task.priority,
+                        "status": task.status if isinstance(task.status, str) else task.status.value,
+                        "dependencies": task.dependencies,
+                    }
+                    for task in state.get("tasks", [])
+                ],
+                "metrics": (
+                    state["metrics"].model_dump()
+                    if isinstance(state.get("metrics"), SprintMetrics)
+                    else state.get("metrics", {})
+                ),
+                "error": state.get("error"),
+            })
+            await self.db.conn.execute(
+                "INSERT INTO checkpoints (checkpoint_id, sprint_id, checkpoint_name, state_json)"
+                " VALUES (?, ?, ?, ?)",
+                (checkpoint_id, sprint_id, checkpoint_name, state_json),
+            )
+            await self.db.conn.commit()
+            return checkpoint_id
 
     async def load_checkpoint(self, checkpoint_id: str) -> SprintState | None:
         """Load a checkpoint by ID."""
