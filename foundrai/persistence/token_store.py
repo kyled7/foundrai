@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from foundrai.api.app import ws_manager
 from foundrai.models.token_usage import TokenUsage
 from foundrai.persistence.database import Database
 
@@ -33,6 +34,19 @@ class TokenStore:
             ),
         )
         await self.db.conn.commit()
+
+        # Broadcast cost update event via WebSocket
+        await ws_manager.broadcast(
+            usage.sprint_id,
+            "cost_updated",
+            {
+                "sprint_id": usage.sprint_id,
+                "task_id": usage.task_id,
+                "cost_usd": usage.cost_usd,
+                "agent_role": usage.agent_role,
+            },
+        )
+
         return cursor.lastrowid or 0
 
     async def get_task_usage(self, task_id: str) -> list[TokenUsage]:
