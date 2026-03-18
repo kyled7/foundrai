@@ -208,6 +208,12 @@ class SprintEngine:
         if not state:
             raise ValueError(f"Failed to load checkpoint {checkpoint_id}")
 
+        # Rebuild task graph from loaded state if tasks exist
+        if state.get("tasks"):
+            await self.task_graph.reset()
+            for task in state["tasks"]:
+                await self.task_graph.add_task(task, depends_on=task.dependencies)
+
         await self.event_log.append("sprint.resumed", {
             "sprint_id": sprint_id,
             "checkpoint_name": checkpoint_name,
