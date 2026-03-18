@@ -342,3 +342,34 @@ async def test_engine_times_out_long_tasks(db, ctx, infra):
     # Task should fail due to timeout
     assert result["status"] == SprintStatus.COMPLETED
     assert result["tasks"][0].status == TaskStatus.FAILED
+
+
+@pytest.mark.asyncio
+async def test_engine_creates_checkpoints(db, ctx, infra):
+    """Verify that checkpoints are created at each sprint phase transition."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+    agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
+
+    engine = SprintEngine(
+        config=FoundrAIConfig(), agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+    result = await engine.run_sprint("checkpoint test", "proj")
+
+    # Verify sprint completed successfully
+    assert result["status"] == SprintStatus.COMPLETED
+
+    # Verify checkpoints were created for each phase transition
+    # Expected checkpoints: after_planning, after_execution, after_review, after_retrospective
+    cursor = await db.conn.execute(
+        "SELECT checkpoint_name FROM checkpoints WHERE sprint_id = ? ORDER BY created_at",
+        (result["sprint_id"],),
+    )
+    rows = await cursor.fetchall()
+    checkpoint_names = [row["checkpoint_name"] for row in rows]
+
+    assert "after_planning" in checkpoint_names
+    assert "after_execution" in checkpoint_names
+    assert "after_review" in checkpoint_names
+    assert "after_retrospective" in checkpoint_names
