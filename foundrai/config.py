@@ -23,6 +23,7 @@ class AgentConfig(BaseModel):
     persona_override: str | None = None
     approval_conditions: dict | None = None
     max_retries: int = 3
+    approval_timeout_seconds: int | None = None
 
 
 class TeamConfig(BaseModel):
