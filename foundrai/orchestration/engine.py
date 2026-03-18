@@ -215,6 +215,11 @@ class SprintEngine:
             "task_count": len(tasks),
         })
 
+        # Create checkpoint after planning
+        await self.sprint_store.save_checkpoint(
+            state["sprint_id"], "after_planning", state
+        )
+
         return state
 
     async def _execute_node(self, state: SprintState) -> SprintState:
@@ -323,6 +328,11 @@ class SprintEngine:
                 *[execute_one(t, agent, role) for t, agent, role in executable_tasks],
                 return_exceptions=True,
             )
+
+        # Create checkpoint after execution
+        await self.sprint_store.save_checkpoint(
+            state["sprint_id"], "after_execution", state
+        )
 
         return state
 
@@ -469,6 +479,11 @@ class SprintEngine:
 
             await self._emit_task_status(task)
 
+        # Create checkpoint after review
+        await self.sprint_store.save_checkpoint(
+            state["sprint_id"], "after_review", state
+        )
+
         return state
 
     async def _retrospective_node(self, state: SprintState) -> SprintState:
@@ -483,6 +498,12 @@ class SprintEngine:
         await self.event_log.append("sprint.retrospective_completed", {
             "sprint_id": state["sprint_id"],
         })
+
+        # Create checkpoint after retrospective
+        await self.sprint_store.save_checkpoint(
+            state["sprint_id"], "after_retrospective", state
+        )
+
         return state
 
     async def _complete_node(self, state: SprintState) -> SprintState:
