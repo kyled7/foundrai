@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import AsyncMock
 
@@ -405,7 +406,7 @@ async def test_engine_resumes_from_checkpoint(db, ctx, infra):
     checkpoint_id = row["checkpoint_id"]
 
     # Reset task graph for resume test
-    tg.reset()
+    await tg.reset()
 
     # Create new engine with fresh agents (simulating restart)
     agents2 = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
@@ -421,3 +422,53 @@ async def test_engine_resumes_from_checkpoint(db, ctx, infra):
     assert resumed_result["status"] == SprintStatus.COMPLETED
     assert resumed_result["sprint_id"] == sprint_id
     assert len(resumed_result["tasks"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_engine_parallel_task_updates(db, ctx, infra):
+    """Verify that parallel task status updates don't cause race conditions."""
+    el, ss, art, mb, tg = infra
+    qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
+
+    # Create 5 tasks that can all run in parallel
+    many_tasks = json.dumps([
+        {"title": f"Task{i}", "description": f"Do {i}", "acceptance_criteria": [],
+         "dependencies": [], "assigned_to": "developer", "priority": i}
+        for i in range(5)
+    ])
+
+    agents = _make_agents(mb, ctx, many_tasks, qa_resp=qa_pass)
+
+    # Each task will take a bit of time to simulate real work
+    async def slow_execute(*args, **kwargs):
+        await asyncio.sleep(0.05)  # Small delay to ensure parallel execution
+        return RuntimeResult(
+            output="Done", parsed=None, artifacts=[], tokens_used=10, success=True,
+        )
+
+    agents[AgentRoleName.DEVELOPER.value].execute_task = AsyncMock(
+        side_effect=slow_execute
+    )
+
+    config = FoundrAIConfig()
+    config.sprint.max_tasks_parallel = 5  # Allow all tasks to run in parallel
+
+    engine = SprintEngine(
+        config=config, agents=agents, task_graph=tg,
+        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+    )
+
+    result = await engine.run_sprint("parallel test", "proj")
+
+    # All tasks should complete successfully without race conditions
+    assert result["status"] == SprintStatus.COMPLETED
+    assert len(result["tasks"]) == 5
+
+    # Verify all tasks reached the DONE status
+    done_count = sum(1 for t in result["tasks"] if t.status == TaskStatus.DONE)
+    assert done_count == 5
+
+    # Verify no task status corruption (all should be in valid states)
+    valid_statuses = {TaskStatus.DONE, TaskStatus.FAILED, TaskStatus.IN_REVIEW}
+    for task in result["tasks"]:
+        assert task.status in valid_statuses or task.status in ("done", "failed", "in_review")

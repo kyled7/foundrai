@@ -52,6 +52,7 @@ class SprintEngine:
         self.vector_memory = vector_memory
         self.error_store = error_store
         self.db = db
+        self._task_status_lock = asyncio.Lock()
         self.graph = self._build_graph()
 
     def _build_graph(self) -> object:
@@ -166,7 +167,7 @@ class SprintEngine:
             })
 
             # Reset task graph for next sprint
-            self.task_graph.reset()
+            await self.task_graph.reset()
 
         return sprint_results
 
@@ -270,9 +271,9 @@ class SprintEngine:
             task.dependencies = resolved_deps
 
         # Build task graph
-        self.task_graph.reset()
+        await self.task_graph.reset()
         for task in tasks:
-            self.task_graph.add_task(task, depends_on=task.dependencies)
+            await self.task_graph.add_task(task, depends_on=task.dependencies)
 
         state["tasks"] = tasks
         await self.sprint_store.update_tasks(state["sprint_id"], tasks)
@@ -298,7 +299,7 @@ class SprintEngine:
 
         # Execute in waves based on dependency graph
         while True:
-            ready = self.task_graph.get_ready_tasks()
+            ready = await self.task_graph.get_ready_tasks()
             if not ready:
                 break
 
@@ -314,7 +315,7 @@ class SprintEngine:
                 else:
                     # No agent available for this role — mark as failed
                     t.status = TaskStatus.FAILED
-                    self.task_graph.mark_completed(t.id)
+                    await self.task_graph.mark_completed(t.id)
                     await self._emit_task_status(t)
 
             if not executable_tasks:
@@ -333,7 +334,7 @@ class SprintEngine:
                     )
                     if not approved:
                         task.status = TaskStatus.BLOCKED
-                        self.task_graph.mark_completed(task.id)
+                        await self.task_graph.mark_completed(task.id)
                         await self._emit_task_status(task)
                         return
 
@@ -366,7 +367,8 @@ class SprintEngine:
 
                         for artifact in result.artifacts:
                             await self.artifact_store.save(artifact)
-                            state["artifacts"].append(artifact)
+                            async with self._task_status_lock:
+                                state["artifacts"].append(artifact)
                     except asyncio.TimeoutError:
                         # Task execution timed out
                         task.status = TaskStatus.FAILED
@@ -388,7 +390,7 @@ class SprintEngine:
                             agent_role=role_name,
                         )
 
-                    self.task_graph.mark_completed(task.id)
+                    await self.task_graph.mark_completed(task.id)
                     await self._emit_task_status(task)
 
             await asyncio.gather(
