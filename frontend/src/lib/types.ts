@@ -71,6 +71,8 @@ export interface Task {
   review: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  cost_usd?: number;
+  tokens_used?: number;
 }
 
 // === Agents ===
