@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ApprovalRequest, ApprovalStatus } from '../types';
+import type { ApprovalRequest, ApprovalStatus } from '../lib/types';
 
 interface ApprovalStore {
   approvals: ApprovalRequest[];

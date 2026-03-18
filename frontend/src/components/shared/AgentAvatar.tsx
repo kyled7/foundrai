@@ -1,5 +1,4 @@
-import { cn } from '../../utils/cn';
-import type { AgentRole } from '../../types';
+import { cn } from '@/lib/utils';
 
 const AGENT_COLORS: Record<string, { bg: string; emoji: string }> = {
   product_manager: { bg: 'bg-purple-500', emoji: '📋' },
@@ -17,7 +16,7 @@ const sizes = {
 };
 
 interface Props {
-  role: AgentRole | string;
+  role: string;
   size?: 'xs' | 'sm' | 'md';
 }
 

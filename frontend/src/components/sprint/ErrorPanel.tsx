@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
 
 interface ErrorEntry {
   error_id: number;
@@ -35,7 +34,12 @@ export function ErrorPanel({ taskId, sprintId }: Props) {
   useEffect(() => {
     const url = taskId ? `/tasks/${taskId}/errors` : sprintId ? `/sprints/${sprintId}/errors` : null;
     if (!url) return;
-    api.get<{ errors: ErrorEntry[] }>(url).then(d => setErrors(d.errors)).catch(() => {});
+
+    // Use the api client's request method directly
+    fetch(`/api${url}`)
+      .then((res) => res.json())
+      .then((d: { errors: ErrorEntry[] }) => setErrors(d.errors))
+      .catch(() => {});
   }, [taskId, sprintId]);
 
   if (errors.length === 0) return null;

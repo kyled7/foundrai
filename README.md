@@ -172,7 +172,8 @@ foundrai serve           # Launch the web dashboard on port 8420
 ┌─────────────────────────────────────────────────────┐
 │         Desktop Shell (Tauri v2 / Browser)           │
 ├─────────────────────────────────────────────────────┤
-│              Frontend (React + TypeScript)            │
+│       Frontend (React 19 + TypeScript + Vite)        │
+│   TanStack Router/Query │ React Flow │ Recharts      │
 │  Sprint Board │ Agent Feed │ Goal Tree │ Metrics     │
 ├─────────────────────────────────────────────────────┤
 │              API Layer (FastAPI + WebSocket)          │
@@ -184,6 +185,8 @@ foundrai serve           # Launch the web dashboard on port 8420
 │           Persistence (SQLite + ChromaDB)             │
 └─────────────────────────────────────────────────────┘
 ```
+
+The frontend uses modern React patterns with TanStack Router for type-safe routing and TanStack Query for server state management. All components are in a single `frontend/` directory.
 
 See [Architecture Documentation](./docs/ARCHITECTURE.md) for full details.
 
@@ -246,11 +249,12 @@ The installer will be in `desktop/src-tauri/target/release/bundle/`.
 
 - **v0.1** ✅ Core agent engine + CLI (Foundation, Visual Layer, Agile Engine, Observability, Ecosystem)
 - **v0.2** ✅ UI-First Platform — Full web dashboard replacing CLI
-  - v0.2.0 ✅ Frontend Foundation (React 19, TypeScript, Tailwind, TanStack Router/Query)
+  - v0.2.0 ✅ Frontend Foundation (React 19, TypeScript, Tailwind v4, TanStack Router/Query)
   - v0.2.1 ✅ Dashboard & Project Management (wizard, team config, templates)
   - v0.2.2 ✅ Sprint Command Center (realtime feed, WebSocket, approvals)
   - v0.2.3 ✅ Analytics & Insights (charts, cost tracking, sprint replay)
   - v0.2.4 ✅ Settings & Polish (settings page, error handling, accessibility)
+  - v0.2.5 ✅ Codebase Consolidation (single frontend/ directory with unified stack)
 - **v0.3** ✅ Native Desktop App — Tauri v2 + PyInstaller sidecar, API key settings UI, CI/CD releases
 - **v0.4** ✅ Backend Integration — Sprint execution from web, agent factory, analytics wiring, retrospectives
 

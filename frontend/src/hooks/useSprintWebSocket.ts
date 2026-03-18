@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import type { WSMessage } from '../types';
+import type { WSMessage } from '../lib/types';
 
 interface UseSprintWSOptions {
   sprintId: string;

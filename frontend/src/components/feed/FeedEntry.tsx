@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { WSMessage } from '../../types';
+import type { WSMessage } from '../../lib/types';
 import { AgentAvatar } from '../shared/AgentAvatar';
 import { TimeAgo } from '../shared/TimeAgo';
 import { TraceViewer } from './TraceViewer';
@@ -67,7 +67,7 @@ export function FeedEntry({ event }: Props) {
   return (
     <div className="flex gap-3 text-sm">
       <div className="flex flex-col items-center">
-        <AgentAvatar role={agentId} size="xs" />
+        <AgentAvatar role={agentId} size="sm" />
         <div className="w-px flex-1 bg-gray-200 dark:bg-gray-700" />
       </div>
 

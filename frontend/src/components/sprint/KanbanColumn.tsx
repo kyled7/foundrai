@@ -1,6 +1,6 @@
-import type { TaskResponse } from '../../types';
+import type { Task } from '@/lib/types';
 import { TaskCard } from './TaskCard';
-import { cn } from '../../utils/cn';
+import { cn } from '@/lib/utils';
 
 const COLOR_MAP: Record<string, string> = {
   gray: 'border-t-gray-400',
@@ -13,7 +13,7 @@ const COLOR_MAP: Record<string, string> = {
 interface Props {
   title: string;
   color: string;
-  tasks: TaskResponse[];
+  tasks: Task[];
   count: number;
 }
 

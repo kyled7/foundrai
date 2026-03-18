@@ -1,105 +1,92 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { listProjects } from '../../api/projects';
-import { listSprints } from '../../api/sprints';
-import type { ProjectResponse, SprintResponse } from '../../types';
-import { StatusBadge } from '../shared/StatusBadge';
-import { cn } from '../../utils/cn';
+import { useLocation } from '@tanstack/react-router';
+import { LayoutDashboard, FolderKanban, Settings, Blocks, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useUI } from '@/stores/ui';
+import { useProjects } from '@/hooks/use-projects';
+
+const navItems = [
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/templates', label: 'Templates', icon: Blocks },
+  { to: '/settings', label: 'Settings', icon: Settings },
+];
 
 export function Sidebar() {
-  const [projects, setProjects] = useState<ProjectResponse[]>([]);
-  const [sprints, setSprints] = useState<SprintResponse[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const { sprintId } = useParams();
-
-  useEffect(() => {
-    listProjects().then((data) => {
-      setProjects(data.projects);
-      if (data.projects.length > 0 && !selectedProject) {
-        setSelectedProject(data.projects[0].project_id);
-      }
-    }).catch(() => {});
-  }, [selectedProject]);
-
-  useEffect(() => {
-    if (selectedProject) {
-      listSprints(selectedProject).then((data) => {
-        setSprints(data.sprints);
-      }).catch(() => {});
-    }
-  }, [selectedProject]);
+  const { sidebarOpen, toggleSidebar } = useUI();
+  const location = useLocation();
+  const { data } = useProjects();
 
   return (
-    <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="text-xl">🚀</span>
-          <span className="font-bold text-lg">FoundrAI</span>
-        </Link>
-      </div>
+    <>
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={toggleSidebar} />
+      )}
 
-      <div className="p-3">
-        <h3 className="text-xs font-semibold uppercase text-gray-400 mb-2">Projects</h3>
-        {projects.map((p) => (
+      <aside
+        className={cn(
+          'fixed top-0 left-0 z-50 h-full w-64 bg-card border-r border-border flex flex-col transition-transform',
+          'md:translate-x-0 md:static md:z-auto',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <div className="flex items-center justify-between h-14 px-4 border-b border-border">
+          <a href="/" className="flex items-center gap-2">
+            <span className="text-lg font-bold text-primary">⚡</span>
+            <span className="text-lg font-semibold text-foreground">FoundrAI</span>
+          </a>
           <button
-            key={p.project_id}
-            onClick={() => setSelectedProject(p.project_id)}
-            className={cn(
-              'w-full text-left px-3 py-2 rounded text-sm',
-              selectedProject === p.project_id
-                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-            )}
+            onClick={toggleSidebar}
+            className="md:hidden text-muted hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Close sidebar"
           >
-            {p.name}
+            <X size={18} />
           </button>
-        ))}
-        {projects.length === 0 && (
-          <p className="text-xs text-gray-400 px-3">No projects yet</p>
-        )}
-      </div>
+        </div>
 
-      <div className="p-3 space-y-1">
-        <Link
-          to="/analytics"
-          className="flex items-center gap-2 px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
-          <span>📊</span>
-          <span>Analytics</span>
-        </Link>
-        <Link
-          to="/settings"
-          className="flex items-center gap-2 px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
-          <span>⚙️</span>
-          <span>Settings</span>
-        </Link>
-      </div>
+        <nav aria-label="Main navigation" className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+          {navItems.map(({ to, label, icon: Icon }) => (
+            <a
+              key={to}
+              href={to}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 min-h-[44px] rounded-md text-sm transition-colors',
+                location.pathname === to
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-muted hover:text-foreground hover:bg-border/50'
+              )}
+            >
+              <Icon size={18} />
+              {label}
+            </a>
+          ))}
 
-      <div className="p-3 flex-1 overflow-y-auto">
-        <h3 className="text-xs font-semibold uppercase text-gray-400 mb-2">Sprints</h3>
-        {sprints.map((s) => (
-          <Link
-            key={s.sprint_id}
-            to={`/sprints/${s.sprint_id}`}
-            className={cn(
-              'block px-3 py-2 rounded text-sm mb-1',
-              sprintId === s.sprint_id
-                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span>Sprint #{s.sprint_number}</span>
-              <StatusBadge status={s.status} />
+          {data && data.projects.length > 0 && (
+            <div className="mt-6">
+              <p className="px-3 text-xs font-semibold text-muted uppercase tracking-wider mb-2">Projects</p>
+              <nav aria-label="Projects">
+                {data.projects.map((p) => (
+                  <a
+                    key={p.project_id}
+                    href={`/projects/${p.project_id}`}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2 min-h-[44px] rounded-md text-sm transition-colors',
+                      location.pathname.includes(p.project_id)
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted hover:text-foreground hover:bg-border/50'
+                    )}
+                  >
+                    <FolderKanban size={16} />
+                    <span className="truncate">{p.name}</span>
+                  </a>
+                ))}
+              </nav>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">{s.goal}</p>
-          </Link>
-        ))}
-        {sprints.length === 0 && (
-          <p className="text-xs text-gray-400 px-3">No sprints</p>
-        )}
-      </div>
-    </aside>
+          )}
+        </nav>
+
+        <div className="p-4 border-t border-border text-xs text-muted">
+          FoundrAI v0.2.4
+        </div>
+      </aside>
+    </>
   );
 }
