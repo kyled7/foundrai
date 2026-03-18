@@ -655,10 +655,15 @@ class SprintEngine:
             pass
 
     async def _emit_task_status(self, task: Task) -> None:
-        """Emit a task status change event and persist to DB."""
+        """Emit a task status change event and persist to DB with synchronization."""
         status_val = task.status if isinstance(task.status, str) else task.status.value
+
+        # Emit event (not under lock to avoid deadlock with listeners)
         await self.event_log.append(
             "task.status_changed",
             {"task_id": task.id, "status": status_val, "task_title": task.title},
         )
-        await self.sprint_store.update_task(task)
+
+        # Synchronize database updates to prevent race conditions
+        async with self._task_status_lock:
+            await self.sprint_store.update_task(task)
