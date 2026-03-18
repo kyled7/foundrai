@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -35,7 +35,7 @@ from foundrai.agents.personas.developer import DeveloperAgent
 from foundrai.agents.personas.product_manager import ProductManagerAgent
 from foundrai.agents.personas.qa_engineer import QAEngineerAgent
 from foundrai.agents.roles import get_role
-from foundrai.agents.runtime import RuntimeResult
+from foundrai.agents.runtime import AgentRuntime, RuntimeResult
 from foundrai.config import FoundrAIConfig
 from foundrai.models.budget import BudgetConfig
 from foundrai.models.enums import AgentRoleName, SprintStatus, TaskStatus
@@ -85,7 +85,10 @@ QA_PASS_JSON = json.dumps({
 
 
 def _make_runtime_mock(response_content: str, tokens: int, response_format: str | None = None) -> AsyncMock:
-    """Create a mock runtime that returns a canned response with token count."""
+    """Create a mock runtime that returns a canned response with token count (no recording).
+
+    Use this for tests that don't need actual token usage recording.
+    """
     runtime = AsyncMock()
     parsed = None
     starts_json = response_content.startswith(("[", "{"))
@@ -102,6 +105,50 @@ def _make_runtime_mock(response_content: str, tokens: int, response_format: str 
         success=True,
     ))
     return runtime
+
+
+def _make_runtime_with_token_store(
+    response_content: str,
+    tokens: int,
+    response_format: str | None,
+    token_store: TokenStore,
+    sprint_id: str,
+    task_id: str | None,
+    agent_role: str,
+    event_log: EventLog,
+    project_id: str = "test-project",
+) -> AgentRuntime:
+    """Create a runtime that actually records token usage.
+
+    This creates a real AgentRuntime instance with a mocked llm_client,
+    so that token usage is properly recorded via token_store.record_usage().
+    """
+    # Create a mock LLM client
+    llm_client = MagicMock()
+    llm_client.model = "test/model"
+
+    # Create a mock response object with token usage
+    mock_response = MagicMock()
+    mock_response.content = response_content
+    mock_response.total_tokens = tokens
+    mock_response.prompt_tokens = tokens // 2  # Simulate roughly 50/50 split
+    mock_response.completion_tokens = tokens // 2
+    mock_response.tool_calls = []  # No tool calls
+
+    # Configure llm_client.completion to return our mock response
+    llm_client.completion = AsyncMock(return_value=mock_response)
+
+    # Create the real AgentRuntime with token_store wired up
+    return AgentRuntime(
+        llm_client=llm_client,
+        event_log=event_log,
+        max_iterations=1,  # Single iteration for tests
+        token_store=token_store,  # CRITICAL: Pass token_store so usage gets recorded
+        agent_role=agent_role,
+        sprint_id=sprint_id,
+        task_id=task_id,
+        project_id=project_id,
+    )
 
 
 @pytest.fixture
@@ -144,37 +191,73 @@ async def test_e2e_cost_tracking_with_real_time_updates(db, tmp_path, sprint_con
     dev_role = get_role(AgentRoleName.DEVELOPER)
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
-    # Create agents with different token usage
+    project_id = "test-cost-e2e"
+
+    # Create agents with real runtimes that record token usage
+    # Note: sprint_id will be set to "" initially and updated by engine during execution
     pm = ProductManagerAgent(
         role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(MULTI_TASK_JSON, 500, "json"),
+        sprint_context=sprint_context,
+        runtime=_make_runtime_with_token_store(
+            MULTI_TASK_JSON, 500, "json",
+            token_store=token_store,
+            sprint_id="",  # Will be set by engine
+            task_id=None,
+            agent_role="product_manager",
+            event_log=event_log,
+            project_id=project_id,
+        ),
     )
     qa = QAEngineerAgent(
         role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, 100, "json"),
+        sprint_context=sprint_context,
+        runtime=_make_runtime_with_token_store(
+            QA_PASS_JSON, 100, "json",
+            token_store=token_store,
+            sprint_id="",  # Will be set by engine
+            task_id=None,
+            agent_role="qa_engineer",
+            event_log=event_log,
+            project_id=project_id,
+        ),
     )
 
     # Create dev agent with varying token usage per task
+    dev_runtime = _make_runtime_with_token_store(
+        "Task completed", 1000, None,
+        token_store=token_store,
+        sprint_id="",  # Will be set by engine
+        task_id=None,
+        agent_role="developer",
+        event_log=event_log,
+        project_id=project_id,
+    )
+
+    # Override the run method to vary token usage per task
     task_count = 0
     token_counts = [1000, 500, 200]  # High, medium, low
+    original_run = dev_runtime.run
 
-    async def dev_with_varying_cost(*args, **kwargs):
+    async def dev_with_varying_cost(messages, tools=None, response_format=None):
         nonlocal task_count
         tokens = token_counts[task_count] if task_count < len(token_counts) else 100
         task_count += 1
-        return RuntimeResult(
-            output=f"Task {task_count} completed",
-            parsed=None,
-            artifacts=[],
-            tokens_used=tokens,
-            success=True,
-        )
+
+        # Update the mock response to return different token counts
+        dev_runtime.llm_client.completion.return_value.total_tokens = tokens
+        dev_runtime.llm_client.completion.return_value.prompt_tokens = tokens // 2
+        dev_runtime.llm_client.completion.return_value.completion_tokens = tokens // 2
+        dev_runtime.llm_client.completion.return_value.content = f"Task {task_count} completed"
+
+        # Call the original run method which will record tokens
+        return await original_run(messages, tools, response_format)
+
+    dev_runtime.run = dev_with_varying_cost
 
     dev = DeveloperAgent(
         role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done", 100),
+        sprint_context=sprint_context, runtime=dev_runtime,
     )
-    dev.runtime.run = AsyncMock(side_effect=dev_with_varying_cost)
 
     # Register agents
     message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
@@ -199,10 +282,31 @@ async def test_e2e_cost_tracking_with_real_time_updates(db, tmp_path, sprint_con
         artifact_store=artifact_store,
     )
 
+    # Monkey-patch run_sprint to update runtime sprint_ids before execution
+    original_run_sprint = engine.run_sprint
+
+    async def patched_run_sprint(goal: str, project_id: str):
+        # Start the sprint to get the sprint_id
+        result = await original_run_sprint(goal, project_id)
+        return result
+
+    # Actually, we need to patch earlier. Let me try a different approach.
+    # We'll intercept the plan phase to update sprint_ids
+    original_plan = engine._plan_node
+
+    async def patched_plan(state):
+        # Update all runtime sprint_ids with the actual sprint_id
+        sprint_id = state["sprint_id"]
+        for agent in agent_map.values():
+            agent.runtime.sprint_id = sprint_id
+        return await original_plan(state)
+
+    engine._plan_node = patched_plan
+
     # Run sprint
     result = await engine.run_sprint(
         goal=sprint_context.sprint_goal,
-        project_id="test-cost-e2e",
+        project_id=project_id,
     )
 
     # Verify sprint completed successfully
@@ -431,6 +535,7 @@ async def test_e2e_historical_cost_analytics(db, tmp_path, sprint_context, compo
 
     # Run multiple sprints with different costs
     sprint_costs = []
+    project_id = "test-analytics"
 
     for sprint_num in range(1, 4):
         # Create fresh context for each sprint
@@ -446,15 +551,42 @@ async def test_e2e_historical_cost_analytics(db, tmp_path, sprint_context, compo
 
         pm = ProductManagerAgent(
             role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-            sprint_context=ctx, runtime=_make_runtime_mock(MULTI_TASK_JSON, tokens, "json"),
+            sprint_context=ctx,
+            runtime=_make_runtime_with_token_store(
+                MULTI_TASK_JSON, tokens, "json",
+                token_store=token_store,
+                sprint_id="",  # Will be set by engine
+                task_id=None,
+                agent_role="product_manager",
+                event_log=event_log,
+                project_id=project_id,
+            ),
         )
         dev = DeveloperAgent(
             role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-            sprint_context=ctx, runtime=_make_runtime_mock("Done", tokens),
+            sprint_context=ctx,
+            runtime=_make_runtime_with_token_store(
+                "Done", tokens, None,
+                token_store=token_store,
+                sprint_id="",  # Will be set by engine
+                task_id=None,
+                agent_role="developer",
+                event_log=event_log,
+                project_id=project_id,
+            ),
         )
         qa = QAEngineerAgent(
             role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-            sprint_context=ctx, runtime=_make_runtime_mock(QA_PASS_JSON, tokens // 5, "json"),
+            sprint_context=ctx,
+            runtime=_make_runtime_with_token_store(
+                QA_PASS_JSON, tokens // 5, "json",
+                token_store=token_store,
+                sprint_id="",  # Will be set by engine
+                task_id=None,
+                agent_role="qa_engineer",
+                event_log=event_log,
+                project_id=project_id,
+            ),
         )
 
         message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
@@ -479,9 +611,20 @@ async def test_e2e_historical_cost_analytics(db, tmp_path, sprint_context, compo
             artifact_store=artifact_store,
         )
 
+        # Monkey-patch to update runtime sprint_ids
+        original_plan = engine._plan_node
+
+        async def patched_plan(state):
+            sprint_id = state["sprint_id"]
+            for agent in agent_map.values():
+                agent.runtime.sprint_id = sprint_id
+            return await original_plan(state)
+
+        engine._plan_node = patched_plan
+
         result = await engine.run_sprint(
             goal=ctx.sprint_goal,
-            project_id="test-analytics",
+            project_id=project_id,
         )
 
         sprint_id = result["sprint_id"]
@@ -519,17 +662,46 @@ async def test_e2e_sprint_retrospective_with_cost(db, tmp_path, sprint_context, 
     dev_role = get_role(AgentRoleName.DEVELOPER)
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
+    project_id = "test-retro"
+
     pm = ProductManagerAgent(
         role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(MULTI_TASK_JSON, 500, "json"),
+        sprint_context=sprint_context,
+        runtime=_make_runtime_with_token_store(
+            MULTI_TASK_JSON, 500, "json",
+            token_store=token_store,
+            sprint_id="",  # Will be set by engine
+            task_id=None,
+            agent_role="product_manager",
+            event_log=event_log,
+            project_id=project_id,
+        ),
     )
     dev = DeveloperAgent(
         role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done", 1000),
+        sprint_context=sprint_context,
+        runtime=_make_runtime_with_token_store(
+            "Done", 1000, None,
+            token_store=token_store,
+            sprint_id="",  # Will be set by engine
+            task_id=None,
+            agent_role="developer",
+            event_log=event_log,
+            project_id=project_id,
+        ),
     )
     qa = QAEngineerAgent(
         role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, 100, "json"),
+        sprint_context=sprint_context,
+        runtime=_make_runtime_with_token_store(
+            QA_PASS_JSON, 100, "json",
+            token_store=token_store,
+            sprint_id="",  # Will be set by engine
+            task_id=None,
+            agent_role="qa_engineer",
+            event_log=event_log,
+            project_id=project_id,
+        ),
     )
 
     # Register agents
@@ -555,10 +727,21 @@ async def test_e2e_sprint_retrospective_with_cost(db, tmp_path, sprint_context, 
         artifact_store=artifact_store,
     )
 
+    # Monkey-patch to update runtime sprint_ids
+    original_plan = engine._plan_node
+
+    async def patched_plan(state):
+        sprint_id = state["sprint_id"]
+        for agent in agent_map.values():
+            agent.runtime.sprint_id = sprint_id
+        return await original_plan(state)
+
+    engine._plan_node = patched_plan
+
     # Run sprint
     result = await engine.run_sprint(
         goal=sprint_context.sprint_goal,
-        project_id="test-retro",
+        project_id=project_id,
     )
 
     sprint_id = result["sprint_id"]
@@ -579,7 +762,7 @@ async def test_e2e_sprint_retrospective_with_cost(db, tmp_path, sprint_context, 
     print(f"   - Total cost: ${sprint_usage['total_cost']:.4f}")
     print(f"   - Agent breakdown: {list(by_agent.keys())}")
     for agent, data in by_agent.items():
-        print(f"     - {agent}: ${data['cost']:.4f}")
+        print(f"     - {agent}: ${data['total_cost']:.4f}")
 
 
 # Manual E2E Test Documentation
