@@ -916,6 +916,166 @@ async def test_e2e_per_agent_budget_enforcement(db, tmp_path, sprint_context, co
     print(f"   - Dev execution allowed: {dev_allowed}")
 
 
+@pytest.mark.asyncio
+async def test_e2e_budget_history_tracking(client: AsyncClient, db, tmp_path, sprint_context, components):
+    """
+    E2E Test 9: Verify budget history tracking across multiple sprints.
+
+    This test validates:
+    - Budget history is tracked across multiple sprints
+    - GET /api/projects/{project_id}/budget-history endpoint returns accurate data
+    - History includes all sprints in chronological order
+    - Trend analysis data is accurate (budget, spent, percentage)
+    """
+    event_log, sprint_store, artifact_store, token_store, message_bus, task_graph = components
+
+    project_id = "test-budget-history"
+
+    # Create 3 sprints with different budgets and spending patterns
+    sprints_data = [
+        {
+            "sprint_id": f"{project_id}-sprint-1",
+            "sprint_number": 1,
+            "goal": "Sprint 1: Initial development",
+            "budget_usd": 5.0,
+            "spent_usd": 3.75,  # 75% - warning threshold
+        },
+        {
+            "sprint_id": f"{project_id}-sprint-2",
+            "sprint_number": 2,
+            "goal": "Sprint 2: Feature expansion",
+            "budget_usd": 10.0,
+            "spent_usd": 9.50,  # 95% - approaching limit
+        },
+        {
+            "sprint_id": f"{project_id}-sprint-3",
+            "sprint_number": 3,
+            "goal": "Sprint 3: Final polish",
+            "budget_usd": 7.5,
+            "spent_usd": 4.20,  # 56% - comfortable
+        },
+    ]
+
+    # Configure budget manager with default settings
+    budget_config = BudgetConfig(
+        sprint_budget_usd=10.0,  # Default, will be overridden per sprint
+        warning_threshold=0.8,
+        agent_budgets={},
+        model_tierdown_map={},
+    )
+    budget_manager = BudgetManager(budget_config, token_store, db, event_log)
+
+    # Create sprints in database and record token usage
+    for sprint_data in sprints_data:
+        # Insert sprint into database
+        await db.conn.execute(
+            """INSERT INTO sprints
+               (sprint_id, project_id, sprint_number, goal, status, created_at, completed_at)
+               VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))""",
+            (
+                sprint_data["sprint_id"],
+                project_id,
+                sprint_data["sprint_number"],
+                sprint_data["goal"],
+                "completed",
+            ),
+        )
+        await db.conn.commit()
+
+        # Override budget for this sprint
+        await budget_manager.set_override(
+            sprint_data["sprint_id"],
+            sprint_data["budget_usd"],
+            agent_role=None  # Sprint-level budget
+        )
+
+        # Record token usage to match spending pattern
+        await token_store.record_usage(TokenUsage(
+            sprint_id=sprint_data["sprint_id"],
+            project_id=project_id,
+            agent_role="developer",
+            model="anthropic/claude-sonnet-4-20250514",
+            cost_usd=sprint_data["spent_usd"],
+            total_tokens=int(sprint_data["spent_usd"] * 2500),  # Approximate tokens
+        ))
+
+    # Query the budget history API endpoint
+    response = await client.get(f"/api/projects/{project_id}/budget-history")
+    assert response.status_code == 200, f"GET budget-history failed: {response.text}"
+
+    history_data = response.json()
+
+    # Verify response structure
+    assert history_data["project_id"] == project_id, f"Expected project_id={project_id}, got {history_data['project_id']}"
+    assert "history" in history_data, "Response should include 'history' field"
+
+    history = history_data["history"]
+
+    # Verify all 3 sprints are included
+    assert len(history) == 3, f"Expected 3 sprints in history, got {len(history)}"
+
+    # Verify sprints are in chronological order (by sprint_number)
+    for i, sprint_entry in enumerate(history):
+        expected_sprint = sprints_data[i]
+        assert sprint_entry["sprint_id"] == expected_sprint["sprint_id"], \
+            f"Sprint {i}: Expected {expected_sprint['sprint_id']}, got {sprint_entry['sprint_id']}"
+        assert sprint_entry["sprint_number"] == expected_sprint["sprint_number"], \
+            f"Sprint {i}: Expected number {expected_sprint['sprint_number']}, got {sprint_entry['sprint_number']}"
+
+    # Verify budget data accuracy for each sprint
+    for i, sprint_entry in enumerate(history):
+        expected_sprint = sprints_data[i]
+
+        # Check budget amount
+        assert sprint_entry["budget_usd"] == expected_sprint["budget_usd"], \
+            f"Sprint {i}: Expected budget ${expected_sprint['budget_usd']:.2f}, got ${sprint_entry['budget_usd']:.2f}"
+
+        # Check spent amount
+        assert sprint_entry["spent_usd"] == expected_sprint["spent_usd"], \
+            f"Sprint {i}: Expected spent ${expected_sprint['spent_usd']:.2f}, got ${sprint_entry['spent_usd']:.2f}"
+
+        # Check remaining amount
+        expected_remaining = expected_sprint["budget_usd"] - expected_sprint["spent_usd"]
+        assert abs(sprint_entry["remaining_usd"] - expected_remaining) < 0.01, \
+            f"Sprint {i}: Expected remaining ${expected_remaining:.2f}, got ${sprint_entry['remaining_usd']:.2f}"
+
+        # Check percentage used
+        expected_percentage = (expected_sprint["spent_usd"] / expected_sprint["budget_usd"]) * 100
+        assert abs(sprint_entry["percentage_used"] - expected_percentage) < 0.1, \
+            f"Sprint {i}: Expected {expected_percentage:.1f}% used, got {sprint_entry['percentage_used']:.1f}%"
+
+    # Verify warning and exceeded flags
+    # Sprint 1: 75% - should NOT have warning (threshold is 80%)
+    assert not history[0]["is_warning"], "Sprint 1 at 75% should not have warning (threshold 80%)"
+    assert not history[0]["is_exceeded"], "Sprint 1 should not be exceeded"
+
+    # Sprint 2: 95% - should have warning AND be close to exceeded
+    assert history[1]["is_warning"], "Sprint 2 at 95% should have warning"
+    assert not history[1]["is_exceeded"], "Sprint 2 at 95% should not be exceeded yet"
+
+    # Sprint 3: 56% - should be comfortable
+    assert not history[2]["is_warning"], "Sprint 3 at 56% should not have warning"
+    assert not history[2]["is_exceeded"], "Sprint 3 should not be exceeded"
+
+    # Verify trend analysis data is suitable for charting
+    for sprint_entry in history:
+        assert "sprint_id" in sprint_entry, "Each entry should have sprint_id"
+        assert "sprint_number" in sprint_entry, "Each entry should have sprint_number for x-axis"
+        assert "budget_usd" in sprint_entry, "Each entry should have budget_usd for charting"
+        assert "spent_usd" in sprint_entry, "Each entry should have spent_usd for charting"
+        assert "percentage_used" in sprint_entry, "Each entry should have percentage_used"
+        assert "goal" in sprint_entry, "Each entry should have goal for tooltips"
+        assert "created_at" in sprint_entry, "Each entry should have created_at timestamp"
+
+    print(f"✅ E2E Test 9 PASSED: Budget history tracking across multiple sprints verified")
+    print(f"   Sprint 1: ${history[0]['spent_usd']:.2f} / ${history[0]['budget_usd']:.2f} ({history[0]['percentage_used']:.1f}%)")
+    print(f"   Sprint 2: ${history[1]['spent_usd']:.2f} / ${history[1]['budget_usd']:.2f} ({history[1]['percentage_used']:.1f}%)")
+    print(f"   Sprint 3: ${history[2]['spent_usd']:.2f} / ${history[2]['budget_usd']:.2f} ({history[2]['percentage_used']:.1f}%)")
+    print(f"   - Total sprints in history: {len(history)}")
+    print(f"   - History ordered chronologically: ✓")
+    print(f"   - Trend analysis data complete: ✓")
+
+
 # Manual E2E Test Documentation
 """
 MANUAL E2E VERIFICATION CHECKLIST
