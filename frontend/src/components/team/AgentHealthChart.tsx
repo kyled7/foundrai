@@ -30,9 +30,9 @@ export function AgentHealthChart({ data, loading, className }: AgentHealthChartP
     index: index + 1,
     timestamp: new Date(health.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     healthScore: health.health_score,
-    completionRate: health.metrics.completion_rate * 100,
-    qualityScore: health.metrics.quality_score * 100,
-    failureRate: health.metrics.failure_rate * 100,
+    completionRate: health.metrics.completion_rate,
+    qualityScore: health.metrics.quality_score,
+    failureRate: health.metrics.failure_rate,
   }));
 
   return (

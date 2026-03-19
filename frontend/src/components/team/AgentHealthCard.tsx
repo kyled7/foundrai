@@ -87,13 +87,13 @@ export function AgentHealthCard({ agentHealth, loading, className }: AgentHealth
         <div>
           <p className="text-muted">Completion Rate</p>
           <p className="font-semibold text-foreground">
-            {(metrics.completion_rate * 100).toFixed(1)}%
+            {metrics.completion_rate.toFixed(1)}%
           </p>
         </div>
         <div>
           <p className="text-muted">Quality Score</p>
           <p className="font-semibold text-foreground">
-            {(metrics.quality_score * 100).toFixed(1)}%
+            {metrics.quality_score.toFixed(1)}%
           </p>
         </div>
         <div>
