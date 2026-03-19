@@ -55,7 +55,7 @@ class BudgetManager:
             spent_usd=spent_usd,
             remaining_usd=remaining,
             percentage_used=pct,
-            is_warning=pct > 80,
+            is_warning=pct > self.config.warning_threshold * 100,
             is_exceeded=pct > 100,
         )
 
