@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from foundrai.config import FoundrAIConfig
@@ -375,7 +376,7 @@ class SprintEngine:
                             await self.artifact_store.save(artifact)
                             async with self._task_status_lock:
                                 state["artifacts"].append(artifact)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         # Task execution timed out
                         task.status = TaskStatus.FAILED
                         logger.warning(
@@ -448,13 +449,19 @@ class SprintEngine:
             return True
 
         approval_id = str(uuid.uuid4())
+
+        # Calculate expiration time based on configured timeout
+        approval_timeout = self._get_approval_timeout(agent_role)
+        expires_at = (datetime.now(UTC) + timedelta(seconds=approval_timeout)).isoformat()
+
         await self.db.conn.execute(
             """INSERT INTO approvals
-               (approval_id, sprint_id, task_id, agent_id, action_type, title, description, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')""",
+               (approval_id, sprint_id, task_id, agent_id, action_type,
+                title, description, status, expires_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
             (
                 approval_id, sprint_id, task.id, agent_role,
-                "task_execution", task.title, task.description,
+                "task_execution", task.title, task.description, expires_at,
             ),
         )
         await self.db.conn.commit()

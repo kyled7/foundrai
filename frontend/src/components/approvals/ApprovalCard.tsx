@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { ApprovalRequest } from '../../lib/types';
 import { approveRequest, rejectRequest } from '../../api/approvals';
 import { useApprovalStore } from '../../stores/approvalStore';
 import { AgentAvatar } from '../shared/AgentAvatar';
 import { ContextRenderer } from './ContextRenderer';
+import { ApprovalTimer } from './ApprovalTimer';
 import { Clock } from 'lucide-react';
 
 interface Props {
@@ -14,33 +15,6 @@ export function ApprovalCard({ approval }: Props) {
   const resolveApproval = useApprovalStore((s) => s.resolveApproval);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState<number>(0);
-
-  // Default timeout: 5 minutes (300 seconds)
-  const APPROVAL_TIMEOUT_SECONDS = 300;
-
-  useEffect(() => {
-    const createdAt = new Date(approval.created_at).getTime();
-    const timeoutMs = APPROVAL_TIMEOUT_SECONDS * 1000;
-
-    const updateTimer = () => {
-      const now = Date.now();
-      const elapsed = now - createdAt;
-      const remaining = Math.max(0, timeoutMs - elapsed);
-      setTimeRemaining(Math.floor(remaining / 1000));
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-
-    return () => clearInterval(interval);
-  }, [approval.created_at]);
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const handleDecision = async (approved: boolean) => {
     setLoading(true);
@@ -66,9 +40,9 @@ export function ApprovalCard({ approval }: Props) {
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-semibold">{approval.title}</h3>
-            <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-              <Clock size={12} />
-              <span className="font-mono">{formatTime(timeRemaining)}</span>
+            <div className="flex items-center gap-1.5">
+              <Clock size={12} className="text-amber-700 dark:text-amber-400" />
+              <ApprovalTimer expiresAt={approval.expires_at} />
             </div>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{approval.description}</p>

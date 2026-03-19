@@ -36,6 +36,7 @@ async def list_approvals(sprint_id: str) -> dict:
             "status": r["status"],
             "context": json.loads(r["context_json"] or "{}"),
             "created_at": r["created_at"],
+            "expires_at": r["expires_at"],
         }
         for r in rows
     ]
@@ -64,7 +65,8 @@ async def get_approval(approval_id: str) -> dict:
         "context": json.loads(row["context_json"] or "{}"),
         "comment": row["comment"],
         "created_at": row["created_at"],
-        "resolved_at": row.get("resolved_at"),
+        "resolved_at": row["resolved_at"],
+        "expires_at": row["expires_at"],
     }
 
 

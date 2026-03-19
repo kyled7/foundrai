@@ -40,7 +40,7 @@ export async function playSound(soundPath: string, volume: number = 0.5): Promis
  * Uses the default notification sound with standard volume
  */
 export async function playNotificationSound(volume: number = 0.5): Promise<void> {
-  const soundPath = '/src/assets/notification.mp3';
+  const soundPath = '/notification.mp3';
   return playSound(soundPath, volume);
 }
 

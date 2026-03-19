@@ -91,7 +91,8 @@ CREATE TABLE IF NOT EXISTS approvals (
     status TEXT NOT NULL DEFAULT 'pending',
     comment TEXT DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    resolved_at TEXT
+    resolved_at TEXT,
+    expires_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_approvals_sprint ON approvals(sprint_id);
 CREATE INDEX IF NOT EXISTS idx_approvals_status ON approvals(status);
