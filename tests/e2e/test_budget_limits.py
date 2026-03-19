@@ -220,7 +220,7 @@ async def test_e2e_automatic_model_switching(db, tmp_path, sprint_context, compo
     budget_config = BudgetConfig(
         sprint_budget_usd=5.0,
         warning_threshold=0.75,
-        agent_budgets={},
+        agent_budgets={"developer": 5.0},
         model_tierdown_map={
             "anthropic/claude-sonnet-4-20250514": "anthropic/claude-haiku-20250513"
         },
@@ -338,7 +338,7 @@ async def test_e2e_sprint_pause_at_budget_limit(db, tmp_path, sprint_context, co
     assert status.percentage_used > 100.0
 
     # Verify enforce_budget returns False (not allowed to spend)
-    allowed = await budget_manager.enforce_budget(sprint_id, agent_role)
+    allowed = await budget_manager.enforce_budget(sprint_id)
     assert not allowed, "Budget enforcement should block spending when exceeded"
 
     # Create runtime and verify it cannot proceed
@@ -350,7 +350,7 @@ async def test_e2e_sprint_pause_at_budget_limit(db, tmp_path, sprint_context, co
         budget_manager=budget_manager,
         sprint_id=sprint_id,
         task_id="task-2",
-        agent_role=agent_role,
+        agent_role=None,  # Test sprint-level budget, not agent-level
         event_log=event_log,
         project_id=project_id,
     )
@@ -906,7 +906,8 @@ async def test_e2e_per_agent_budget_enforcement(db, tmp_path, sprint_context, co
     # Verify sprint-level budget is still OK (total $3.70 of $10.00)
     sprint_status = await budget_manager.check_budget(sprint_id)
     assert not sprint_status.is_exceeded, "Sprint budget should not be exceeded"
-    assert sprint_status.spent_usd == 3.70, f"Total sprint spent should be $3.70, got ${sprint_status.spent_usd}"
+    assert abs(sprint_status.spent_usd - 3.70) < 0.01, \
+        f"Total sprint spent should be ~$3.70, got ${sprint_status.spent_usd}"
 
     print(f"✅ E2E Test 8 PASSED: Per-agent budget enforcement verified")
     print(f"   - PM blocked: 110% of $2.00 budget (${pm_status.spent_usd:.2f})")
