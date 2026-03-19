@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from foundrai.api.deps import get_db
 
 router = APIRouter()
+
+
+class TaskStatusUpdate(BaseModel):
+    """Request model for updating task status."""
+    status: str
 
 
 @router.get("/sprints/{sprint_id}/tasks")
@@ -93,4 +100,47 @@ async def get_task(task_id: str) -> dict:
         "updated_at": row["updated_at"],
         "cost_usd": cost_row["cost_usd"] if cost_row["cost_usd"] > 0 else None,
         "tokens_used": cost_row["tokens_used"] if cost_row["tokens_used"] > 0 else None,
+    }
+
+
+@router.patch("/tasks/{task_id}")
+async def update_task_status(task_id: str, update: TaskStatusUpdate) -> dict:
+    """Update a task's status."""
+    db = await get_db()
+
+    # Verify task exists
+    cursor = await db.conn.execute(
+        "SELECT * FROM tasks WHERE task_id = ?", (task_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Update task status
+    now = datetime.now(timezone.utc).isoformat()
+    await db.conn.execute(
+        "UPDATE tasks SET status = ?, updated_at = ? WHERE task_id = ?",
+        (update.status, now, task_id)
+    )
+    await db.conn.commit()
+
+    # Return updated task
+    cursor = await db.conn.execute(
+        "SELECT * FROM tasks WHERE task_id = ?", (task_id,)
+    )
+    row = await cursor.fetchone()
+
+    return {
+        "task_id": row["task_id"],
+        "title": row["title"],
+        "description": row["description"],
+        "acceptance_criteria": json.loads(row["acceptance_criteria_json"] or "[]"),
+        "assigned_to": row["assigned_to"],
+        "priority": row["priority"],
+        "status": row["status"],
+        "dependencies": json.loads(row["dependencies_json"] or "[]"),
+        "result": json.loads(row["result_json"]) if row["result_json"] else None,
+        "review": json.loads(row["review_json"]) if row["review_json"] else None,
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
     }

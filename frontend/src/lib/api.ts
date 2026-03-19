@@ -66,6 +66,8 @@ export const api = {
   tasks: {
     list: (sprintId: string) => request<Task[]>(`/sprints/${sprintId}/tasks`),
     get: (id: string) => request<Task>(`/tasks/${id}`),
+    updateStatus: (id: string, status: string) =>
+      request<Task>(`/tasks/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   },
 
   // Agents
