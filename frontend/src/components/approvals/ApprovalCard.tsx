@@ -3,6 +3,9 @@ import type { ApprovalRequest } from '../../lib/types';
 import { approveRequest, rejectRequest } from '../../api/approvals';
 import { useApprovalStore } from '../../stores/approvalStore';
 import { AgentAvatar } from '../shared/AgentAvatar';
+import { ContextRenderer } from './ContextRenderer';
+import { ApprovalTimer } from './ApprovalTimer';
+import { Clock } from 'lucide-react';
 
 interface Props {
   approval: ApprovalRequest;
@@ -35,17 +38,16 @@ export function ApprovalCard({ approval }: Props) {
       <div className="flex items-start gap-3">
         <AgentAvatar role={approval.agent_id} />
         <div className="flex-1">
-          <h3 className="font-semibold">{approval.title}</h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold">{approval.title}</h3>
+            <div className="flex items-center gap-1.5">
+              <Clock size={12} className="text-amber-700 dark:text-amber-400" />
+              <ApprovalTimer expiresAt={approval.expires_at} />
+            </div>
+          </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{approval.description}</p>
 
-          {Object.keys(approval.context).length > 0 && (
-            <details className="mt-2">
-              <summary className="text-xs text-gray-500 cursor-pointer">View context</summary>
-              <pre className="mt-1 text-xs bg-white dark:bg-gray-900 rounded p-2 overflow-x-auto">
-                {JSON.stringify(approval.context, null, 2)}
-              </pre>
-            </details>
-          )}
+          <ContextRenderer context={approval.context} actionType={approval.action_type} />
 
           <textarea
             value={comment}

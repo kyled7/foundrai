@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
@@ -33,12 +34,40 @@ async def list_approvals(sprint_id: str) -> dict:
             "action_type": r["action_type"],
             "title": r["title"],
             "status": r["status"],
+            "context": json.loads(r["context_json"] or "{}"),
             "created_at": r["created_at"],
+            "expires_at": r["expires_at"],
         }
         for r in rows
     ]
     pending = sum(1 for a in approvals if a["status"] == "pending")
     return {"approvals": approvals, "pending_count": pending, "total": len(approvals)}
+
+
+@router.get("/approvals/{approval_id}")
+async def get_approval(approval_id: str) -> dict:
+    """Get approval details."""
+    db = await get_db()
+    cursor = await db.conn.execute(
+        "SELECT * FROM approvals WHERE approval_id = ?", (approval_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Approval not found")
+
+    return {
+        "approval_id": row["approval_id"],
+        "sprint_id": row["sprint_id"],
+        "agent_id": row["agent_id"],
+        "action_type": row["action_type"],
+        "title": row["title"],
+        "status": row["status"],
+        "context": json.loads(row["context_json"] or "{}"),
+        "comment": row["comment"],
+        "created_at": row["created_at"],
+        "resolved_at": row["resolved_at"],
+        "expires_at": row["expires_at"],
+    }
 
 
 @router.post("/approvals/{approval_id}/approve")

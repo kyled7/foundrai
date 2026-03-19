@@ -11,6 +11,10 @@ export async function listApprovals(sprintId: string): Promise<ApprovalListRespo
   return api.get(`/sprints/${sprintId}/approvals`);
 }
 
+export async function getApproval(approvalId: string): Promise<ApprovalRequest> {
+  return api.get(`/approvals/${approvalId}`);
+}
+
 export async function approveRequest(approvalId: string, comment = ''): Promise<void> {
   await api.post(`/approvals/${approvalId}/approve`, { comment });
 }

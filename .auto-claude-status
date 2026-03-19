@@ -1,15 +1,15 @@
 {
   "active": true,
-  "spec": "005-real-time-cost-tracking-dashboard",
+  "spec": "006-human-approval-gateway-ui",
   "state": "building",
   "subtasks": {
-    "completed": 14,
-    "total": 15,
+    "completed": 13,
+    "total": 16,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "End-to-End Integration",
+    "current": "Integration & E2E Testing",
     "id": null,
     "total": 2
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 5,
-    "started_at": "2026-03-19T06:05:23.345868"
+    "number": 15,
+    "started_at": "2026-03-19T06:17:14.223956"
   },
-  "last_update": "2026-03-19T06:34:23.970571"
+  "last_update": "2026-03-19T06:54:32.887092"
 }
