@@ -153,4 +153,10 @@ export interface RetroResponse {
   went_wrong: string[];
   action_items: string[];
   learnings_count: number;
+  cost_summary?: {
+    total_cost: number;
+    total_tokens: number;
+    by_agent: Record<string, { cost_usd: number; tokens: number }>;
+    by_task: Record<string, { cost_usd: number; tokens: number }>;
+  };
 }

@@ -6,6 +6,7 @@ import logging
 
 from foundrai.models.budget import BudgetConfig, BudgetStatus
 from foundrai.persistence.database import Database
+from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.token_store import TokenStore
 
 logger = logging.getLogger(__name__)
@@ -14,10 +15,17 @@ logger = logging.getLogger(__name__)
 class BudgetManager:
     """Manages token budgets and enforcement."""
 
-    def __init__(self, config: BudgetConfig, token_store: TokenStore, db: Database) -> None:
+    def __init__(
+        self,
+        config: BudgetConfig,
+        token_store: TokenStore,
+        db: Database,
+        event_log: EventLog,
+    ) -> None:
         self.config = config
         self.token_store = token_store
         self.db = db
+        self.event_log = event_log
 
     async def check_budget(self, sprint_id: str, agent_role: str | None = None) -> BudgetStatus:
         """Check budget status for a sprint or agent."""
@@ -56,6 +64,14 @@ class BudgetManager:
                 "Budget warning: %s %s at %.1f%% ($%.4f / $%.4f)",
                 sprint_id, agent_role or "total", pct, spent_usd, budget_usd,
             )
+            # Emit budget_warning event
+            await self.event_log.append("budget_warning", {
+                "sprint_id": sprint_id,
+                "agent_role": agent_role,
+                "budget_usd": budget_usd,
+                "spent_usd": spent_usd,
+                "percentage_used": pct,
+            })
         elif status.is_exceeded:
             logger.error(
                 "Budget exceeded: %s %s at %.1f%% ($%.4f / $%.4f)",

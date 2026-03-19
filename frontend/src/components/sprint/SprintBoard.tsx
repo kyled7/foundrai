@@ -1,8 +1,12 @@
+import { useQuery } from '@tanstack/react-query';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useState } from 'react';
 import { useSprintStore } from '@/stores/sprintStore';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { KanbanColumn } from './KanbanColumn';
+import { BudgetWarning } from './BudgetWarning';
+import { api } from '@/lib/api';
+import type { TaskStatus } from '@/lib/types';
 import { TaskCard } from './TaskCard';
 import type { TaskStatus, Task } from '@/lib/types';
 
@@ -13,6 +17,11 @@ const COLUMNS: { key: string; title: string; statuses: TaskStatus[]; color: stri
   { key: 'failed',      title: 'Failed',      statuses: ['failed'],             color: 'red' },
 ];
 
+interface SprintBoardProps {
+  sprintId?: string;
+}
+
+export function SprintBoard({ sprintId }: SprintBoardProps = {}) {
 function BoardSkeleton() {
   return (
     <div className="flex gap-2 md:gap-3 xl:gap-4 overflow-x-auto p-2 md:p-3 xl:p-4 h-full" role="region" aria-label="Loading sprint board">
@@ -107,7 +116,25 @@ function SprintBoardContent() {
     );
   }
 
+  // Fetch budget status for warning banner
+  const { data: budgetStatus } = useQuery({
+    queryKey: ['sprint', sprintId, 'budget'],
+    queryFn: () => api.analytics.budget(sprintId!),
+    enabled: !!sprintId,
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
+
   return (
+    <div className="flex flex-col h-full" role="region" aria-label="Sprint task board">
+      {/* Budget warning banner */}
+      {sprintId && budgetStatus && (budgetStatus.is_warning || budgetStatus.is_exceeded) && (
+        <div className="px-4 pt-4">
+          <BudgetWarning budgetStatus={budgetStatus} sprintId={sprintId} />
+        </div>
+      )}
+
+      {/* Kanban columns */}
+      <div className="flex gap-4 overflow-x-auto p-4 flex-1">
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
@@ -129,6 +156,7 @@ function SprintBoardContent() {
           );
         })}
       </div>
+    </div>
       <DragOverlay>
         {activeTask ? (
           <div className="opacity-80 rotate-2">

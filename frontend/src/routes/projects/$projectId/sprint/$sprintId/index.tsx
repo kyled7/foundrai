@@ -197,7 +197,7 @@ export function SprintDetailPage() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'board' && <SprintBoard />}
+        {activeTab === 'board' && <SprintBoard sprintId={sprintId} />}
         {activeTab === 'feed' && <AgentFeed />}
         {activeTab === 'tree' && <GoalTree sprintId={sprintId} />}
         {activeTab === 'approvals' && <ApprovalQueue />}
