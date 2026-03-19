@@ -1,18 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
-
-interface BudgetConfig {
-  sprint_budget_usd: number | null;
-  per_agent_budgets: Record<string, number | null>;
-  warning_threshold_percent: number;
-  model_tier_down_mapping?: Record<string, string>;
-}
-
-interface BudgetConfigPanelProps {
-  config?: BudgetConfig;
-  onSave?: (config: BudgetConfig) => void;
-  isSaving?: boolean;
-}
+import { useBudgetConfig, useSaveBudgetConfig } from '@/hooks/use-budget-config';
+import type { BudgetConfig } from '@/lib/types';
 
 const agentRoles = [
   { value: 'product_manager', label: 'Product Manager' },
@@ -23,7 +12,9 @@ const agentRoles = [
   { value: 'devops', label: 'DevOps' },
 ];
 
-export function BudgetConfigPanel({ config, onSave, isSaving }: BudgetConfigPanelProps) {
+export function BudgetConfigPanel() {
+  const { data: config, isLoading } = useBudgetConfig();
+  const saveBudgetConfig = useSaveBudgetConfig();
   const [sprintBudget, setSprintBudget] = useState(config?.sprint_budget_usd?.toString() ?? '');
   const [warningThreshold, setWarningThreshold] = useState(config?.warning_threshold_percent?.toString() ?? '80');
   const [agentBudgets, setAgentBudgets] = useState<Record<string, string>>(() => {
@@ -58,14 +49,12 @@ export function BudgetConfigPanel({ config, onSave, isSaving }: BudgetConfigPane
     JSON.stringify(tierDownMappings) !== JSON.stringify(config?.model_tier_down_mapping ?? {});
 
   function handleSave() {
-    if (!onSave) return;
-
     const per_agent_budgets: Record<string, number | null> = {};
     agentRoles.forEach(({ value }) => {
       per_agent_budgets[value] = agentBudgets[value] ? parseFloat(agentBudgets[value]) : null;
     });
 
-    onSave({
+    saveBudgetConfig.mutate({
       sprint_budget_usd: sprintBudget ? parseFloat(sprintBudget) : null,
       per_agent_budgets,
       warning_threshold_percent: parseFloat(warningThreshold),
@@ -91,6 +80,14 @@ export function BudgetConfigPanel({ config, onSave, isSaving }: BudgetConfigPane
       delete updated[sourceModel];
       return updated;
     });
+  }
+
+  if (isLoading) {
+    return (
+      <div role="tabpanel" id="panel-budget" className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin text-muted" size={32} />
+      </div>
+    );
   }
 
   return (
@@ -266,10 +263,10 @@ export function BudgetConfigPanel({ config, onSave, isSaving }: BudgetConfigPane
 
       <button
         onClick={handleSave}
-        disabled={!hasChanges || isSaving || !onSave}
+        disabled={!hasChanges || saveBudgetConfig.isPending}
         className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isSaving && <Loader2 size={14} className="animate-spin" />}
+        {saveBudgetConfig.isPending && <Loader2 size={14} className="animate-spin" />}
         Save Changes
       </button>
     </div>

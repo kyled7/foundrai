@@ -354,6 +354,14 @@ export interface BreadcrumbItem {
   href?: string;
 }
 
+// === Budget Configuration ===
+export interface BudgetConfig {
+  sprint_budget_usd: number | null;
+  per_agent_budgets: Record<string, number | null>;
+  warning_threshold_percent: number;
+  model_tier_down_mapping?: Record<string, string>;
+}
+
 // === API Response Wrappers ===
 export interface ListResponse<T> {
   items: T[];

@@ -1,28 +1,19 @@
-# FoundrAI Project Configuration
-# This file is created by `foundrai init` and can be customized.
-
 project:
-  name: "my-project"
-  description: ""
-
-# Team Configuration
-# Assign different LLM models and autonomy levels per agent role.
-# Models use LiteLLM format: provider/model-name
+  name: my-project
+  description: ''
 team:
   product_manager:
     enabled: true
     model: anthropic/claude-sonnet-4-20250514
-    autonomy: notify          # auto_approve | notify | require_approval | block
+    autonomy: notify
     max_tokens_per_action: 4096
-    persona_override: null    # Optional: custom system prompt override
-
+    persona_override: null
   architect:
     enabled: true
     model: anthropic/claude-sonnet-4-20250514
     autonomy: require_approval
     max_tokens_per_action: 4096
     persona_override: null
-
   developer:
     enabled: true
     model: anthropic/claude-sonnet-4-20250514
@@ -32,59 +23,49 @@ team:
     approval_conditions:
       require_approval_if:
         lines_changed_gte: 50
-
   qa_engineer:
     enabled: true
     model: anthropic/claude-sonnet-4-20250514
     autonomy: auto_approve
     max_tokens_per_action: 4096
     persona_override: null
-
   designer:
-    enabled: false            # Disabled by default for MVP
+    enabled: false
     model: anthropic/claude-sonnet-4-20250514
     autonomy: notify
     max_tokens_per_action: 4096
-
   devops:
-    enabled: false            # Disabled by default for MVP
+    enabled: false
     model: openai/gpt-4o-mini
     autonomy: require_approval
     max_tokens_per_action: 4096
-
-# Sprint Configuration
 sprint:
-  max_tasks_parallel: 3       # Max tasks running simultaneously
-  token_budget: 100000        # Max tokens per sprint (0 = unlimited)
-  max_sprints: 5              # Max sprints per project run
-  auto_start_next: false      # Auto-start next sprint after retro
-
-# Persistence
+  max_tasks_parallel: 3
+  token_budget: 100000
+  max_sprints: 5
+  auto_start_next: false
 persistence:
-  database: sqlite            # sqlite | postgresql
+  database: sqlite
   sqlite_path: .foundrai/data.db
-  # postgresql_url: postgresql://user:pass@localhost:5432/foundrai
-
-# Vector Memory
 memory:
-  provider: chromadb          # chromadb
+  provider: chromadb
   chromadb_path: .foundrai/vectors
-  embedding_model: default    # Uses LiteLLM default embeddings
-
-# Code Execution
+  embedding_model: default
 sandbox:
-  provider: docker            # docker | e2b | none
+  provider: docker
   timeout_seconds: 30
   max_memory_mb: 512
-
-# Server
 server:
   host: 0.0.0.0
   port: 8420
   cors_origins:
-    - http://localhost:5173   # Vite dev server
-
-# Logging
+  - http://localhost:5173
 logging:
-  level: INFO                 # DEBUG | INFO | WARNING | ERROR
+  level: INFO
   file: .foundrai/logs/foundrai.log
+budget:
+  sprint_budget_usd: 10.0
+  warning_threshold: 0.75
+  model_tierdown_map:
+    anthropic/claude-sonnet-4-20250514: anthropic/claude-haiku-20250513
+  agent_budgets: {}
