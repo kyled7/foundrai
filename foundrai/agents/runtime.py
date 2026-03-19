@@ -99,20 +99,6 @@ class AgentRuntime:
         response_format: str | None = None,
     ) -> RuntimeResult:
         """Internal execution logic for the ReAct loop."""
-        # Budget check before LLM call
-        if self.budget_manager and self.sprint_id:
-            allowed = await self.budget_manager.enforce_budget(
-                self.sprint_id, self.agent_role or None
-            )
-            if not allowed:
-                return RuntimeResult(
-                    output="Budget exceeded. Cannot proceed.",
-                    parsed=None,
-                    artifacts=[],
-                    tokens_used=0,
-                    success=False,
-                )
-
         # Build tool schemas for the LLM if tools are provided
         tool_map: dict[str, Any] = {}
         tool_schemas: list[dict] | None = None
@@ -127,6 +113,20 @@ class AgentRuntime:
         final_content = ""
 
         for iteration in range(self.max_iterations):
+            # Budget check before each LLM call
+            if self.budget_manager and self.sprint_id:
+                allowed = await self.budget_manager.enforce_budget(
+                    self.sprint_id, self.agent_role or None
+                )
+                if not allowed:
+                    return RuntimeResult(
+                        output="Budget exceeded. Cannot proceed.",
+                        parsed=None,
+                        artifacts=[],
+                        tokens_used=total_tokens,
+                        success=False,
+                    )
+
             _start_time = time.monotonic()
             # Wrap LLM call with retry logic for transient failures
             response = await retry_async(
