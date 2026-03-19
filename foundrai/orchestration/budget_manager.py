@@ -85,6 +85,24 @@ class BudgetManager:
         status = await self.check_budget(sprint_id, agent_role)
         return not status.is_exceeded
 
+    async def should_switch_model(self, sprint_id: str, agent_role: str | None = None) -> bool:
+        """Check if model tier should be switched due to budget constraints.
+
+        Returns True if budget is in warning state and tier-down is recommended.
+        """
+        status = await self.check_budget(sprint_id, agent_role)
+
+        # Switch if we're in warning zone but not exceeded yet
+        # This allows tier-down to cheaper model before hard limit
+        if status.is_warning and not status.is_exceeded:
+            logger.info(
+                "Model tier-down recommended for %s %s (%.1f%% budget used)",
+                sprint_id, agent_role or "total", status.percentage_used,
+            )
+            return True
+
+        return False
+
     async def _get_effective_budget(self, sprint_id: str, agent_role: str | None) -> float:
         """Get effective budget, checking overrides first."""
         # Check DB overrides
