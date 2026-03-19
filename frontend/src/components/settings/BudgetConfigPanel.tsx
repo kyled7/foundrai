@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, X } from 'lucide-react';
 
 interface BudgetConfig {
   sprint_budget_usd: number | null;
   per_agent_budgets: Record<string, number | null>;
   warning_threshold_percent: number;
+  model_tier_down_mapping?: Record<string, string>;
 }
 
 interface BudgetConfigPanelProps {
@@ -32,6 +33,12 @@ export function BudgetConfigPanel({ config, onSave, isSaving }: BudgetConfigPane
     });
     return initial;
   });
+  const [tierDownMappings, setTierDownMappings] = useState<Record<string, string>>(() =>
+    config?.model_tier_down_mapping ?? {}
+  );
+  const [newSourceModel, setNewSourceModel] = useState('');
+  const [newFallbackModel, setNewFallbackModel] = useState('');
+  const [showAddMapping, setShowAddMapping] = useState(false);
 
   useEffect(() => {
     setSprintBudget(config?.sprint_budget_usd?.toString() ?? '');
@@ -41,12 +48,14 @@ export function BudgetConfigPanel({ config, onSave, isSaving }: BudgetConfigPane
       updated[value] = config?.per_agent_budgets?.[value]?.toString() ?? '';
     });
     setAgentBudgets(updated);
+    setTierDownMappings(config?.model_tier_down_mapping ?? {});
   }, [config]);
 
   const hasChanges =
     sprintBudget !== (config?.sprint_budget_usd?.toString() ?? '') ||
     warningThreshold !== (config?.warning_threshold_percent?.toString() ?? '80') ||
-    agentRoles.some(({ value }) => agentBudgets[value] !== (config?.per_agent_budgets?.[value]?.toString() ?? ''));
+    agentRoles.some(({ value }) => agentBudgets[value] !== (config?.per_agent_budgets?.[value]?.toString() ?? '')) ||
+    JSON.stringify(tierDownMappings) !== JSON.stringify(config?.model_tier_down_mapping ?? {});
 
   function handleSave() {
     if (!onSave) return;
@@ -60,11 +69,28 @@ export function BudgetConfigPanel({ config, onSave, isSaving }: BudgetConfigPane
       sprint_budget_usd: sprintBudget ? parseFloat(sprintBudget) : null,
       per_agent_budgets,
       warning_threshold_percent: parseFloat(warningThreshold),
+      model_tier_down_mapping: tierDownMappings,
     });
   }
 
   function handleAgentBudgetChange(role: string, value: string) {
     setAgentBudgets(prev => ({ ...prev, [role]: value }));
+  }
+
+  function handleAddMapping() {
+    if (!newSourceModel.trim() || !newFallbackModel.trim()) return;
+    setTierDownMappings(prev => ({ ...prev, [newSourceModel.trim()]: newFallbackModel.trim() }));
+    setNewSourceModel('');
+    setNewFallbackModel('');
+    setShowAddMapping(false);
+  }
+
+  function handleRemoveMapping(sourceModel: string) {
+    setTierDownMappings(prev => {
+      const updated = { ...prev };
+      delete updated[sourceModel];
+      return updated;
+    });
   }
 
   return (
@@ -134,6 +160,108 @@ export function BudgetConfigPanel({ config, onSave, isSaving }: BudgetConfigPane
           onChange={(e) => setWarningThreshold(e.target.value)}
           className="w-full max-w-md px-3 py-2 bg-background border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
+      </fieldset>
+
+      {/* Model Tier-Down Mapping */}
+      <fieldset className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <legend className="text-sm font-medium text-foreground">Model Tier-Down Mapping</legend>
+            <p className="text-xs text-muted mt-1">
+              Define fallback models when budget limits are reached
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAddMapping(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
+          >
+            <Plus size={14} />
+            Add Mapping
+          </button>
+        </div>
+
+        {Object.keys(tierDownMappings).length === 0 && !showAddMapping ? (
+          <p className="text-sm text-muted py-8 text-center">No tier-down mappings configured</p>
+        ) : (
+          <div className="space-y-2 max-w-4xl">
+            {Object.entries(tierDownMappings).map(([sourceModel, fallbackModel]) => (
+              <div
+                key={sourceModel}
+                className="flex items-center gap-3 p-3 bg-background border border-border rounded-md"
+              >
+                <div className="flex-1 grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted mb-1">Source Model</p>
+                    <p className="text-sm text-foreground font-mono">{sourceModel}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted mb-1">Fallback Model</p>
+                    <p className="text-sm text-foreground font-mono">{fallbackModel}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRemoveMapping(sourceModel)}
+                  className="p-2 text-muted hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                  aria-label="Remove mapping"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
+
+            {showAddMapping && (
+              <div className="flex items-end gap-3 p-3 bg-muted/30 border border-border rounded-md">
+                <div className="flex-1 grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="new-source-model" className="text-xs text-muted mb-1 block">
+                      Source Model
+                    </label>
+                    <input
+                      id="new-source-model"
+                      type="text"
+                      value={newSourceModel}
+                      onChange={(e) => setNewSourceModel(e.target.value)}
+                      placeholder="e.g., gpt-4"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="new-fallback-model" className="text-xs text-muted mb-1 block">
+                      Fallback Model
+                    </label>
+                    <input
+                      id="new-fallback-model"
+                      type="text"
+                      value={newFallbackModel}
+                      onChange={(e) => setNewFallbackModel(e.target.value)}
+                      placeholder="e.g., gpt-3.5-turbo"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAddMapping}
+                    disabled={!newSourceModel.trim() || !newFallbackModel.trim()}
+                    className="px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAddMapping(false);
+                      setNewSourceModel('');
+                      setNewFallbackModel('');
+                    }}
+                    className="px-3 py-2 bg-background border border-border text-foreground rounded-md text-sm font-medium hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </fieldset>
 
       <button
