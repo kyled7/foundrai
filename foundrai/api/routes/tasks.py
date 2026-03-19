@@ -33,8 +33,19 @@ async def list_tasks(sprint_id: str) -> list[dict]:
         "SELECT * FROM tasks WHERE sprint_id = ? ORDER BY priority", (sprint_id,)
     )
     rows = await cursor.fetchall()
-    return [
-        {
+
+    tasks = []
+    for r in rows:
+        # Get cost data from token_usage table
+        cost_cursor = await db.conn.execute(
+            """SELECT COALESCE(SUM(cost_usd), 0.0) as cost_usd,
+                      COALESCE(SUM(total_tokens), 0) as tokens_used
+               FROM token_usage WHERE task_id = ?""",
+            (r["task_id"],),
+        )
+        cost_row = await cost_cursor.fetchone()
+
+        tasks.append({
             "task_id": r["task_id"],
             "title": r["title"],
             "description": r["description"],
@@ -47,9 +58,11 @@ async def list_tasks(sprint_id: str) -> list[dict]:
             "review": json.loads(r["review_json"]) if r["review_json"] else None,
             "created_at": r["created_at"],
             "updated_at": r["updated_at"],
-        }
-        for r in rows
-    ]
+            "cost_usd": cost_row["cost_usd"] if cost_row["cost_usd"] > 0 else None,
+            "tokens_used": cost_row["tokens_used"] if cost_row["tokens_used"] > 0 else None,
+        })
+
+    return tasks
 
 
 @router.get("/tasks/{task_id}")
@@ -63,11 +76,30 @@ async def get_task(task_id: str) -> dict:
     if not row:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # Get cost data from token_usage table
+    cost_cursor = await db.conn.execute(
+        """SELECT COALESCE(SUM(cost_usd), 0.0) as cost_usd,
+                  COALESCE(SUM(total_tokens), 0) as tokens_used
+           FROM token_usage WHERE task_id = ?""",
+        (task_id,),
+    )
+    cost_row = await cost_cursor.fetchone()
+
     return {
         "task_id": row["task_id"],
         "title": row["title"],
         "description": row["description"],
+        "acceptance_criteria": json.loads(row["acceptance_criteria_json"] or "[]"),
+        "assigned_to": row["assigned_to"],
+        "priority": row["priority"],
         "status": row["status"],
+        "dependencies": json.loads(row["dependencies_json"] or "[]"),
+        "result": json.loads(row["result_json"]) if row["result_json"] else None,
+        "review": json.loads(row["review_json"]) if row["review_json"] else None,
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+        "cost_usd": cost_row["cost_usd"] if cost_row["cost_usd"] > 0 else None,
+        "tokens_used": cost_row["tokens_used"] if cost_row["tokens_used"] > 0 else None,
     }
 
 

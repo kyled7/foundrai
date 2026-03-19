@@ -279,11 +279,56 @@ async def get_retrospective(sprint_id: str) -> dict:
     except Exception:
         pass
 
+    # Get cost summary
+    cost_cursor = await db.conn.execute(
+        """SELECT COALESCE(SUM(cost_usd), 0.0) as total_cost,
+                  COALESCE(SUM(total_tokens), 0) as total_tokens
+           FROM token_usage WHERE sprint_id = ?""",
+        (sprint_id,),
+    )
+    cost_row = await cost_cursor.fetchone()
+
+    # Get by-agent breakdown
+    agent_cursor = await db.conn.execute(
+        """SELECT agent_role,
+                  COALESCE(SUM(cost_usd), 0.0) as cost_usd,
+                  COALESCE(SUM(total_tokens), 0) as tokens
+           FROM token_usage WHERE sprint_id = ?
+           GROUP BY agent_role""",
+        (sprint_id,),
+    )
+    by_agent = {
+        row["agent_role"]: {"cost_usd": row["cost_usd"], "tokens": row["tokens"]}
+        for row in await agent_cursor.fetchall()
+    }
+
+    # Get by-task breakdown
+    task_cursor = await db.conn.execute(
+        """SELECT task_id,
+                  COALESCE(SUM(cost_usd), 0.0) as cost_usd,
+                  COALESCE(SUM(total_tokens), 0) as tokens
+           FROM token_usage WHERE sprint_id = ?
+           GROUP BY task_id""",
+        (sprint_id,),
+    )
+    by_task = {
+        row["task_id"]: {"cost_usd": row["cost_usd"], "tokens": row["tokens"]}
+        for row in await task_cursor.fetchall()
+    }
+
+    cost_summary = {
+        "total_cost": cost_row["total_cost"],
+        "total_tokens": cost_row["total_tokens"],
+        "by_agent": by_agent,
+        "by_task": by_task,
+    }
+
     return {
         "went_well": went_well,
         "went_wrong": went_wrong,
         "action_items": action_items,
         "learnings_count": learnings_count,
+        "cost_summary": cost_summary,
     }
 
 

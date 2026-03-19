@@ -9,17 +9,19 @@ from foundrai.models.budget import BudgetConfig
 from foundrai.models.token_usage import TokenUsage
 from foundrai.orchestration.budget_manager import BudgetManager
 from foundrai.persistence.database import Database
+from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.token_store import TokenStore
 
 
 @pytest_asyncio.fixture
 async def budget_setup(db: Database):
     token_store = TokenStore(db)
+    event_log = EventLog(db)
     config = BudgetConfig(
         sprint_budget_usd=1.0,
         agent_budgets={"developer": 0.5, "qa_engineer": 0.3},
     )
-    manager = BudgetManager(config, token_store, db)
+    manager = BudgetManager(config, token_store, db, event_log)
     return manager, token_store
 
 
@@ -104,8 +106,9 @@ async def test_unlimited_budget() -> None:
     await db.connect()
     try:
         store = TokenStore(db)
+        event_log = EventLog(db)
         config = BudgetConfig(sprint_budget_usd=0.0)
-        mgr = BudgetManager(config, store, db)
+        mgr = BudgetManager(config, store, db, event_log)
         status = await mgr.check_budget("sprint-1")
         assert not status.is_exceeded
         assert not status.is_warning

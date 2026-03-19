@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useProjectCost, useCostOverTime, useSprintHistory, useAgentPerformance, useLearnings } from '@/hooks/use-analytics';
+import { useProjectCost, useCostOverTime, useSprintHistory, useSprintComparison, useAgentPerformance, useLearnings } from '@/hooks/use-analytics';
 import { StatCard } from './StatCard';
 import { DateRangePicker } from './DateRangePicker';
 import { CostOverTimeChart } from './CostOverTimeChart';
+import { CostTrendChart } from './CostTrendChart';
 import { AgentCostPieChart } from './AgentCostPieChart';
 import { SprintVelocityChart } from './SprintVelocityChart';
 import { AgentPerformanceTable } from './AgentPerformanceTable';
@@ -20,6 +21,7 @@ export function ProjectAnalyticsPage({ projectId }: ProjectAnalyticsPageProps) {
   const costQuery = useProjectCost(projectId);
   const costOverTimeQuery = useCostOverTime(projectId);
   const sprintHistoryQuery = useSprintHistory(projectId);
+  const sprintComparisonQuery = useSprintComparison(projectId);
   const agentPerfQuery = useAgentPerformance(projectId);
   const learningsQuery = useLearnings(projectId);
 
@@ -30,6 +32,7 @@ export function ProjectAnalyticsPage({ projectId }: ProjectAnalyticsPageProps) {
   const cost = costQuery.data;
   const costData = costOverTimeQuery.data ?? [];
   const sprints = sprintHistoryQuery.data ?? [];
+  const sprintComparisons = sprintComparisonQuery.data?.sprints ?? [];
   const agents = agentPerfQuery.data ?? [];
   const learnings = learningsQuery.data?.learnings ?? [];
 
@@ -40,6 +43,9 @@ export function ProjectAnalyticsPage({ projectId }: ProjectAnalyticsPageProps) {
   const filteredSprints = dateRange
     ? sprints.filter(s => s.created_at.slice(0, 10) >= dateRange.from && s.created_at.slice(0, 10) <= dateRange.to)
     : sprints;
+  const filteredComparisons = dateRange
+    ? sprintComparisons.filter(s => s.sprint_number >= 0) // TODO: Add date filtering when available
+    : sprintComparisons;
 
   const totalSprints = filteredSprints.length;
   const avgCompletion = totalSprints > 0 ? filteredSprints.reduce((a, s) => a + s.completion_rate, 0) / totalSprints : 0;
@@ -69,6 +75,13 @@ export function ProjectAnalyticsPage({ projectId }: ProjectAnalyticsPageProps) {
         </div>
         <div className="w-full lg:w-96">
           <AgentCostPieChart data={cost?.by_agent ?? {}} />
+        </div>
+      </div>
+
+      {/* Cost Trend */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex-1">
+          <CostTrendChart data={filteredComparisons} />
         </div>
       </div>
 

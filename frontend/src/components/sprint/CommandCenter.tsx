@@ -3,7 +3,7 @@ import { useSprintFeed } from '@/stores/sprint-feed';
 import { useSprint } from '@/hooks/use-sprints';
 import { useTasks } from '@/hooks/use-tasks';
 import { useAgents } from '@/hooks/use-agents';
-import { useApprovals, useApprove, useReject, useSprintCost } from '@/hooks/use-analytics';
+import { useApprovals, useApprove, useReject } from '@/hooks/use-analytics';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ProgressBar } from './ProgressBar';
 import { TeamStatus } from './TeamStatus';
@@ -27,7 +27,6 @@ export function CommandCenter({ projectId, sprintId }: CommandCenterProps) {
   
   const { data: tasks } = useTasks(sprintId);
   const { data: agentsData } = useAgents(projectId);
-  const { data: costData } = useSprintCost(sprintId);
   const { data: approvalsData } = useApprovals(sprintId);
   const approve = useApprove();
   const reject = useReject();
@@ -149,10 +148,7 @@ export function CommandCenter({ projectId, sprintId }: CommandCenterProps) {
 
           {tasks && tasks.length > 0 && <TaskList tasks={tasks} />}
 
-          <CostTracker
-            totalCost={costData?.total_cost_usd ?? 0}
-            byAgent={costData?.by_agent as Record<string, { cost_usd: number }> | undefined}
-          />
+          <CostTracker sprintId={sprintId} />
 
           {approvalsData && approvalsData.pending_count > 0 && (
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-center">

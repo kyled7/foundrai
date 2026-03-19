@@ -71,6 +71,8 @@ export interface Task {
   review: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  cost_usd?: number;
+  tokens_used?: number;
 }
 
 // === Agents ===
@@ -148,10 +150,12 @@ export interface CostBreakdown {
 }
 
 export interface BudgetStatus {
-  sprint_budget_usd: number;
+  budget_usd: number;
   spent_usd: number;
   remaining_usd: number;
   percentage_used: number;
+  is_warning: boolean;
+  is_exceeded: boolean;
 }
 
 // === Templates ===
@@ -218,7 +222,7 @@ export type WSEventType =
   | 'agent.thinking' | 'agent.action' | 'agent.message' | 'agent.tool_call' | 'agent.tool_result'
   | 'artifact.created' | 'artifact.updated'
   | 'approval.requested' | 'approval.resolved'
-  | 'budget.warning' | 'budget.exceeded'
+  | 'cost_updated' | 'budget.warning' | 'budget.exceeded'
   | 'connection.established';
 
 export interface WSEvent {
@@ -249,6 +253,19 @@ export interface SprintSummary {
   duration_seconds: number | null;
   created_at: string;
   completed_at: string | null;
+}
+
+export interface SprintComparison {
+  sprint_id: string;
+  sprint_number: number;
+  goal: string;
+  task_count: number;
+  completed_count: number;
+  failed_count: number;
+  pass_rate: number;
+  total_tokens: number;
+  total_cost: number;
+  duration_seconds: number;
 }
 
 export interface AgentMetrics {
