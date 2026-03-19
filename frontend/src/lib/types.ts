@@ -92,6 +92,43 @@ export interface AgentConfigUpdate {
   enabled?: boolean;
 }
 
+// === Agent Health ===
+export type AgentHealthStatus = 'healthy' | 'warning' | 'unhealthy' | 'no_data';
+
+export interface AgentHealthMetrics {
+  completion_rate: number;
+  quality_score: number;
+  cost_efficiency: number;
+  avg_execution_time: number;
+  failure_rate: number;
+  total_tasks: number;
+  completed_tasks: number;
+  failed_tasks: number;
+  total_tokens: number;
+  total_cost_usd: number;
+}
+
+export interface AgentHealth {
+  agent_role: string;
+  project_id: string;
+  sprint_id: string | null;
+  health_score: number;
+  status: AgentHealthStatus;
+  metrics: AgentHealthMetrics;
+  recommendations: string[];
+  timestamp: string;
+}
+
+export interface ProjectAgentHealthResponse {
+  project_id: string;
+  agents: AgentHealth[];
+}
+
+export interface SprintAgentHealthResponse {
+  sprint_id: string;
+  agents: AgentHealth[];
+}
+
 // === Approvals ===
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 

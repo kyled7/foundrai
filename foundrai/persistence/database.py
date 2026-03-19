@@ -184,6 +184,21 @@ CREATE TABLE IF NOT EXISTS checkpoints (
 CREATE INDEX IF NOT EXISTS idx_checkpoints_sprint ON checkpoints(sprint_id);
 CREATE INDEX IF NOT EXISTS idx_checkpoints_created ON checkpoints(sprint_id, created_at);
 
+CREATE TABLE IF NOT EXISTS agent_health_metrics (
+    health_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_role TEXT NOT NULL,
+    project_id TEXT NOT NULL,
+    sprint_id TEXT,
+    health_score REAL NOT NULL DEFAULT 0.0,
+    status TEXT NOT NULL DEFAULT 'healthy',
+    metrics_json TEXT DEFAULT '{}',
+    recommendations_json TEXT DEFAULT '[]',
+    timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_agent_health_project ON agent_health_metrics(project_id);
+CREATE INDEX IF NOT EXISTS idx_agent_health_sprint ON agent_health_metrics(sprint_id);
+CREATE INDEX IF NOT EXISTS idx_agent_health_role ON agent_health_metrics(agent_role);
+
 -- Phase 4 tables
 CREATE TABLE IF NOT EXISTS plugins (
     id TEXT PRIMARY KEY,

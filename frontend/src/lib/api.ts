@@ -30,7 +30,7 @@ import type {
   SprintEvent, AgentMessage, Artifact, CostBreakdown, BudgetStatus,
   TeamTemplate, CreateTemplateRequest, Team, CreateTeamRequest, Learning,
   SprintCostPoint, SprintSummary, SprintComparison, AgentMetrics, GlobalAnalytics,
-  GlobalSettings, ApiKeyInfo,
+  GlobalSettings, ApiKeyInfo, AgentHealth, ProjectAgentHealthResponse, SprintAgentHealthResponse,
 } from './types';
 
 export const api = {
@@ -77,6 +77,16 @@ export const api = {
       request<AgentConfig>(`/projects/${projectId}/agents/${role}`, {
         method: 'PUT', body: JSON.stringify(data),
       }),
+  },
+
+  // Agent Health
+  agentHealth: {
+    get: (projectId: string, role: string) =>
+      request<AgentHealth>(`/projects/${projectId}/agents/${role}/health`),
+    listProject: (projectId: string) =>
+      request<ProjectAgentHealthResponse>(`/projects/${projectId}/agent-health`),
+    listSprint: (sprintId: string) =>
+      request<SprintAgentHealthResponse>(`/sprints/${sprintId}/agent-health`),
   },
 
   // Approvals

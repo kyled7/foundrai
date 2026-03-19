@@ -120,3 +120,20 @@ export function useReplayEvents(sprintId: string) {
     enabled: !!sprintId,
   });
 }
+
+// Health Monitoring
+export function useAgentHealth(projectId: string, agentRole: string) {
+  return useQuery({
+    queryKey: ['agent', projectId, agentRole, 'health'],
+    queryFn: () => api.agentHealth.get(projectId, agentRole),
+    enabled: !!projectId && !!agentRole,
+  });
+}
+
+export function useProjectHealth(projectId: string) {
+  return useQuery({
+    queryKey: ['project', projectId, 'health'],
+    queryFn: () => api.agentHealth.listProject(projectId),
+    enabled: !!projectId,
+  });
+}
