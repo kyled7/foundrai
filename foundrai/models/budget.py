@@ -11,6 +11,8 @@ class BudgetConfig:
 
     sprint_budget_usd: float = 0.0  # 0 = unlimited
     agent_budgets: dict[str, float] = field(default_factory=dict)
+    warning_threshold: float = 0.8  # Percentage (0.0-1.0) at which to trigger warnings
+    model_tierdown_map: dict[str, str] = field(default_factory=dict)  # Model -> fallback model
 
 
 @dataclass
