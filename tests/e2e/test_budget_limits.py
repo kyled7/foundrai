@@ -581,6 +581,341 @@ async def test_api_budget_config_endpoints(client: AsyncClient, project_id: str)
     print(f"   - Per-agent budgets: {len(get_data['agent_budgets'])}")
 
 
+@pytest.mark.asyncio
+async def test_e2e_per_agent_budget_warnings(db, tmp_path, sprint_context, components):
+    """
+    E2E Test 6: Verify per-agent budget warnings.
+
+    This test validates:
+    - Per-agent budgets are enforced independently
+    - Individual agents get warnings at their own thresholds
+    - PM agent warning at 80% of $2.00 budget ($1.60)
+    - Dev agent warning at 80% of $3.00 budget ($2.40)
+    """
+    event_log, sprint_store, artifact_store, token_store, message_bus, task_graph = components
+
+    # Configure per-agent budgets: PM=$2, Dev=$3
+    budget_config = BudgetConfig(
+        sprint_budget_usd=10.0,  # High sprint budget so we test agent limits
+        warning_threshold=0.8,  # 80% threshold
+        agent_budgets={
+            "product_manager": 2.0,
+            "developer": 3.0,
+        },
+        model_tierdown_map={},
+    )
+    budget_manager = BudgetManager(budget_config, token_store, db, event_log)
+
+    project_id = "test-per-agent-warnings"
+    sprint_id = "test-sprint-6"
+
+    # Record PM usage to reach 85% of $2.00 = $1.70
+    await token_store.record_usage(TokenUsage(
+        sprint_id=sprint_id,
+        project_id=project_id,
+        agent_role="product_manager",
+        model="anthropic/claude-sonnet-4-20250514",
+        cost_usd=1.70,
+        total_tokens=4500,
+    ))
+
+    # Record Dev usage to reach 85% of $3.00 = $2.55
+    await token_store.record_usage(TokenUsage(
+        sprint_id=sprint_id,
+        project_id=project_id,
+        agent_role="developer",
+        model="anthropic/claude-sonnet-4-20250514",
+        cost_usd=2.55,
+        total_tokens=6700,
+    ))
+
+    # Check PM budget status
+    pm_status = await budget_manager.check_budget(sprint_id, "product_manager")
+    assert pm_status.is_warning, f"PM should have warning at 85%, got {pm_status.percentage_used}%"
+    assert not pm_status.is_exceeded, "PM budget should not be exceeded yet"
+    assert pm_status.budget_usd == 2.0, f"PM budget should be $2.00, got ${pm_status.budget_usd}"
+    assert pm_status.spent_usd == 1.70, f"PM spent should be $1.70, got ${pm_status.spent_usd}"
+    assert pm_status.percentage_used > 80.0, f"PM usage should be >80%, got {pm_status.percentage_used}%"
+
+    # Check Dev budget status
+    dev_status = await budget_manager.check_budget(sprint_id, "developer")
+    assert dev_status.is_warning, f"Dev should have warning at 85%, got {dev_status.percentage_used}%"
+    assert not dev_status.is_exceeded, "Dev budget should not be exceeded yet"
+    assert dev_status.budget_usd == 3.0, f"Dev budget should be $3.00, got ${dev_status.budget_usd}"
+    assert dev_status.spent_usd == 2.55, f"Dev spent should be $2.55, got ${dev_status.spent_usd}"
+    assert dev_status.percentage_used > 80.0, f"Dev usage should be >80%, got {dev_status.percentage_used}%"
+
+    # Verify both agents got warning events
+    pm_warnings = await event_log.query(sprint_id=sprint_id, event_type="budget_warning")
+    pm_agent_warnings = [e for e in pm_warnings if e["data"].get("agent_role") == "product_manager"]
+    assert len(pm_agent_warnings) > 0, "PM should have budget_warning event"
+
+    dev_agent_warnings = [e for e in pm_warnings if e["data"].get("agent_role") == "developer"]
+    assert len(dev_agent_warnings) > 0, "Dev should have budget_warning event"
+
+    # Verify sprint-level budget is still OK (total spent is $4.25 of $10.00)
+    sprint_status = await budget_manager.check_budget(sprint_id)
+    assert not sprint_status.is_warning, "Sprint budget should not be in warning yet"
+    assert sprint_status.spent_usd == 4.25, f"Total sprint spent should be $4.25, got ${sprint_status.spent_usd}"
+    assert sprint_status.percentage_used < 50.0, f"Sprint usage should be <50%, got {sprint_status.percentage_used}%"
+
+    print(f"✅ E2E Test 6 PASSED: Per-agent budget warnings verified")
+    print(f"   - PM budget: ${pm_status.budget_usd:.2f}, spent: ${pm_status.spent_usd:.2f} ({pm_status.percentage_used:.1f}%)")
+    print(f"   - Dev budget: ${dev_status.budget_usd:.2f}, spent: ${dev_status.spent_usd:.2f} ({dev_status.percentage_used:.1f}%)")
+    print(f"   - Sprint budget: ${sprint_status.budget_usd:.2f}, spent: ${sprint_status.spent_usd:.2f} ({sprint_status.percentage_used:.1f}%)")
+
+
+@pytest.mark.asyncio
+async def test_e2e_per_agent_model_switching(db, tmp_path, sprint_context, components):
+    """
+    E2E Test 7: Verify per-agent automatic model switching.
+
+    This test validates:
+    - Each agent switches models independently based on their own budget
+    - PM switches at 80% of $2.00 budget
+    - Dev continues with original model (under threshold)
+    - agent.model_switched events have correct agent_role
+    """
+    event_log, sprint_store, artifact_store, token_store, message_bus, task_graph = components
+
+    # Configure per-agent budgets with tier-down mapping
+    budget_config = BudgetConfig(
+        sprint_budget_usd=10.0,  # High sprint budget
+        warning_threshold=0.8,  # 80% threshold
+        agent_budgets={
+            "product_manager": 2.0,
+            "developer": 3.0,
+        },
+        model_tierdown_map={
+            "anthropic/claude-sonnet-4-20250514": "anthropic/claude-haiku-20250513"
+        },
+    )
+    budget_manager = BudgetManager(budget_config, token_store, db, event_log)
+
+    project_id = "test-per-agent-switching"
+    sprint_id = "test-sprint-7"
+
+    # Create PM runtime
+    pm_runtime = _create_runtime_with_token_store(
+        response_content="Planning complete",
+        tokens=500,
+        response_format=None,
+        token_store=token_store,
+        budget_manager=budget_manager,
+        sprint_id=sprint_id,
+        task_id="task-pm",
+        agent_role="product_manager",
+        event_log=event_log,
+        project_id=project_id,
+    )
+
+    # Create Dev runtime
+    dev_runtime = _create_runtime_with_token_store(
+        response_content="Development complete",
+        tokens=500,
+        response_format=None,
+        token_store=token_store,
+        budget_manager=budget_manager,
+        sprint_id=sprint_id,
+        task_id="task-dev",
+        agent_role="developer",
+        event_log=event_log,
+        project_id=project_id,
+    )
+
+    # Record PM usage to reach 85% of $2.00 = $1.70
+    await token_store.record_usage(TokenUsage(
+        sprint_id=sprint_id,
+        project_id=project_id,
+        agent_role="product_manager",
+        model="anthropic/claude-sonnet-4-20250514",
+        cost_usd=1.70,
+        total_tokens=4500,
+    ))
+
+    # Record Dev usage to only 50% of $3.00 = $1.50
+    await token_store.record_usage(TokenUsage(
+        sprint_id=sprint_id,
+        project_id=project_id,
+        agent_role="developer",
+        model="anthropic/claude-sonnet-4-20250514",
+        cost_usd=1.50,
+        total_tokens=4000,
+    ))
+
+    # Verify PM should switch, Dev should not
+    pm_should_switch = await budget_manager.should_switch_model(sprint_id, "product_manager")
+    dev_should_switch = await budget_manager.should_switch_model(sprint_id, "developer")
+    assert pm_should_switch, "PM should switch at 85% of budget"
+    assert not dev_should_switch, "Dev should NOT switch at 50% of budget"
+
+    # Run PM agent (should trigger switch)
+    pm_result = await pm_runtime.run(
+        messages=[{"role": "user", "content": "Complete planning"}],
+        tools=None,
+        response_format=None,
+    )
+
+    # Verify PM model was switched
+    assert pm_runtime.llm_client.config.model == "anthropic/claude-haiku-20250513", \
+        f"PM model should have switched to haiku, got {pm_runtime.llm_client.config.model}"
+
+    # Run Dev agent (should NOT trigger switch)
+    dev_result = await dev_runtime.run(
+        messages=[{"role": "user", "content": "Complete development"}],
+        tools=None,
+        response_format=None,
+    )
+
+    # Verify Dev model stayed the same
+    assert dev_runtime.llm_client.config.model == "anthropic/claude-sonnet-4-20250514", \
+        f"Dev model should still be sonnet, got {dev_runtime.llm_client.config.model}"
+
+    # Verify only PM has model switch event
+    switch_events = await event_log.query(sprint_id=sprint_id, event_type="agent.model_switched")
+    pm_switch_events = [e for e in switch_events if e["data"].get("agent_role") == "product_manager"]
+    dev_switch_events = [e for e in switch_events if e["data"].get("agent_role") == "developer"]
+
+    assert len(pm_switch_events) > 0, "PM should have model_switched event"
+    assert len(dev_switch_events) == 0, "Dev should NOT have model_switched event"
+
+    pm_switch = pm_switch_events[-1]
+    assert pm_switch["data"]["from_model"] == "anthropic/claude-sonnet-4-20250514"
+    assert pm_switch["data"]["to_model"] == "anthropic/claude-haiku-20250513"
+    assert pm_switch["data"]["agent_role"] == "product_manager"
+
+    print(f"✅ E2E Test 7 PASSED: Per-agent model switching verified")
+    print(f"   - PM switched: sonnet → haiku (at 85% of $2.00 budget)")
+    print(f"   - Dev stayed: sonnet (at 50% of $3.00 budget)")
+
+
+@pytest.mark.asyncio
+async def test_e2e_per_agent_budget_enforcement(db, tmp_path, sprint_context, components):
+    """
+    E2E Test 8: Verify per-agent budget enforcement (agent pause when limit reached).
+
+    This test validates:
+    - Agent is blocked when individual budget is exceeded
+    - PM blocked at 110% of $2.00 budget ($2.20)
+    - Dev still allowed to execute (only at 50% of $3.00 budget)
+    - Sprint continues for agents under budget
+    """
+    event_log, sprint_store, artifact_store, token_store, message_bus, task_graph = components
+
+    # Configure per-agent budgets
+    budget_config = BudgetConfig(
+        sprint_budget_usd=10.0,  # High sprint budget
+        warning_threshold=0.8,
+        agent_budgets={
+            "product_manager": 2.0,
+            "developer": 3.0,
+        },
+        model_tierdown_map={},
+    )
+    budget_manager = BudgetManager(budget_config, token_store, db, event_log)
+
+    project_id = "test-per-agent-enforcement"
+    sprint_id = "test-sprint-8"
+
+    # Record PM usage to exceed budget: 110% of $2.00 = $2.20
+    await token_store.record_usage(TokenUsage(
+        sprint_id=sprint_id,
+        project_id=project_id,
+        agent_role="product_manager",
+        model="anthropic/claude-sonnet-4-20250514",
+        cost_usd=2.20,
+        total_tokens=5800,
+    ))
+
+    # Record Dev usage at only 50% of $3.00 = $1.50
+    await token_store.record_usage(TokenUsage(
+        sprint_id=sprint_id,
+        project_id=project_id,
+        agent_role="developer",
+        model="anthropic/claude-sonnet-4-20250514",
+        cost_usd=1.50,
+        total_tokens=4000,
+    ))
+
+    # Verify PM budget is exceeded
+    pm_status = await budget_manager.check_budget(sprint_id, "product_manager")
+    assert pm_status.is_exceeded, f"PM budget should be exceeded at 110%, got {pm_status.percentage_used}%"
+    assert pm_status.percentage_used > 100.0
+
+    # Verify Dev budget is OK
+    dev_status = await budget_manager.check_budget(sprint_id, "developer")
+    assert not dev_status.is_exceeded, f"Dev budget should NOT be exceeded at 50%, got {dev_status.percentage_used}%"
+    assert not dev_status.is_warning, "Dev should not even have warning"
+    assert dev_status.percentage_used == 50.0
+
+    # Verify PM is blocked by budget enforcement
+    pm_allowed = await budget_manager.enforce_budget(sprint_id, "product_manager")
+    assert not pm_allowed, "PM should be blocked when budget exceeded"
+
+    # Verify Dev is still allowed
+    dev_allowed = await budget_manager.enforce_budget(sprint_id, "developer")
+    assert dev_allowed, "Dev should be allowed when budget OK"
+
+    # Create PM runtime and verify it cannot proceed
+    pm_runtime = _create_runtime_with_token_store(
+        response_content="Should not execute",
+        tokens=500,
+        response_format=None,
+        token_store=token_store,
+        budget_manager=budget_manager,
+        sprint_id=sprint_id,
+        task_id="task-pm",
+        agent_role="product_manager",
+        event_log=event_log,
+        project_id=project_id,
+    )
+
+    # Attempt PM execution (should fail)
+    pm_result = await pm_runtime.run(
+        messages=[{"role": "user", "content": "This should fail"}],
+        tools=None,
+        response_format=None,
+    )
+
+    assert not pm_result.success, "PM execution should have failed due to budget exceeded"
+    assert "Budget exceeded" in pm_result.output, f"Expected 'Budget exceeded' message, got: {pm_result.output}"
+
+    # Create Dev runtime and verify it CAN proceed
+    dev_runtime = _create_runtime_with_token_store(
+        response_content="Dev work completed",
+        tokens=500,
+        response_format=None,
+        token_store=token_store,
+        budget_manager=budget_manager,
+        sprint_id=sprint_id,
+        task_id="task-dev",
+        agent_role="developer",
+        event_log=event_log,
+        project_id=project_id,
+    )
+
+    # Dev execution should succeed
+    dev_result = await dev_runtime.run(
+        messages=[{"role": "user", "content": "Complete task"}],
+        tools=None,
+        response_format=None,
+    )
+
+    assert dev_result.success, f"Dev execution should succeed, got: {dev_result.output}"
+
+    # Verify sprint-level budget is still OK (total $3.70 of $10.00)
+    sprint_status = await budget_manager.check_budget(sprint_id)
+    assert not sprint_status.is_exceeded, "Sprint budget should not be exceeded"
+    assert sprint_status.spent_usd == 3.70, f"Total sprint spent should be $3.70, got ${sprint_status.spent_usd}"
+
+    print(f"✅ E2E Test 8 PASSED: Per-agent budget enforcement verified")
+    print(f"   - PM blocked: 110% of $2.00 budget (${pm_status.spent_usd:.2f})")
+    print(f"   - Dev allowed: 50% of $3.00 budget (${dev_status.spent_usd:.2f})")
+    print(f"   - Sprint continues: ${sprint_status.spent_usd:.2f} of ${sprint_status.budget_usd:.2f}")
+    print(f"   - PM execution blocked: {not pm_allowed}")
+    print(f"   - Dev execution allowed: {dev_allowed}")
+
+
 # Manual E2E Test Documentation
 """
 MANUAL E2E VERIFICATION CHECKLIST
