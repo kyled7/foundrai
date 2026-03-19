@@ -158,6 +158,46 @@ async def save_budget_config(body: BudgetConfigRequest) -> dict:
     }}
 
 
+@router.get("/projects/{project_id}/budget-history")
+async def get_budget_history(project_id: str) -> dict:
+    """Get budget usage history across sprints for trend analysis."""
+    db = await get_db()
+    mgr = await _get_budget_manager()
+
+    # Get all sprints for the project ordered by sprint number
+    cursor = await db.conn.execute(
+        """SELECT sprint_id, sprint_number, goal, created_at, completed_at
+           FROM sprints
+           WHERE project_id = ?
+           ORDER BY sprint_number""",
+        (project_id,),
+    )
+    rows = await cursor.fetchall()
+
+    history = []
+    for row in rows:
+        sprint_id = row["sprint_id"]
+
+        # Get budget status for this sprint
+        status = await mgr.check_budget(sprint_id)
+
+        history.append({
+            "sprint_id": sprint_id,
+            "sprint_number": row["sprint_number"],
+            "goal": row["goal"],
+            "created_at": row["created_at"],
+            "completed_at": row["completed_at"],
+            "budget_usd": status.budget_usd,
+            "spent_usd": status.spent_usd,
+            "remaining_usd": status.remaining_usd,
+            "percentage_used": status.percentage_used,
+            "is_warning": status.is_warning,
+            "is_exceeded": status.is_exceeded,
+        })
+
+    return {"project_id": project_id, "history": history}
+
+
 # --- Communication Graph ---
 
 
