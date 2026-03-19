@@ -103,6 +103,17 @@ class BudgetManager:
 
         return False
 
+    def get_fallback_model(self, current_model: str) -> str | None:
+        """Get the fallback model for tier-down from the configured mapping.
+
+        Args:
+            current_model: The current model name (e.g., "gpt-4", "claude-sonnet-4")
+
+        Returns:
+            The fallback model name if configured, None otherwise.
+        """
+        return self.config.model_tierdown_map.get(current_model)
+
     async def _get_effective_budget(self, sprint_id: str, agent_role: str | None) -> float:
         """Get effective budget, checking overrides first."""
         # Check DB overrides
