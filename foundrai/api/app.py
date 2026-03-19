@@ -123,6 +123,7 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
 
     # API routes
     from foundrai.api.routes import (
+        agent_health,
         agents,
         analytics,
         approvals,
@@ -150,6 +151,7 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
     app.include_router(events.router, prefix="/api")
     app.include_router(artifacts.router, prefix="/api")
     app.include_router(agents.router, prefix="/api")
+    app.include_router(agent_health.router, prefix="/api")
     app.include_router(learnings.router, prefix="/api")
     app.include_router(analytics.router, prefix="/api")
     app.include_router(traces.router, prefix="/api")
