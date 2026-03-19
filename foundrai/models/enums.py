@@ -11,6 +11,7 @@ class SprintStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    PAUSED = "paused"
 
 
 class TaskStatus(str, Enum):
