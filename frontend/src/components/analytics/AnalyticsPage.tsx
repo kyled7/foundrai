@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useProjectCost, useCostOverTime, useSprintHistory, useSprintComparison, useAgentPerformance, useLearnings } from '@/hooks/use-analytics';
+import { useProjectCost, useCostOverTime, useSprintHistory, useSprintComparison, useAgentPerformance, useLearnings, useBudgetHistory } from '@/hooks/use-analytics';
 import { StatCard } from './StatCard';
 import { DateRangePicker } from './DateRangePicker';
 import { CostOverTimeChart } from './CostOverTimeChart';
@@ -8,6 +8,7 @@ import { AgentCostPieChart } from './AgentCostPieChart';
 import { SprintVelocityChart } from './SprintVelocityChart';
 import { AgentPerformanceTable } from './AgentPerformanceTable';
 import { LearningsTimeline } from './LearningsTimeline';
+import { BudgetHistoryChart } from './BudgetHistoryChart';
 import { DollarSign, Zap, Target, Clock } from 'lucide-react';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 
@@ -24,6 +25,7 @@ export function ProjectAnalyticsPage({ projectId }: ProjectAnalyticsPageProps) {
   const sprintComparisonQuery = useSprintComparison(projectId);
   const agentPerfQuery = useAgentPerformance(projectId);
   const learningsQuery = useLearnings(projectId);
+  const budgetHistoryQuery = useBudgetHistory(projectId);
 
   const isLoading = costQuery.isLoading || costOverTimeQuery.isLoading || sprintHistoryQuery.isLoading;
 
@@ -35,6 +37,7 @@ export function ProjectAnalyticsPage({ projectId }: ProjectAnalyticsPageProps) {
   const sprintComparisons = sprintComparisonQuery.data?.sprints ?? [];
   const agents = agentPerfQuery.data ?? [];
   const learnings = learningsQuery.data?.learnings ?? [];
+  const budgetHistory = budgetHistoryQuery.data ?? [];
 
   // Filter by date range
   const filteredCost = dateRange
@@ -82,6 +85,13 @@ export function ProjectAnalyticsPage({ projectId }: ProjectAnalyticsPageProps) {
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
           <CostTrendChart data={filteredComparisons} />
+        </div>
+      </div>
+
+      {/* Budget History */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex-1">
+          <BudgetHistoryChart data={budgetHistory} />
         </div>
       </div>
 
