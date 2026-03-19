@@ -31,7 +31,7 @@ import type {
   TeamTemplate, CreateTemplateRequest, Team, CreateTeamRequest, Learning,
   SprintCostPoint, SprintSummary, SprintComparison, AgentMetrics, GlobalAnalytics,
   GlobalSettings, ApiKeyInfo, AgentHealth, ProjectAgentHealthResponse, SprintAgentHealthResponse,
-  BudgetConfig,
+  BudgetConfig, BudgetHistoryPoint,
 } from './types';
 
 export const api = {
@@ -121,6 +121,8 @@ export const api = {
     agentCosts: (projectId: string) =>
       request<{ project_id: string; agents: Record<string, unknown> }>(`/projects/${projectId}/agent-costs`),
     budget: (sprintId: string) => request<BudgetStatus>(`/sprints/${sprintId}/budget`),
+    budgetHistory: (projectId: string) =>
+      request<{ project_id: string; history: BudgetHistoryPoint[] }>(`/projects/${projectId}/budget-history`),
     costOverTime: (projectId: string) =>
       request<SprintCostPoint[]>(`/projects/${projectId}/analytics/cost-over-time`),
     sprintHistory: (projectId: string) =>
