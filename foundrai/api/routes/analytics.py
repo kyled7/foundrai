@@ -98,6 +98,18 @@ class BudgetConfigRequest(BaseModel):
     agent_budgets: dict[str, float] = Field(default_factory=dict)
 
 
+@router.get("/budget/config")
+async def get_budget_config() -> dict:
+    """Get current budget configuration."""
+    config = get_config()
+    return {
+        "sprint_budget_usd": config.budget.sprint_budget_usd,
+        "warning_threshold": config.budget.warning_threshold,
+        "model_tierdown_map": config.budget.model_tierdown_map,
+        "agent_budgets": config.budget.agent_budgets,
+    }
+
+
 @router.post("/budget/config")
 async def save_budget_config(body: BudgetConfigRequest) -> dict:
     """Save budget configuration."""
