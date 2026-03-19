@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
-import { Settings, Key, Bell, Palette } from 'lucide-react';
+import { Settings, Key, Bell, Palette, DollarSign } from 'lucide-react';
 
-export type SettingsTab = 'general' | 'api-keys' | 'notifications' | 'appearance';
+export type SettingsTab = 'general' | 'api-keys' | 'notifications' | 'appearance' | 'budget';
 
 interface SettingsTabsProps {
   activeTab: SettingsTab;
@@ -11,6 +11,7 @@ interface SettingsTabsProps {
 const tabs: { id: SettingsTab; label: string; icon: typeof Settings }[] = [
   { id: 'general', label: 'General', icon: Settings },
   { id: 'api-keys', label: 'API Keys', icon: Key },
+  { id: 'budget', label: 'Budget', icon: DollarSign },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'appearance', label: 'Appearance', icon: Palette },
 ];

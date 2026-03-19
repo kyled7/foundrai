@@ -5,6 +5,7 @@ import { useSettings, useUpdateSettings, useApiKeys, useAddApiKey, useRemoveApiK
 import { SettingsTabs, type SettingsTab } from '@/components/settings/SettingsTabs';
 import { GeneralSettingsPanel } from '@/components/settings/GeneralSettingsPanel';
 import { ApiKeysPanel } from '@/components/settings/ApiKeysPanel';
+import { BudgetConfigPanel } from '@/components/settings/BudgetConfigPanel';
 import { NotificationsPanel } from '@/components/settings/NotificationsPanel';
 import { AppearancePanel } from '@/components/settings/AppearancePanel';
 import type { GlobalSettings, NotificationSettings } from '@/lib/types';
@@ -89,6 +90,9 @@ export function SettingsPage() {
             testingProvider={testingProvider}
             removingProvider={removingProvider}
           />
+        )}
+        {activeTab === 'budget' && (
+          <BudgetConfigPanel />
         )}
         {activeTab === 'notifications' && (
           <NotificationsPanel settings={s.notifications} onSave={handleSaveNotifications} isSaving={updateSettings.isPending} />
