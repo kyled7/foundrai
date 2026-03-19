@@ -42,6 +42,7 @@ class SprintEngine:
         vector_memory: Any | None = None,
         error_store: Any | None = None,
         db: Any | None = None,
+        budget_manager: Any | None = None,
     ) -> None:
         self.config = config
         self.agents = agents
@@ -53,6 +54,7 @@ class SprintEngine:
         self.vector_memory = vector_memory
         self.error_store = error_store
         self.db = db
+        self.budget_manager = budget_manager
         self._task_status_lock = asyncio.Lock()
         self.graph = self._build_graph()
 
@@ -306,6 +308,26 @@ class SprintEngine:
 
         # Execute in waves based on dependency graph
         while True:
+            # Check budget before executing next wave of tasks
+            if self.budget_manager:
+                budget_status = await self.budget_manager.check_budget(state["sprint_id"])
+                if budget_status.is_exceeded:
+                    # Emit budget_exceeded event
+                    await self.event_log.append("budget_exceeded", {
+                        "sprint_id": state["sprint_id"],
+                        "spent_usd": budget_status.spent_usd,
+                        "budget_usd": budget_status.budget_usd,
+                        "percentage_used": budget_status.percentage_used,
+                    })
+                    # Pause sprint
+                    state["status"] = SprintStatus.PAUSED
+                    await self._emit_status_change(state)
+                    logger.error(
+                        "Sprint %s paused: budget exceeded ($%.4f / $%.4f)",
+                        state["sprint_id"], budget_status.spent_usd, budget_status.budget_usd,
+                    )
+                    break
+
             ready = await self.task_graph.get_ready_tasks()
             if not ready:
                 break

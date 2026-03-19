@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "006-human-approval-gateway-ui",
+  "spec": "008-per-agent-budget-limits-with-automatic-model-tier-",
   "state": "building",
   "subtasks": {
-    "completed": 13,
-    "total": 16,
+    "completed": 17,
+    "total": 26,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Integration & E2E Testing",
+    "current": "Frontend Budget Configuration UI",
     "id": null,
-    "total": 2
+    "total": 5
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 15,
-    "started_at": "2026-03-19T06:17:14.223956"
+    "number": 17,
+    "started_at": "2026-03-19T22:07:11.518521"
   },
-  "last_update": "2026-03-19T06:54:32.887092"
+  "last_update": "2026-03-19T22:49:13.276509"
 }

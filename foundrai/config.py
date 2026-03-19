@@ -95,6 +95,8 @@ class LoggingConfig(BaseModel):
 class BudgetConfigModel(BaseModel):
     sprint_budget_usd: float = 0.0
     agent_budgets: dict[str, float] = Field(default_factory=dict)
+    warning_threshold: float = 0.8  # Percentage (0.0-1.0) at which to trigger warnings
+    model_tierdown_map: dict[str, str] = Field(default_factory=dict)  # Model -> fallback model
 
 
 class FoundrAIConfig(BaseModel):

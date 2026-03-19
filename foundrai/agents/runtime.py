@@ -99,20 +99,6 @@ class AgentRuntime:
         response_format: str | None = None,
     ) -> RuntimeResult:
         """Internal execution logic for the ReAct loop."""
-        # Budget check before LLM call
-        if self.budget_manager and self.sprint_id:
-            allowed = await self.budget_manager.enforce_budget(
-                self.sprint_id, self.agent_role or None
-            )
-            if not allowed:
-                return RuntimeResult(
-                    output="Budget exceeded. Cannot proceed.",
-                    parsed=None,
-                    artifacts=[],
-                    tokens_used=0,
-                    success=False,
-                )
-
         # Build tool schemas for the LLM if tools are provided
         tool_map: dict[str, Any] = {}
         tool_schemas: list[dict] | None = None
@@ -127,6 +113,45 @@ class AgentRuntime:
         final_content = ""
 
         for iteration in range(self.max_iterations):
+            # Budget check before each LLM call
+            if self.budget_manager and self.sprint_id:
+                allowed = await self.budget_manager.enforce_budget(
+                    self.sprint_id, self.agent_role or None
+                )
+                if not allowed:
+                    return RuntimeResult(
+                        output="Budget exceeded. Cannot proceed.",
+                        parsed=None,
+                        artifacts=[],
+                        tokens_used=total_tokens,
+                        success=False,
+                    )
+
+                # Check if we should switch to a cheaper model tier
+                should_switch = await self.budget_manager.should_switch_model(
+                    self.sprint_id, self.agent_role or None
+                )
+                if should_switch:
+                    current_model = self.llm_client.config.model
+                    fallback_model = self.budget_manager.get_fallback_model(current_model)
+                    if fallback_model and fallback_model != current_model:
+                        logger.info(
+                            "Switching agent %s from model %s to %s due to budget threshold",
+                            self.agent_role, current_model, fallback_model,
+                        )
+                        # Update both config.model and model attribute
+                        self.llm_client.config.model = fallback_model
+                        self.llm_client.model = fallback_model
+                        # Emit model switch event
+                        await self.event_log.append("agent.model_switched", {
+                            "agent_role": self.agent_role,
+                            "task_id": self.task_id,
+                            "sprint_id": self.sprint_id,
+                            "from_model": current_model,
+                            "to_model": fallback_model,
+                            "reason": "budget_threshold",
+                        })
+
             _start_time = time.monotonic()
             # Wrap LLM call with retry logic for transient failures
             response = await retry_async(

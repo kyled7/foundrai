@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
+import yaml
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from foundrai.api.deps import get_config, get_db, get_event_log
+from foundrai.api.deps import get_config, get_db, get_event_log, set_config
 from foundrai.models.budget import BudgetConfig
 from foundrai.orchestration.budget_manager import BudgetManager
 from foundrai.persistence.token_store import TokenStore
@@ -87,6 +89,113 @@ async def set_sprint_budget(sprint_id: str, body: BudgetOverrideRequest) -> dict
     mgr = await _get_budget_manager()
     await mgr.set_override(sprint_id, body.budget_usd, body.agent_role)
     return {"status": "ok", "sprint_id": sprint_id, "budget_usd": body.budget_usd}
+
+
+class BudgetConfigRequest(BaseModel):
+    sprint_budget_usd: float = 0.0
+    warning_threshold: float = 0.8
+    model_tierdown_map: dict[str, str] = Field(default_factory=dict)
+    agent_budgets: dict[str, float] = Field(default_factory=dict)
+
+
+@router.get("/budget/config")
+async def get_budget_config() -> dict:
+    """Get current budget configuration."""
+    config = get_config()
+    return {
+        "sprint_budget_usd": config.budget.sprint_budget_usd,
+        "warning_threshold": config.budget.warning_threshold,
+        "model_tierdown_map": config.budget.model_tierdown_map,
+        "agent_budgets": config.budget.agent_budgets,
+    }
+
+
+@router.post("/budget/config")
+async def save_budget_config(body: BudgetConfigRequest) -> dict:
+    """Save budget configuration."""
+    config = get_config()
+
+    # Update in-memory config
+    config.budget.sprint_budget_usd = body.sprint_budget_usd
+    config.budget.warning_threshold = body.warning_threshold
+    config.budget.model_tierdown_map = body.model_tierdown_map
+    config.budget.agent_budgets = body.agent_budgets
+
+    # Save to foundrai.yaml file
+    # Find the project directory by looking for foundrai.yaml
+    config_path = Path(".") / "foundrai.yaml"
+    if not config_path.exists():
+        # Try looking in parent directories
+        current = Path(".").resolve()
+        for parent in [current] + list(current.parents):
+            potential_path = parent / "foundrai.yaml"
+            if potential_path.exists():
+                config_path = potential_path
+                break
+
+    if config_path.exists():
+        # Load existing YAML
+        with open(config_path) as f:
+            yaml_data = yaml.safe_load(f) or {}
+
+        # Update budget section
+        if "budget" not in yaml_data:
+            yaml_data["budget"] = {}
+        yaml_data["budget"]["sprint_budget_usd"] = body.sprint_budget_usd
+        yaml_data["budget"]["warning_threshold"] = body.warning_threshold
+        yaml_data["budget"]["model_tierdown_map"] = body.model_tierdown_map
+        yaml_data["budget"]["agent_budgets"] = body.agent_budgets
+
+        # Write back to file
+        with open(config_path, "w") as f:
+            yaml.dump(yaml_data, f, default_flow_style=False, sort_keys=False)
+
+    return {"status": "ok", "config": {
+        "sprint_budget_usd": body.sprint_budget_usd,
+        "warning_threshold": body.warning_threshold,
+        "model_tierdown_map": body.model_tierdown_map,
+        "agent_budgets": body.agent_budgets,
+    }}
+
+
+@router.get("/projects/{project_id}/budget-history")
+async def get_budget_history(project_id: str) -> dict:
+    """Get budget usage history across sprints for trend analysis."""
+    db = await get_db()
+    mgr = await _get_budget_manager()
+
+    # Get all sprints for the project ordered by sprint number
+    cursor = await db.conn.execute(
+        """SELECT sprint_id, sprint_number, goal, created_at, completed_at
+           FROM sprints
+           WHERE project_id = ?
+           ORDER BY sprint_number""",
+        (project_id,),
+    )
+    rows = await cursor.fetchall()
+
+    history = []
+    for row in rows:
+        sprint_id = row["sprint_id"]
+
+        # Get budget status for this sprint
+        status = await mgr.check_budget(sprint_id)
+
+        history.append({
+            "sprint_id": sprint_id,
+            "sprint_number": row["sprint_number"],
+            "goal": row["goal"],
+            "created_at": row["created_at"],
+            "completed_at": row["completed_at"],
+            "budget_usd": status.budget_usd,
+            "spent_usd": status.spent_usd,
+            "remaining_usd": status.remaining_usd,
+            "percentage_used": status.percentage_used,
+            "is_warning": status.is_warning,
+            "is_exceeded": status.is_exceeded,
+        })
+
+    return {"project_id": project_id, "history": history}
 
 
 # --- Communication Graph ---

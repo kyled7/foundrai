@@ -105,6 +105,17 @@ export function useAgentPerformance(projectId: string) {
   });
 }
 
+export function useBudgetHistory(projectId: string) {
+  return useQuery({
+    queryKey: ['project', projectId, 'budget-history'],
+    queryFn: async () => {
+      const response = await api.analytics.budgetHistory(projectId);
+      return response.history;
+    },
+    enabled: !!projectId,
+  });
+}
+
 export function useGlobalAnalytics() {
   return useQuery({
     queryKey: ['analytics', 'global'],

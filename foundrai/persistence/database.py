@@ -131,6 +131,17 @@ CREATE TABLE IF NOT EXISTS budget_overrides (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS budget_config (
+    config_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT,
+    agent_role TEXT,
+    tier_down_map_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_budget_config_project ON budget_config(project_id);
+CREATE INDEX IF NOT EXISTS idx_budget_config_agent ON budget_config(agent_role);
+
 CREATE TABLE IF NOT EXISTS agent_configs (
     project_id TEXT NOT NULL,
     agent_role TEXT NOT NULL,

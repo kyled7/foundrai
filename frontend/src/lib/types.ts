@@ -305,6 +305,20 @@ export interface SprintComparison {
   duration_seconds: number;
 }
 
+export interface BudgetHistoryPoint {
+  sprint_id: string;
+  sprint_number: number;
+  goal: string;
+  created_at: string;
+  completed_at: string | null;
+  budget_usd: number;
+  spent_usd: number;
+  remaining_usd: number;
+  percentage_used: number;
+  is_warning: boolean;
+  is_exceeded: boolean;
+}
+
 export interface AgentMetrics {
   agent_role: string;
   tasks_completed: number;
@@ -352,6 +366,14 @@ export interface ApiKeyInfo {
 export interface BreadcrumbItem {
   label: string;
   href?: string;
+}
+
+// === Budget Configuration ===
+export interface BudgetConfig {
+  sprint_budget_usd: number | null;
+  per_agent_budgets: Record<string, number | null>;
+  warning_threshold_percent: number;
+  model_tier_down_mapping?: Record<string, string>;
 }
 
 // === API Response Wrappers ===
