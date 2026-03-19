@@ -17,7 +17,7 @@ interface BudgetWarningProps {
 
 /**
  * BudgetWarning banner component that appears when budget thresholds are exceeded.
- * - Warning banner (yellow) at 80% usage
+ * - Warning banner (yellow) when configurable threshold is reached (default 80%)
  * - Error banner (red) at 100% usage (exceeded)
  */
 export function BudgetWarning({ budgetStatus, sprintId, dismissible = true }: BudgetWarningProps) {
