@@ -22,6 +22,12 @@ class LearningPin(BaseModel):
     pinned: bool
 
 
+class LearningSearch(BaseModel):
+    """Request model for searching learnings."""
+    query: str = Field(..., min_length=1)
+    k: int = Field(default=5, ge=1, le=50)
+
+
 @router.get("/projects/{project_id}/learnings")
 async def list_learnings(project_id: str) -> dict:
     """List learnings for a project."""
@@ -61,6 +67,40 @@ async def get_vector_learnings(project_id: str) -> dict:
     # Get learnings from VectorMemory
     vm = await get_vector_memory()
     learnings_list = await vm.get_all_learnings(project_id=project_id)
+
+    learnings = [
+        {
+            "learning_id": learning.id,
+            "project_id": learning.project_id,
+            "sprint_id": learning.sprint_id,
+            "content": learning.content,
+            "category": learning.category,
+            "timestamp": learning.timestamp,
+        }
+        for learning in learnings_list
+    ]
+    return {"learnings": learnings, "total": len(learnings)}
+
+
+@router.post("/projects/{project_id}/learnings/search")
+async def search_learnings(project_id: str, search: LearningSearch) -> dict:
+    """Search learnings using natural language query."""
+    db = await get_db()
+
+    # Check project exists
+    cursor = await db.conn.execute(
+        "SELECT 1 FROM projects WHERE project_id = ?", (project_id,)
+    )
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Search using VectorMemory
+    vm = await get_vector_memory()
+    learnings_list = await vm.query_relevant(
+        query=search.query,
+        k=search.k,
+        project_id=project_id
+    )
 
     learnings = [
         {
