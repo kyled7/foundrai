@@ -112,6 +112,7 @@ class SprintRetrospective:
         state: SprintState,
         agents: dict,
         vector_memory: Any | None = None,
+        db: Any | None = None,
     ) -> RetroSummary:
         """Run retrospective, store learnings."""
         tasks = state.get("tasks", [])
