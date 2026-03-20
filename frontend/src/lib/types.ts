@@ -92,6 +92,51 @@ export interface AgentConfigUpdate {
   enabled?: boolean;
 }
 
+// === Autonomy Configuration (Granular) ===
+export type ActionType =
+  | 'code_write'
+  | 'code_execute'
+  | 'file_create'
+  | 'file_modify'
+  | 'file_delete'
+  | 'git_commit'
+  | 'git_push'
+  | 'api_call'
+  | 'tool_use'
+  | 'task_create'
+  | 'task_assign'
+  | 'message_send'
+  | 'code_review'
+  | 'deployment';
+
+export type AutonomyMode = 'auto_approve' | 'notify' | 'require_approval' | 'block';
+
+export interface TrustScore {
+  agent_role: string;
+  action_type: ActionType;
+  success_count: number;
+  total_count: number;
+  last_updated: string;
+  success_rate: number;
+  recommendation: string | null;
+}
+
+export interface AutonomyMatrix {
+  project_id: string;
+  matrix: Record<string, Record<ActionType, AutonomyMode>>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutonomyProfile {
+  profile_id: string;
+  name: string;
+  description: string;
+  matrix: Record<string, Record<ActionType, AutonomyMode>>;
+  is_builtin: boolean;
+  created_at: string;
+}
+
 // === Agent Health ===
 export type AgentHealthStatus = 'healthy' | 'warning' | 'unhealthy' | 'no_data';
 
