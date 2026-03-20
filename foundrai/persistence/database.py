@@ -163,6 +163,18 @@ CREATE TABLE IF NOT EXISTS autonomy_config (
 CREATE INDEX IF NOT EXISTS idx_autonomy_config_project ON autonomy_config(project_id);
 CREATE INDEX IF NOT EXISTS idx_autonomy_config_agent ON autonomy_config(agent_role);
 
+CREATE TABLE IF NOT EXISTS autonomy_profiles (
+    profile_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    config_json TEXT NOT NULL DEFAULT '{}',
+    is_default INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_autonomy_profiles_name ON autonomy_profiles(name);
+CREATE INDEX IF NOT EXISTS idx_autonomy_profiles_default ON autonomy_profiles(is_default);
+
 CREATE TABLE IF NOT EXISTS agent_trust_scores (
     project_id TEXT NOT NULL,
     agent_role TEXT NOT NULL,
