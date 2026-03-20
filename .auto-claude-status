@@ -1,15 +1,15 @@
 {
   "active": true,
-  "spec": "008-per-agent-budget-limits-with-automatic-model-tier-",
+  "spec": "009-intelligent-model-recommendation-engine",
   "state": "building",
   "subtasks": {
-    "completed": 17,
-    "total": 26,
+    "completed": 7,
+    "total": 11,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Frontend Budget Configuration UI",
+    "current": "Frontend Recommendation UI",
     "id": null,
     "total": 5
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 17,
-    "started_at": "2026-03-19T22:07:11.518521"
+    "number": 8,
+    "started_at": "2026-03-20T06:56:02.494281"
   },
-  "last_update": "2026-03-19T22:49:13.276509"
+  "last_update": "2026-03-20T07:20:09.779622"
 }

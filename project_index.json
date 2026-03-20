@@ -1,0 +1,35 @@
+{
+  "project_type": "monorepo",
+  "services": {
+    "backend": {
+      "path": "./foundrai",
+      "tech_stack": ["python", "fastapi", "litellm", "langgraph", "sqlite"],
+      "port": 8000,
+      "dev_command": "uvicorn foundrai.api.app:app --reload --host 0.0.0.0 --port 8000",
+      "test_command": "pytest tests/"
+    },
+    "frontend": {
+      "path": "./frontend",
+      "tech_stack": ["react", "typescript", "vite", "tanstack-router", "tailwindcss"],
+      "port": 5173,
+      "dev_command": "npm run dev",
+      "test_command": "npm test"
+    }
+  },
+  "infrastructure": {
+    "docker": true,
+    "database": "sqlite",
+    "vector_store": "chromadb"
+  },
+  "conventions": {
+    "python_style": "pep8",
+    "linter": "ruff",
+    "formatter": "black",
+    "testing": "pytest",
+    "async_first": true,
+    "type_hints": "required",
+    "docstrings": "google_style",
+    "frontend_style": "functional_components_with_hooks",
+    "typescript_mode": "strict"
+  }
+}
