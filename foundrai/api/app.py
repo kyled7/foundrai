@@ -135,6 +135,7 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
         learnings,
         plugins,
         projects,
+        recommendations,
         replay,
         settings,
         sprints,
@@ -154,6 +155,7 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
     app.include_router(agent_health.router, prefix="/api")
     app.include_router(learnings.router, prefix="/api")
     app.include_router(analytics.router, prefix="/api")
+    app.include_router(recommendations.router, prefix="/api")
     app.include_router(traces.router, prefix="/api")
     app.include_router(errors.router, prefix="/api")
     app.include_router(replay.router, prefix="/api")

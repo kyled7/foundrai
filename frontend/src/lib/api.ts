@@ -31,7 +31,8 @@ import type {
   TeamTemplate, CreateTemplateRequest, Team, CreateTeamRequest, Learning,
   SprintCostPoint, SprintSummary, SprintComparison, AgentMetrics, GlobalAnalytics,
   GlobalSettings, ApiKeyInfo, AgentHealth, ProjectAgentHealthResponse, SprintAgentHealthResponse,
-  BudgetConfig, BudgetHistoryPoint,
+  BudgetConfig, BudgetHistoryPoint, ModelRecommendation, CostSavingsEstimate,
+  ModelPerformanceComparison, TaskComplexity,
 } from './types';
 
 export const api = {
@@ -216,5 +217,33 @@ export const api = {
         agent_budgets: Record<string, number>;
       };
     }>('/budget/config', { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  // Model Recommendations
+  recommendations: {
+    list: (projectId: string) =>
+      request<{ project_id: string; recommendations: ModelRecommendation[] }>(
+        `/projects/${projectId}/recommendations`
+      ),
+    get: (projectId: string, agentRole: string, constraints?: {
+      current_model?: string;
+      task_complexity?: TaskComplexity;
+      quality_requirements?: string;
+      cost_constraints?: number;
+    }) =>
+      request<ModelRecommendation>(`/projects/${projectId}/recommendations/${agentRole}`, {
+        method: 'POST',
+        body: JSON.stringify(constraints ?? {}),
+      }),
+    costSavings: (projectId: string, data: {
+      current_config: Record<string, string>;
+      recommended_config?: Record<string, string>;
+    }) =>
+      request<CostSavingsEstimate>(`/projects/${projectId}/cost-savings`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    compareModels: (projectId: string, agentRole: string) =>
+      request<ModelPerformanceComparison>(`/projects/${projectId}/model-comparison/${agentRole}`),
   },
 } as const;

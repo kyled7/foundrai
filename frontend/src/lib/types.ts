@@ -376,6 +376,77 @@ export interface BudgetConfig {
   model_tier_down_mapping?: Record<string, string>;
 }
 
+// === Model Recommendations ===
+export type RecommendationConfidence = 'high' | 'medium' | 'low' | 'insufficient_data';
+export type TaskComplexity = 'simple' | 'moderate' | 'complex' | 'critical';
+
+export interface PerformanceMetrics {
+  model: string;
+  agent_role: string;
+  task_complexity: TaskComplexity | null;
+  success_rate: number;
+  quality_score: number;
+  avg_tokens_per_task: number;
+  avg_cost_per_task: number;
+  avg_execution_time: number;
+  total_tasks: number;
+  successful_tasks: number;
+  failed_tasks: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  project_id: string | null;
+  sprint_id: string | null;
+  last_updated: string;
+}
+
+export interface ModelRecommendation {
+  id: string;
+  project_id: string;
+  agent_role: string;
+  recommended_model: string;
+  current_model: string | null;
+  confidence: RecommendationConfidence;
+  reasoning: string;
+  expected_quality_score: number;
+  expected_cost_per_task: number;
+  expected_success_rate: number;
+  performance_metrics: PerformanceMetrics | null;
+  alternative_models: string[];
+  task_complexity: TaskComplexity | null;
+  quality_requirements: string | null;
+  cost_constraints: number | null;
+  created_at: string;
+  expires_at: string | null;
+}
+
+export interface CostSavingsEstimate {
+  id: string;
+  project_id: string;
+  current_total_cost: number;
+  current_config: Record<string, string>;
+  recommended_total_cost: number;
+  recommended_config: Record<string, string>;
+  total_savings_usd: number;
+  savings_percentage: number;
+  role_breakdown: Record<string, { current_cost: number; recommended_cost: number; savings: number }>;
+  quality_impact: string;
+  quality_score_change: number;
+  based_on_tasks: number;
+  confidence: RecommendationConfidence;
+  created_at: string;
+  sprint_id: string | null;
+}
+
+export interface ModelPerformanceComparison {
+  agent_role: string;
+  project_id: string;
+  models: PerformanceMetrics[];
+  best_for_quality: string | null;
+  best_for_cost: string | null;
+  best_overall: string | null;
+  created_at: string;
+}
+
 // === API Response Wrappers ===
 export interface ListResponse<T> {
   items: T[];
