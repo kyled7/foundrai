@@ -71,6 +71,26 @@ export function RetrospectiveView({ sprintId }: RetrospectiveViewProps) {
         </div>
       )}
 
+      {retro.learnings && retro.learnings.length > 0 && (
+        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+          <h3 className="font-medium text-purple-800 dark:text-purple-300 mb-2">
+            📚 Learnings
+          </h3>
+          <div className="space-y-2">
+            {retro.learnings.map((learning) => (
+              <div key={learning.learning_id} className="flex items-start gap-2">
+                <span className="inline-block px-2 py-0.5 text-xs font-medium bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded">
+                  {learning.category}
+                </span>
+                <span className="text-sm text-purple-700 dark:text-purple-400 flex-1">
+                  {learning.content}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {retro.cost_summary && retro.cost_summary.total_cost > 0 && (
         <div className="bg-card border border-border rounded-lg p-4">
           <h3 className="font-medium text-foreground mb-3">💰 Cost Summary</h3>
