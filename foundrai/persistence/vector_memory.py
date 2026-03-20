@@ -38,6 +38,9 @@ class VectorMemory:
                     "project_id": learning.project_id,
                     "category": learning.category,
                     "timestamp": learning.timestamp,
+                    "pinned": learning.pinned,
+                    "status": learning.status,
+                    "updated_at": learning.updated_at,
                 }],
             )
 
@@ -45,14 +48,17 @@ class VectorMemory:
             if self.db:
                 await self.db.conn.execute(
                     """INSERT INTO learnings
-                    (learning_id, project_id, sprint_id, content, category)
-                    VALUES (?, ?, ?, ?, ?)""",
+                    (learning_id, project_id, sprint_id, content, category, pinned, status, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         learning.id,
                         learning.project_id,
                         learning.sprint_id,
                         learning.content,
                         learning.category,
+                        1 if learning.pinned else 0,
+                        learning.status,
+                        learning.updated_at,
                     ),
                 )
                 await self.db.conn.commit()
@@ -93,6 +99,9 @@ class VectorMemory:
                     sprint_id=meta.get("sprint_id", ""),
                     project_id=meta.get("project_id", ""),
                     timestamp=meta.get("timestamp", ""),
+                    pinned=meta.get("pinned", False),
+                    status=meta.get("status", "pending"),
+                    updated_at=meta.get("updated_at", meta.get("timestamp", "")),
                 ))
         return learnings
 
@@ -112,5 +121,8 @@ class VectorMemory:
                 sprint_id=meta.get("sprint_id", ""),
                 project_id=meta.get("project_id", ""),
                 timestamp=meta.get("timestamp", ""),
+                pinned=meta.get("pinned", False),
+                status=meta.get("status", "pending"),
+                updated_at=meta.get("updated_at", meta.get("timestamp", "")),
             ))
         return learnings
