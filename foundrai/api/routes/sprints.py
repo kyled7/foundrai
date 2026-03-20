@@ -8,7 +8,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from foundrai.api.deps import get_db
+from foundrai.api.deps import get_db, get_vector_memory
 
 router = APIRouter()
 
@@ -267,15 +267,44 @@ async def get_retrospective(sprint_id: str) -> dict:
             "Consider breaking goal into smaller, more achievable sprints"
         )
 
-    # Check for learnings in DB
-    learnings_count = 0
+    # Get learnings from DB
+    learnings_from_db = []
     try:
         lc = await db.conn.execute(
-            "SELECT COUNT(*) as cnt FROM learnings WHERE sprint_id = ?",
+            "SELECT * FROM learnings WHERE sprint_id = ? ORDER BY created_at DESC",
             (sprint_id,),
         )
-        lr = await lc.fetchone()
-        learnings_count = lr["cnt"] if lr else 0
+        learning_rows = await lc.fetchall()
+        learnings_from_db = [
+            {
+                "learning_id": lr["learning_id"],
+                "project_id": lr["project_id"],
+                "sprint_id": lr["sprint_id"],
+                "content": lr["content"],
+                "category": lr["category"],
+                "created_at": lr["created_at"],
+            }
+            for lr in learning_rows
+        ]
+    except Exception:
+        pass
+
+    # Get learnings from VectorMemory
+    learnings_from_vector = []
+    try:
+        vm = await get_vector_memory()
+        learnings_list = await vm.get_all_learnings(sprint_id=sprint_id)
+        learnings_from_vector = [
+            {
+                "learning_id": learning.id,
+                "project_id": learning.project_id,
+                "sprint_id": learning.sprint_id,
+                "content": learning.content,
+                "category": learning.category,
+                "timestamp": learning.timestamp,
+            }
+            for learning in learnings_list
+        ]
     except Exception:
         pass
 
@@ -327,7 +356,8 @@ async def get_retrospective(sprint_id: str) -> dict:
         "went_well": went_well,
         "went_wrong": went_wrong,
         "action_items": action_items,
-        "learnings_count": learnings_count,
+        "learnings": learnings_from_db,
+        "learnings_vector": learnings_from_vector,
         "cost_summary": cost_summary,
     }
 
