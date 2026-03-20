@@ -111,6 +111,14 @@ export function usePinLearning() {
   });
 }
 
+export function useSearchLearnings(projectId: string, query: string) {
+  return useQuery({
+    queryKey: ['learnings', projectId, 'search', query],
+    queryFn: () => api.learnings.search(projectId, query),
+    enabled: !!projectId && !!query,
+  });
+}
+
 // Analytics v0.2.3
 export function useCostOverTime(projectId: string) {
   return useQuery({
