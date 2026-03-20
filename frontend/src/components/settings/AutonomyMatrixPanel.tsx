@@ -42,8 +42,66 @@ const autonomyModes: { value: AutonomyMode; label: string; color: string }[] = [
   { value: 'block', label: 'Block', color: 'text-red-600 dark:text-red-400' },
 ];
 
+// Preset profiles
+type ProfileName = 'full_autonomy' | 'supervised' | 'manual_review' | 'custom';
+
+interface Profile {
+  value: ProfileName;
+  label: string;
+  description: string;
+  matrix: Record<string, Record<ActionType, AutonomyMode>>;
+}
+
+function createProfileMatrix(defaultMode: AutonomyMode, overrides?: Partial<Record<ActionType, AutonomyMode>>): Record<string, Record<ActionType, AutonomyMode>> {
+  const matrix: Record<string, Record<ActionType, AutonomyMode>> = {};
+  agentRoles.forEach((role) => {
+    matrix[role] = {} as Record<ActionType, AutonomyMode>;
+    actionTypes.forEach((action) => {
+      matrix[role][action.value] = overrides?.[action.value] ?? defaultMode;
+    });
+  });
+  return matrix;
+}
+
+const profiles: Profile[] = [
+  {
+    value: 'full_autonomy',
+    label: 'Full Autonomy',
+    description: 'All actions auto-approved. Agents work independently.',
+    matrix: createProfileMatrix('auto_approve'),
+  },
+  {
+    value: 'supervised',
+    label: 'Supervised',
+    description: 'Most actions notify, risky actions require approval.',
+    matrix: createProfileMatrix('notify', {
+      code_execute: 'require_approval',
+      file_delete: 'require_approval',
+      git_push: 'require_approval',
+      deployment: 'require_approval',
+    }),
+  },
+  {
+    value: 'manual_review',
+    label: 'Manual Review',
+    description: 'Most actions require approval. Maximum oversight.',
+    matrix: createProfileMatrix('require_approval', {
+      message_send: 'notify',
+      task_create: 'notify',
+      task_assign: 'notify',
+    }),
+  },
+  {
+    value: 'custom',
+    label: 'Custom',
+    description: 'User-defined configuration.',
+    matrix: {},
+  },
+];
+
 export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
   const [matrix, setMatrix] = useState<Record<string, Record<ActionType, AutonomyMode>>>({});
+  const [selectedProfile, setSelectedProfile] = useState<ProfileName>('custom');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,12 +121,49 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
         throw new Error('Failed to load autonomy configuration');
       }
       const data = await response.json();
-      setMatrix(data.matrix || {});
+      const loadedMatrix = data.matrix || {};
+      setMatrix(loadedMatrix);
+      setSelectedProfile(detectProfile(loadedMatrix));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load configuration');
-      console.error('Failed to load autonomy config:', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function detectProfile(currentMatrix: Record<string, Record<ActionType, AutonomyMode>>): ProfileName {
+    // Check if matrix matches any preset profile
+    for (const profile of profiles) {
+      if (profile.value === 'custom') continue;
+
+      let matches = true;
+      for (const role of agentRoles) {
+        for (const action of actionTypes) {
+          const expected = profile.matrix[role]?.[action.value];
+          const actual = currentMatrix[role]?.[action.value] || 'notify';
+          if (expected !== actual) {
+            matches = false;
+            break;
+          }
+        }
+        if (!matches) break;
+      }
+
+      if (matches) {
+        return profile.value;
+      }
+    }
+
+    return 'custom';
+  }
+
+  function handleProfileChange(profileName: ProfileName) {
+    setSelectedProfile(profileName);
+
+    const profile = profiles.find((p) => p.value === profileName);
+    if (profile && profile.value !== 'custom') {
+      setMatrix(profile.matrix);
+      setHasChanges(true);
     }
   }
 
@@ -107,6 +202,7 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
       };
       return updated;
     });
+    setSelectedProfile('custom');
     setHasChanges(true);
   }
 
@@ -140,6 +236,28 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
           Configure approval policies for each agent-action combination. Changes take effect immediately.
         </p>
       </div>
+
+      {/* Profile Selector */}
+      <fieldset className="space-y-2">
+        <label htmlFor="autonomy-profile" className="block text-sm font-medium text-foreground">
+          Autonomy Profile
+        </label>
+        <select
+          id="autonomy-profile"
+          value={selectedProfile}
+          onChange={(e) => handleProfileChange(e.target.value as ProfileName)}
+          className="w-full max-w-md px-3 py-2 bg-background border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          {profiles.map((profile) => (
+            <option key={profile.value} value={profile.value}>
+              {profile.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted">
+          {profiles.find((p) => p.value === selectedProfile)?.description}
+        </p>
+      </fieldset>
 
       {/* Matrix Grid */}
       <div className="overflow-x-auto">
