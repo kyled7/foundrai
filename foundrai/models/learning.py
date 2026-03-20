@@ -16,6 +16,11 @@ class Learning(BaseModel):
     category: str = "general"
     sprint_id: str = ""
     project_id: str = ""
+    pinned: bool = False
+    status: str = "pending"
     timestamp: str = Field(
+        default_factory=lambda: datetime.now(UTC).isoformat()
+    )
+    updated_at: str = Field(
         default_factory=lambda: datetime.now(UTC).isoformat()
     )
