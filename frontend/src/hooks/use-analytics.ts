@@ -101,13 +101,17 @@ export function useDeleteLearning() {
 export function usePinLearning() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ projectId, learningId }: { projectId: string; learningId: string }) =>
-      api.learnings.pin(projectId, learningId),
+    mutationFn: ({ projectId, learningId, pinned }: {
+      projectId: string;
+      learningId: string;
+      pinned: boolean
+    }) =>
+      api.learnings.pin(projectId, learningId, pinned),
     onSuccess: (_, variables) => {
-      toast.success('Learning pinned');
+      toast.success(variables.pinned ? 'Learning pinned' : 'Learning unpinned');
       qc.invalidateQueries({ queryKey: ['learnings', variables.projectId] });
     },
-    onError: (err: Error) => toast.error('Failed to pin learning', { description: err.message }),
+    onError: (err: Error) => toast.error('Failed to update learning', { description: err.message }),
   });
 }
 

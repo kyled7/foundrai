@@ -63,6 +63,97 @@ class VectorMemory:
                 )
                 await self.db.conn.commit()
 
+    async def update_learning(
+        self,
+        learning_id: str,
+        content: str | None = None,
+        pinned: bool | None = None,
+        status: str | None = None
+    ) -> None:
+        """Update a learning in both ChromaDB and SQLite.
+
+        Args:
+            learning_id: ID of learning to update
+            content: New content (if updating)
+            pinned: New pinned status (if updating)
+            status: New status (if updating)
+        """
+        from datetime import datetime, UTC
+
+        async with self._lock:
+            # Get current learning from ChromaDB
+            result = self.collection.get(ids=[learning_id])
+            if not result or not result['ids']:
+                raise ValueError(f"Learning {learning_id} not found")
+
+            metadata = result['metadatas'][0] if result.get('metadatas') else {}
+            document = result['documents'][0] if result.get('documents') else ""
+
+            # Update fields
+            if content is not None:
+                document = content
+            if pinned is not None:
+                metadata['pinned'] = pinned
+            if status is not None:
+                metadata['status'] = status
+            metadata['updated_at'] = datetime.now(UTC).isoformat()
+
+            # Update ChromaDB (delete and re-add with same ID)
+            self.collection.delete(ids=[learning_id])
+            self.collection.add(
+                ids=[learning_id],
+                documents=[document],
+                metadatas=[metadata]
+            )
+
+            # Update SQLite
+            if self.db:
+                updates = []
+                params = []
+
+                if content is not None:
+                    updates.append("content = ?")
+                    params.append(content)
+                if pinned is not None:
+                    updates.append("pinned = ?")
+                    params.append(1 if pinned else 0)
+                if status is not None:
+                    updates.append("status = ?")
+                    params.append(status)
+
+                if updates:
+                    updates.append("updated_at = ?")
+                    params.append(metadata['updated_at'])
+                    params.append(learning_id)
+
+                    await self.db.conn.execute(
+                        f"UPDATE learnings SET {', '.join(updates)} WHERE learning_id = ?",
+                        params
+                    )
+                    await self.db.conn.commit()
+
+    async def delete_learning(self, learning_id: str) -> None:
+        """Delete a learning from both ChromaDB and SQLite.
+
+        Args:
+            learning_id: ID of learning to delete
+        """
+        async with self._lock:
+            # Delete from ChromaDB
+            try:
+                self.collection.delete(ids=[learning_id])
+            except Exception:
+                # Learning may not exist in ChromaDB, continue to delete from SQLite
+                pass
+
+            # Delete from SQLite
+            if self.db:
+                await self.db.conn.execute(
+                    "DELETE FROM learnings WHERE learning_id = ?",
+                    (learning_id,)
+                )
+                await self.db.conn.commit()
+
     async def query_relevant(
         self, query: str, k: int = 5, project_id: str | None = None
     ) -> list[Learning]:

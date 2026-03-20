@@ -120,6 +120,7 @@ async def search_learnings(project_id: str, search: LearningSearch) -> dict:
 async def update_learning(learning_id: str, update: LearningUpdate) -> dict:
     """Update a learning's content."""
     db = await get_db()
+    vm = await get_vector_memory()
 
     # Verify learning exists
     cursor = await db.conn.execute(
@@ -129,13 +130,8 @@ async def update_learning(learning_id: str, update: LearningUpdate) -> dict:
     if not row:
         raise HTTPException(status_code=404, detail="Learning not found")
 
-    # Update learning content
-    now = datetime.now(timezone.utc).isoformat()
-    await db.conn.execute(
-        "UPDATE learnings SET content = ?, updated_at = ? WHERE learning_id = ?",
-        (update.content, now, learning_id)
-    )
-    await db.conn.commit()
+    # Update in both ChromaDB and SQLite
+    await vm.update_learning(learning_id, content=update.content)
 
     # Return updated learning
     cursor = await db.conn.execute(
@@ -159,6 +155,7 @@ async def update_learning(learning_id: str, update: LearningUpdate) -> dict:
 async def delete_learning(learning_id: str) -> None:
     """Delete a learning."""
     db = await get_db()
+    vm = await get_vector_memory()
 
     # Verify learning exists
     cursor = await db.conn.execute(
@@ -167,17 +164,15 @@ async def delete_learning(learning_id: str) -> None:
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Learning not found")
 
-    # Delete the learning
-    await db.conn.execute(
-        "DELETE FROM learnings WHERE learning_id = ?", (learning_id,)
-    )
-    await db.conn.commit()
+    # Delete from both ChromaDB and SQLite
+    await vm.delete_learning(learning_id)
 
 
 @router.post("/learnings/{learning_id}/pin")
 async def pin_learning(learning_id: str, pin_request: LearningPin) -> dict:
     """Pin or unpin a learning to mark it as important."""
     db = await get_db()
+    vm = await get_vector_memory()
 
     # Verify learning exists
     cursor = await db.conn.execute(
@@ -187,14 +182,8 @@ async def pin_learning(learning_id: str, pin_request: LearningPin) -> dict:
     if not row:
         raise HTTPException(status_code=404, detail="Learning not found")
 
-    # Update pinned status
-    now = datetime.now(timezone.utc).isoformat()
-    pinned_value = 1 if pin_request.pinned else 0
-    await db.conn.execute(
-        "UPDATE learnings SET pinned = ?, updated_at = ? WHERE learning_id = ?",
-        (pinned_value, now, learning_id)
-    )
-    await db.conn.commit()
+    # Update in both ChromaDB and SQLite
+    await vm.update_learning(learning_id, pinned=pin_request.pinned)
 
     # Return updated learning
     cursor = await db.conn.execute(

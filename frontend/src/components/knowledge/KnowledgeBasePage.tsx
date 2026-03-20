@@ -72,7 +72,11 @@ export function KnowledgeBasePage({ projectId }: KnowledgeBasePageProps) {
   };
 
   const handlePin = (learning: Learning) => {
-    pinMutation.mutate({ projectId, learningId: learning.learning_id });
+    pinMutation.mutate({
+      projectId,
+      learningId: learning.learning_id,
+      pinned: !learning.pinned
+    });
   };
 
   const handleEdit = (learning: Learning) => {

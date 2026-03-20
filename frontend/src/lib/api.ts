@@ -197,8 +197,11 @@ export const api = {
       }),
     delete: (projectId: string, learningId: string) =>
       request<void>(`/projects/${projectId}/learnings/${learningId}`, { method: 'DELETE' }),
-    pin: (projectId: string, learningId: string) =>
-      request<Learning>(`/projects/${projectId}/learnings/${learningId}/pin`, { method: 'POST' }),
+    pin: (projectId: string, learningId: string, pinned: boolean) =>
+      request<Learning>(`/projects/${projectId}/learnings/${learningId}/pin`, {
+        method: 'POST',
+        body: JSON.stringify({ pinned })
+      }),
     search: (projectId: string, query: string) =>
       request<{ learnings: Learning[]; total: number }>(`/projects/${projectId}/learnings/search`, {
         method: 'POST',
