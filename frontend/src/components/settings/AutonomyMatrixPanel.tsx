@@ -99,6 +99,14 @@ const profiles: Profile[] = [
   },
 ];
 
+interface TrustMetric {
+  agent_role: string;
+  action_type: ActionType;
+  success_rate: number;
+  total_attempts: number;
+  recommendation?: 'auto_approve' | 'notify' | 'require_approval';
+}
+
 export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
   const [matrix, setMatrix] = useState<Record<string, Record<ActionType, AutonomyMode>>>({});
   const [selectedProfile, setSelectedProfile] = useState<ProfileName>('custom');
@@ -106,10 +114,13 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [trustMetrics, setTrustMetrics] = useState<TrustMetric[]>([]);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
 
   // Load configuration on mount
   useEffect(() => {
     loadConfig();
+    loadTrustMetrics();
   }, [projectId]);
 
   async function loadConfig() {
@@ -128,6 +139,21 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
       setError(err instanceof Error ? err.message : 'Failed to load configuration');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadTrustMetrics() {
+    setLoadingMetrics(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/autonomy/trust-metrics`);
+      if (response.ok) {
+        const data = await response.json();
+        setTrustMetrics(data.metrics || []);
+      }
+    } catch (err) {
+      // Silently fail - trust metrics are optional
+    } finally {
+      setLoadingMetrics(false);
     }
   }
 
@@ -214,6 +240,20 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
     return autonomyModes.find((m) => m.value === mode)?.color || 'text-foreground';
   }
 
+  function getSuccessRateColor(rate: number): string {
+    if (rate >= 0.95) return 'text-green-600 dark:text-green-400';
+    if (rate >= 0.85) return 'text-blue-600 dark:text-blue-400';
+    if (rate >= 0.70) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
+  }
+
+  function getTopRecommendations(): TrustMetric[] {
+    return trustMetrics
+      .filter((m) => m.recommendation && m.total_attempts >= 5)
+      .sort((a, b) => b.success_rate - a.success_rate)
+      .slice(0, 5);
+  }
+
   if (loading) {
     return (
       <div role="tabpanel" id="panel-autonomy" className="flex items-center justify-center py-12">
@@ -258,6 +298,85 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
           {profiles.find((p) => p.value === selectedProfile)?.description}
         </p>
       </fieldset>
+
+      {/* Progressive Trust Display */}
+      {trustMetrics.length > 0 && (
+        <div className="space-y-4 p-4 bg-muted/30 border border-border rounded-md">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground mb-1">Progressive Trust Scores</h3>
+            <p className="text-xs text-muted">
+              Based on historical agent performance. Higher success rates suggest candidates for increased autonomy.
+            </p>
+          </div>
+
+          {loadingMetrics ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="animate-spin text-muted" size={20} />
+            </div>
+          ) : (
+            <>
+              {/* Trust Metrics Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 px-2 font-medium text-muted">Agent</th>
+                      <th className="text-left py-2 px-2 font-medium text-muted">Action</th>
+                      <th className="text-right py-2 px-2 font-medium text-muted">Success Rate</th>
+                      <th className="text-right py-2 px-2 font-medium text-muted">Attempts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trustMetrics.slice(0, 10).map((metric, idx) => (
+                      <tr key={idx} className="border-b border-border/50">
+                        <td className="py-2 px-2 text-foreground">{metric.agent_role}</td>
+                        <td className="py-2 px-2 text-foreground">
+                          {actionTypes.find((a) => a.value === metric.action_type)?.label || metric.action_type}
+                        </td>
+                        <td className={`py-2 px-2 text-right font-medium ${getSuccessRateColor(metric.success_rate)}`}>
+                          {(metric.success_rate * 100).toFixed(1)}%
+                        </td>
+                        <td className="py-2 px-2 text-right text-muted">{metric.total_attempts}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Recommendations */}
+              {getTopRecommendations().length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-foreground">Recommendations</h4>
+                  <div className="space-y-1">
+                    {getTopRecommendations().map((metric, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between px-3 py-2 bg-background border border-border rounded text-xs"
+                      >
+                        <div className="flex-1">
+                          <span className="font-medium text-foreground">{metric.agent_role}</span>
+                          <span className="text-muted"> → </span>
+                          <span className="text-foreground">
+                            {actionTypes.find((a) => a.value === metric.action_type)?.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`font-medium ${getSuccessRateColor(metric.success_rate)}`}>
+                            {(metric.success_rate * 100).toFixed(0)}% success
+                          </span>
+                          <span className="text-muted text-xs">
+                            Consider: {autonomyModes.find((m) => m.value === metric.recommendation)?.label}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Matrix Grid */}
       <div className="overflow-x-auto">
