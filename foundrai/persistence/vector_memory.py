@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from foundrai.models.learning import Learning
 
 if TYPE_CHECKING:
     from foundrai.config import MemoryConfig
+    from foundrai.persistence.database import Database
 
 
 class VectorMemory:
     """ChromaDB-backed vector memory for persistent learnings."""
 
-    def __init__(self, config: MemoryConfig) -> None:
+    def __init__(self, config: MemoryConfig, db: Database | None = None) -> None:
         import chromadb
 
         self.client = chromadb.PersistentClient(path=config.chromadb_path)
@@ -21,19 +23,39 @@ class VectorMemory:
             name="foundrai_learnings",
             metadata={"hnsw:space": "cosine"},
         )
+        self.db = db
+        self._lock = asyncio.Lock()
 
     async def store_learning(self, learning: Learning) -> None:
         """Store a learning in vector memory."""
-        self.collection.add(
-            ids=[learning.id],
-            documents=[learning.content],
-            metadatas=[{
-                "sprint_id": learning.sprint_id,
-                "project_id": learning.project_id,
-                "category": learning.category,
-                "timestamp": learning.timestamp,
-            }],
-        )
+        async with self._lock:
+            # Store in ChromaDB
+            self.collection.add(
+                ids=[learning.id],
+                documents=[learning.content],
+                metadatas=[{
+                    "sprint_id": learning.sprint_id,
+                    "project_id": learning.project_id,
+                    "category": learning.category,
+                    "timestamp": learning.timestamp,
+                }],
+            )
+
+            # Store in database if available
+            if self.db:
+                await self.db.conn.execute(
+                    """INSERT INTO learnings
+                    (learning_id, project_id, sprint_id, content, category)
+                    VALUES (?, ?, ?, ?, ?)""",
+                    (
+                        learning.id,
+                        learning.project_id,
+                        learning.sprint_id,
+                        learning.content,
+                        learning.category,
+                    ),
+                )
+                await self.db.conn.commit()
 
     async def query_relevant(
         self, query: str, k: int = 5, project_id: str | None = None

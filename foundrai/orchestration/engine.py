@@ -682,7 +682,7 @@ class SprintEngine:
         })
 
         retro = SprintRetrospective()
-        await retro.run(state, self.agents, self.vector_memory)
+        await retro.run(state, self.agents, self.vector_memory, self.db)
 
         await self.event_log.append("sprint.retrospective_completed", {
             "sprint_id": state["sprint_id"],

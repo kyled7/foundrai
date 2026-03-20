@@ -8,10 +8,12 @@ from foundrai.config import FoundrAIConfig
 from foundrai.persistence.database import Database
 from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
+from foundrai.persistence.vector_memory import VectorMemory
 
 _db: Database | None = None
 _config: FoundrAIConfig | None = None
 _project_dir: str | None = None
+_vector_memory: VectorMemory | None = None
 
 
 def set_config(config: FoundrAIConfig) -> None:
@@ -55,6 +57,16 @@ async def get_event_log() -> EventLog:
     """Get an EventLog instance."""
     db = await get_db()
     return EventLog(db)
+
+
+async def get_vector_memory() -> VectorMemory:
+    """Get or create the VectorMemory instance."""
+    global _vector_memory
+    if _vector_memory is None:
+        assert _config is not None, "Config not set"
+        db = await get_db()
+        _vector_memory = VectorMemory(_config.memory, db)
+    return _vector_memory
 
 
 async def cleanup_db() -> None:

@@ -153,6 +153,8 @@ export interface RetroResponse {
   went_wrong: string[];
   action_items: string[];
   learnings_count: number;
+  learnings: LearningResponse[];
+  learnings_vector: LearningResponse[];
   cost_summary?: {
     total_cost: number;
     total_tokens: number;
