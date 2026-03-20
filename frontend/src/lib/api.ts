@@ -199,6 +199,11 @@ export const api = {
       request<void>(`/projects/${projectId}/learnings/${learningId}`, { method: 'DELETE' }),
     pin: (projectId: string, learningId: string) =>
       request<Learning>(`/projects/${projectId}/learnings/${learningId}/pin`, { method: 'POST' }),
+    search: (projectId: string, query: string) =>
+      request<{ learnings: Learning[]; total: number }>(`/projects/${projectId}/learnings/search`, {
+        method: 'POST',
+        body: JSON.stringify({ query }),
+      }),
   },
 
   // Replay
