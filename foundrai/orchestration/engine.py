@@ -434,6 +434,51 @@ class SprintEngine:
 
         return state
 
+    async def _get_autonomy_level_for_action(
+        self, agent_role: str, action_type: str, project_id: str
+    ) -> AutonomyLevel:
+        """Query autonomy matrix for specific agent-action combination.
+
+        Args:
+            agent_role: The agent role (e.g., "developer", "product_manager")
+            action_type: The action type (e.g., "task_execution", "code_execute")
+            project_id: The project ID
+
+        Returns:
+            AutonomyLevel enum value (AUTO_APPROVE, NOTIFY, REQUIRE_APPROVAL, or BLOCK)
+        """
+        if not self.db:
+            # No database — fall back to old config-based autonomy
+            return self._get_agent_autonomy(agent_role)
+
+        # Query autonomy_config table
+        cursor = await self.db.conn.execute(
+            """SELECT autonomy_mode FROM autonomy_config
+               WHERE project_id = ? AND agent_role = ? AND action_type = ?""",
+            (project_id, agent_role, action_type),
+        )
+        row = await cursor.fetchone()
+
+        if row:
+            # Found explicit configuration
+            try:
+                return AutonomyLevel(row["autonomy_mode"])
+            except (ValueError, KeyError):
+                logger.warning(
+                    "Invalid autonomy_mode '%s' for %s/%s, falling back to REQUIRE_APPROVAL",
+                    row.get("autonomy_mode"), agent_role, action_type,
+                )
+                return AutonomyLevel.REQUIRE_APPROVAL
+
+        # Not found — fall back to old config or default
+        legacy_autonomy = self._get_agent_autonomy(agent_role)
+        if legacy_autonomy != AutonomyLevel.NOTIFY:
+            # Use legacy config if explicitly set
+            return legacy_autonomy
+
+        # Default to REQUIRE_APPROVAL if not configured anywhere
+        return AutonomyLevel.REQUIRE_APPROVAL
+
     async def _check_approval_gate(
         self, task: Task, agent_role: str, sprint_id: str
     ) -> bool:
@@ -441,27 +486,53 @@ class SprintEngine:
 
         Returns True if approved (or no approval needed), False if rejected/timed out.
         """
-        # Look up autonomy level from config
-        autonomy = self._get_agent_autonomy(agent_role)
+        # Get project_id from sprint
+        if not self.sprint_store:
+            # Fallback to old autonomy system
+            autonomy = self._get_agent_autonomy(agent_role)
+        else:
+            # Query sprint to get project_id
+            sprint = await self.sprint_store.get_sprint(sprint_id)
+            project_id = sprint.get("project_id", "") if sprint else ""
 
-        if autonomy in (AutonomyLevel.AUTO_APPROVE, AutonomyLevel.NOTIFY):
-            # Auto-approve or just notify (no blocking)
-            if autonomy == AutonomyLevel.NOTIFY:
-                await self.event_log.append("approval.notify", {
-                    "sprint_id": sprint_id,
-                    "task_id": task.id,
-                    "agent_role": agent_role,
-                    "task_title": task.title,
-                    "message": f"Agent '{agent_role}' is starting task: {task.title}",
-                })
+            # Query autonomy matrix for task_execution action
+            # Map task execution to CODE_EXECUTE action type as it's the most relevant
+            from foundrai.models.enums import ActionType
+            action_type = ActionType.CODE_EXECUTE.value
+            autonomy = await self._get_autonomy_level_for_action(
+                agent_role, action_type, project_id
+            )
+
+        # Handle AUTO_APPROVE
+        if autonomy == AutonomyLevel.AUTO_APPROVE:
+            await self.event_log.append("approval.auto_approved", {
+                "sprint_id": sprint_id,
+                "task_id": task.id,
+                "agent_role": agent_role,
+                "task_title": task.title,
+                "autonomy_level": autonomy.value,
+            })
             return True
 
+        # Handle NOTIFY
+        if autonomy == AutonomyLevel.NOTIFY:
+            await self.event_log.append("approval.notify", {
+                "sprint_id": sprint_id,
+                "task_id": task.id,
+                "agent_role": agent_role,
+                "task_title": task.title,
+                "message": f"Agent '{agent_role}' is starting task: {task.title}",
+            })
+            return True
+
+        # Handle BLOCK
         if autonomy == AutonomyLevel.BLOCK:
             await self.event_log.append("approval.blocked", {
                 "sprint_id": sprint_id,
                 "task_id": task.id,
                 "agent_role": agent_role,
                 "task_title": task.title,
+                "autonomy_level": autonomy.value,
             })
             return False
 
