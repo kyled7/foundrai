@@ -191,6 +191,14 @@ export const api = {
   learnings: {
     list: (projectId: string) =>
       request<{ learnings: Learning[]; total: number }>(`/projects/${projectId}/learnings`),
+    update: (projectId: string, learningId: string, data: Partial<Learning>) =>
+      request<Learning>(`/projects/${projectId}/learnings/${learningId}`, {
+        method: 'PUT', body: JSON.stringify(data),
+      }),
+    delete: (projectId: string, learningId: string) =>
+      request<void>(`/projects/${projectId}/learnings/${learningId}`, { method: 'DELETE' }),
+    pin: (projectId: string, learningId: string) =>
+      request<Learning>(`/projects/${projectId}/learnings/${learningId}/pin`, { method: 'POST' }),
   },
 
   // Replay
