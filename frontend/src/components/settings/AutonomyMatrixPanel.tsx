@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import type { ActionType, AutonomyMode } from '@/lib/types';
 
 interface AutonomyMatrixPanelProps {
-  projectId: string;
+  projectId?: string;
 }
 
 // Agent roles in the system
@@ -116,18 +116,43 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
   const [hasChanges, setHasChanges] = useState(false);
   const [trustMetrics, setTrustMetrics] = useState<TrustMetric[]>([]);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId || '');
+  const [projects, setProjects] = useState<Array<{ project_id: string; name: string }>>([]);
+
+  // Load projects list if no projectId provided
+  useEffect(() => {
+    if (!projectId) {
+      fetch('/api/projects')
+        .then(res => res.json())
+        .then(data => {
+          setProjects(data.projects || []);
+          if (data.projects?.length > 0 && !selectedProjectId) {
+            setSelectedProjectId(data.projects[0].project_id);
+          }
+        })
+        .catch(() => setProjects([]));
+    }
+  }, [projectId]);
 
   // Load configuration on mount
   useEffect(() => {
-    loadConfig();
-    loadTrustMetrics();
-  }, [projectId]);
+    const activeProjectId = projectId || selectedProjectId;
+    if (activeProjectId) {
+      loadConfig();
+      loadTrustMetrics();
+    } else {
+      setLoading(false);
+    }
+  }, [projectId, selectedProjectId]);
 
   async function loadConfig() {
+    const activeProjectId = projectId || selectedProjectId;
+    if (!activeProjectId) return;
+
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/projects/${projectId}/autonomy/config`);
+      const response = await fetch(`/api/projects/${activeProjectId}/autonomy/config`);
       if (!response.ok) {
         throw new Error('Failed to load autonomy configuration');
       }
@@ -143,9 +168,12 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
   }
 
   async function loadTrustMetrics() {
+    const activeProjectId = projectId || selectedProjectId;
+    if (!activeProjectId) return;
+
     setLoadingMetrics(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/autonomy/trust-metrics`);
+      const response = await fetch(`/api/projects/${activeProjectId}/autonomy/trust-metrics`);
       if (response.ok) {
         const data = await response.json();
         setTrustMetrics(data.metrics || []);
@@ -194,10 +222,13 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
   }
 
   async function handleSave() {
+    const activeProjectId = projectId || selectedProjectId;
+    if (!activeProjectId) return;
+
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch(`/api/projects/${projectId}/autonomy/config`, {
+      const response = await fetch(`/api/projects/${activeProjectId}/autonomy/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ matrix }),
@@ -262,6 +293,29 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
     );
   }
 
+  // If no projectId provided and no projects available, show message
+  if (!projectId && projects.length === 0) {
+    return (
+      <div role="tabpanel" id="panel-autonomy" className="space-y-6">
+        <div className="p-6 bg-muted/30 border border-border rounded-md text-center">
+          <p className="text-sm text-muted">No projects found. Create a project to configure autonomy settings.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no active project selected, show message
+  const activeProjectId = projectId || selectedProjectId;
+  if (!activeProjectId) {
+    return (
+      <div role="tabpanel" id="panel-autonomy" className="space-y-6">
+        <div className="p-6 bg-muted/30 border border-border rounded-md text-center">
+          <p className="text-sm text-muted">Select a project to configure autonomy settings.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div role="tabpanel" id="panel-autonomy" className="space-y-6">
       {error && (
@@ -276,6 +330,27 @@ export function AutonomyMatrixPanel({ projectId }: AutonomyMatrixPanelProps) {
           Configure approval policies for each agent-action combination. Changes take effect immediately.
         </p>
       </div>
+
+      {/* Project Selector - only show if no projectId prop provided */}
+      {!projectId && projects.length > 0 && (
+        <fieldset className="space-y-2">
+          <label htmlFor="project-select" className="block text-sm font-medium text-foreground">
+            Project
+          </label>
+          <select
+            id="project-select"
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            className="w-full max-w-md px-3 py-2 bg-background border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {projects.map((project) => (
+              <option key={project.project_id} value={project.project_id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </fieldset>
+      )}
 
       {/* Profile Selector */}
       <fieldset className="space-y-2">
