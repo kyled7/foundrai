@@ -17,6 +17,11 @@ class LearningUpdate(BaseModel):
     content: str = Field(..., min_length=1)
 
 
+class LearningPin(BaseModel):
+    """Request model for pinning/unpinning a learning."""
+    pinned: bool
+
+
 @router.get("/projects/{project_id}/learnings")
 async def list_learnings(project_id: str) -> dict:
     """List learnings for a project."""
@@ -33,6 +38,7 @@ async def list_learnings(project_id: str) -> dict:
             "sprint_id": r["sprint_id"],
             "content": r["content"],
             "category": r["category"],
+            "pinned": bool(r.get("pinned", 0)),
             "created_at": r["created_at"],
         }
         for r in rows
@@ -103,6 +109,7 @@ async def update_learning(learning_id: str, update: LearningUpdate) -> dict:
         "sprint_id": row["sprint_id"],
         "content": row["content"],
         "category": row["category"],
+        "pinned": bool(row.get("pinned", 0)),
         "created_at": row["created_at"],
         "updated_at": row.get("updated_at"),
     }
@@ -125,3 +132,43 @@ async def delete_learning(learning_id: str) -> None:
         "DELETE FROM learnings WHERE learning_id = ?", (learning_id,)
     )
     await db.conn.commit()
+
+
+@router.post("/learnings/{learning_id}/pin")
+async def pin_learning(learning_id: str, pin_request: LearningPin) -> dict:
+    """Pin or unpin a learning to mark it as important."""
+    db = await get_db()
+
+    # Verify learning exists
+    cursor = await db.conn.execute(
+        "SELECT * FROM learnings WHERE learning_id = ?", (learning_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Learning not found")
+
+    # Update pinned status
+    now = datetime.now(timezone.utc).isoformat()
+    pinned_value = 1 if pin_request.pinned else 0
+    await db.conn.execute(
+        "UPDATE learnings SET pinned = ?, updated_at = ? WHERE learning_id = ?",
+        (pinned_value, now, learning_id)
+    )
+    await db.conn.commit()
+
+    # Return updated learning
+    cursor = await db.conn.execute(
+        "SELECT * FROM learnings WHERE learning_id = ?", (learning_id,)
+    )
+    row = await cursor.fetchone()
+
+    return {
+        "learning_id": row["learning_id"],
+        "project_id": row["project_id"],
+        "sprint_id": row["sprint_id"],
+        "content": row["content"],
+        "category": row["category"],
+        "pinned": bool(row["pinned"]),
+        "created_at": row["created_at"],
+        "updated_at": row.get("updated_at"),
+    }

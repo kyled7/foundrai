@@ -389,6 +389,15 @@ class Database:
             # Column already exists, ignore
             pass
 
+        # Migration: Add pinned column to learnings table if it doesn't exist
+        try:
+            await self._connection.execute(
+                "ALTER TABLE learnings ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0"
+            )
+        except Exception:
+            # Column already exists, ignore
+            pass
+
         await self._connection.commit()  # type: ignore[union-attr]
 
     async def close(self) -> None:
