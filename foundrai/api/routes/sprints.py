@@ -356,6 +356,7 @@ async def get_retrospective(sprint_id: str) -> dict:
         "went_well": went_well,
         "went_wrong": went_wrong,
         "action_items": action_items,
+        "learnings_count": len(learnings_from_db),
         "learnings": learnings_from_db,
         "learnings_vector": learnings_from_vector,
         "cost_summary": cost_summary,
