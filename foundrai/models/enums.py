@@ -48,3 +48,20 @@ class AgentRoleName(str, Enum):
     ARCHITECT = "architect"
     DESIGNER = "designer"
     DEVOPS = "devops"
+
+
+class ActionType(str, Enum):
+    CODE_WRITE = "code_write"
+    CODE_EXECUTE = "code_execute"
+    FILE_CREATE = "file_create"
+    FILE_MODIFY = "file_modify"
+    FILE_DELETE = "file_delete"
+    GIT_COMMIT = "git_commit"
+    GIT_PUSH = "git_push"
+    API_CALL = "api_call"
+    TOOL_USE = "tool_use"
+    TASK_CREATE = "task_create"
+    TASK_ASSIGN = "task_assign"
+    MESSAGE_SEND = "message_send"
+    CODE_REVIEW = "code_review"
+    DEPLOYMENT = "deployment"
