@@ -27,6 +27,9 @@ const SprintCommandCenter = lazy(() =>
 const TeamConfigPage = lazy(() =>
   import('@/routes/projects/$projectId/team').then((m) => ({ default: m.TeamConfigPage }))
 );
+const ProjectKnowledgeBasePage = lazy(() =>
+  import('@/routes/projects/$projectId/knowledge').then((m) => ({ default: m.ProjectKnowledgeBasePage }))
+);
 
 const rootRoute = createRootRoute({
   component: AppShell,
@@ -81,6 +84,16 @@ const teamRoute = createRoute({
   ),
 });
 
+const knowledgeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/$projectId/knowledge',
+  component: () => (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <ProjectKnowledgeBasePage />
+    </Suspense>
+  ),
+});
+
 const templatesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/templates',
@@ -122,6 +135,7 @@ const routeTree = rootRoute.addChildren([
   sprintReplayRoute,
   analyticsRoute,
   teamRoute,
+  knowledgeRoute,
   templatesRoute,
   settingsRoute,
 ]);
