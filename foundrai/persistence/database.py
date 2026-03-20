@@ -103,7 +103,8 @@ CREATE TABLE IF NOT EXISTS learnings (
     sprint_id TEXT NOT NULL,
     content TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT 'general',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_learnings_project ON learnings(project_id);
 
@@ -378,6 +379,16 @@ class Database:
     async def _init_schema(self) -> None:
         """Create tables if they don't exist."""
         await self._connection.executescript(SCHEMA_SQL)  # type: ignore[union-attr]
+
+        # Migration: Add updated_at column to learnings table if it doesn't exist
+        try:
+            await self._connection.execute(
+                "ALTER TABLE learnings ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))"
+            )
+        except Exception:
+            # Column already exists, ignore
+            pass
+
         await self._connection.commit()  # type: ignore[union-attr]
 
     async def close(self) -> None:
