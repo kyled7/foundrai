@@ -32,7 +32,8 @@ import type {
   SprintCostPoint, SprintSummary, SprintComparison, AgentMetrics, GlobalAnalytics,
   GlobalSettings, ApiKeyInfo, AgentHealth, ProjectAgentHealthResponse, SprintAgentHealthResponse,
   BudgetConfig, BudgetHistoryPoint, ModelRecommendation, CostSavingsEstimate,
-  ModelPerformanceComparison, TaskComplexity,
+  ModelPerformanceComparison, TaskComplexity, AutonomyMatrix, AutonomyProfile, TrustScore,
+  ActionType, AutonomyMode,
 } from './types';
 
 export const api = {
@@ -79,6 +80,30 @@ export const api = {
       request<AgentConfig>(`/projects/${projectId}/agents/${role}`, {
         method: 'PUT', body: JSON.stringify(data),
       }),
+  },
+
+  // Autonomy Configuration
+  autonomy: {
+    getConfig: (projectId: string) =>
+      request<{ project_id: string; matrix: Record<string, Record<string, string>>; updated_at: string }>(
+        `/projects/${projectId}/autonomy/config`
+      ),
+    updateConfig: (projectId: string, matrix: Record<string, Record<string, string>>) =>
+      request<{ project_id: string; matrix: Record<string, Record<string, string>>; updated_at: string }>(
+        `/projects/${projectId}/autonomy/config`,
+        { method: 'PUT', body: JSON.stringify({ matrix }) }
+      ),
+    listProfiles: () =>
+      request<{ profiles: AutonomyProfile[]; total: number }>('/autonomy/profiles'),
+    applyProfile: (projectId: string, profileId: string) =>
+      request<{ project_id: string; profile_id: string; profile_name: string; applied_at: string }>(
+        `/projects/${projectId}/autonomy/apply-profile/${profileId}`,
+        { method: 'POST' }
+      ),
+    getTrustScores: (projectId: string) =>
+      request<{ project_id: string; trust_scores: TrustScore[]; total: number }>(
+        `/projects/${projectId}/autonomy/trust-scores`
+      ),
   },
 
   // Agent Health
