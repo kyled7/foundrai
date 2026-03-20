@@ -151,6 +151,18 @@ CREATE TABLE IF NOT EXISTS agent_configs (
     PRIMARY KEY (project_id, agent_role)
 );
 
+CREATE TABLE IF NOT EXISTS autonomy_config (
+    project_id TEXT NOT NULL,
+    agent_role TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    autonomy_mode TEXT NOT NULL DEFAULT 'notify',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (project_id, agent_role, action_type)
+);
+CREATE INDEX IF NOT EXISTS idx_autonomy_config_project ON autonomy_config(project_id);
+CREATE INDEX IF NOT EXISTS idx_autonomy_config_agent ON autonomy_config(agent_role);
+
 CREATE TABLE IF NOT EXISTS decision_traces (
     trace_id INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id INTEGER,
