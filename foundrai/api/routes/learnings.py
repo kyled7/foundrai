@@ -106,3 +106,22 @@ async def update_learning(learning_id: str, update: LearningUpdate) -> dict:
         "created_at": row["created_at"],
         "updated_at": row.get("updated_at"),
     }
+
+
+@router.delete("/learnings/{learning_id}", status_code=204)
+async def delete_learning(learning_id: str) -> None:
+    """Delete a learning."""
+    db = await get_db()
+
+    # Verify learning exists
+    cursor = await db.conn.execute(
+        "SELECT 1 FROM learnings WHERE learning_id = ?", (learning_id,)
+    )
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Learning not found")
+
+    # Delete the learning
+    await db.conn.execute(
+        "DELETE FROM learnings WHERE learning_id = ?", (learning_id,)
+    )
+    await db.conn.commit()
