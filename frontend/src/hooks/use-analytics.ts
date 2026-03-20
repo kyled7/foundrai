@@ -72,6 +72,45 @@ export function useLearnings(projectId: string) {
   });
 }
 
+export function useUpdateLearning() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, learningId, data }: { projectId: string; learningId: string; data: Partial<import('@/lib/types').Learning> }) =>
+      api.learnings.update(projectId, learningId, data),
+    onSuccess: (_, variables) => {
+      toast.success('Learning updated');
+      qc.invalidateQueries({ queryKey: ['learnings', variables.projectId] });
+    },
+    onError: (err: Error) => toast.error('Failed to update learning', { description: err.message }),
+  });
+}
+
+export function useDeleteLearning() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, learningId }: { projectId: string; learningId: string }) =>
+      api.learnings.delete(projectId, learningId),
+    onSuccess: (_, variables) => {
+      toast.success('Learning deleted');
+      qc.invalidateQueries({ queryKey: ['learnings', variables.projectId] });
+    },
+    onError: (err: Error) => toast.error('Failed to delete learning', { description: err.message }),
+  });
+}
+
+export function usePinLearning() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, learningId }: { projectId: string; learningId: string }) =>
+      api.learnings.pin(projectId, learningId),
+    onSuccess: (_, variables) => {
+      toast.success('Learning pinned');
+      qc.invalidateQueries({ queryKey: ['learnings', variables.projectId] });
+    },
+    onError: (err: Error) => toast.error('Failed to pin learning', { description: err.message }),
+  });
+}
+
 // Analytics v0.2.3
 export function useCostOverTime(projectId: string) {
   return useQuery({
