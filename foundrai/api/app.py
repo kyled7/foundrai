@@ -128,6 +128,7 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
         analytics,
         approvals,
         artifacts,
+        autonomy,
         errors,
         events,
         execution,
@@ -149,6 +150,7 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
     app.include_router(sprints.router, prefix="/api")
     app.include_router(tasks.router, prefix="/api")
     app.include_router(approvals.router, prefix="/api")
+    app.include_router(autonomy.router, prefix="/api")
     app.include_router(events.router, prefix="/api")
     app.include_router(artifacts.router, prefix="/api")
     app.include_router(agents.router, prefix="/api")

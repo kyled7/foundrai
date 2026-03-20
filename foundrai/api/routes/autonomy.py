@@ -247,3 +247,35 @@ async def apply_autonomy_profile(project_id: str, profile_id: str) -> dict:
         "profile_name": profile.name,
         "applied_at": updated_at,
     }
+
+
+@router.get("/projects/{project_id}/autonomy/trust-scores")
+async def get_trust_scores(project_id: str) -> dict:
+    """Get trust scores for all agents in a project."""
+    db = await get_db()
+    cursor = await db.conn.execute(
+        "SELECT agent_role, action_type, trust_score, success_count,"
+        " failure_count, last_updated FROM agent_trust_scores"
+        " WHERE project_id = ? ORDER BY agent_role, action_type",
+        (project_id,),
+    )
+    rows = await cursor.fetchall()
+
+    # Build structured response
+    trust_scores = [
+        {
+            "agent_role": row["agent_role"],
+            "action_type": row["action_type"],
+            "trust_score": row["trust_score"],
+            "success_count": row["success_count"],
+            "failure_count": row["failure_count"],
+            "last_updated": row["last_updated"],
+        }
+        for row in rows
+    ]
+
+    return {
+        "project_id": project_id,
+        "trust_scores": trust_scores,
+        "total": len(trust_scores),
+    }
