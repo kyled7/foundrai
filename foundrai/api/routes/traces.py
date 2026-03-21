@@ -71,6 +71,31 @@ async def get_trace(trace_id: int) -> dict:
     }
 
 
+@router.get("/traces/{trace_id}/export")
+async def export_trace(trace_id: int) -> dict:
+    """Export a single trace as JSON for external analysis."""
+    store = await _get_trace_store()
+    trace = await store.get_trace(trace_id)
+    if not trace:
+        raise HTTPException(status_code=404, detail="Trace not found")
+    return {
+        "trace_id": trace.trace_id,
+        "event_id": trace.event_id,
+        "task_id": trace.task_id,
+        "sprint_id": trace.sprint_id,
+        "agent_role": trace.agent_role,
+        "model": trace.model,
+        "prompt": trace.prompt,
+        "response": trace.response,
+        "thinking": trace.thinking,
+        "tool_calls": trace.tool_calls,
+        "tokens_used": trace.tokens_used,
+        "cost_usd": trace.cost_usd,
+        "duration_ms": trace.duration_ms,
+        "timestamp": trace.timestamp,
+    }
+
+
 def _trace_summary(t: Any) -> dict:
     """Return a trace without full prompt/response (for list views)."""
     return {
