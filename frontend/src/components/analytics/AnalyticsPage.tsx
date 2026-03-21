@@ -9,6 +9,7 @@ import { SprintVelocityChart } from './SprintVelocityChart';
 import { AgentPerformanceTable } from './AgentPerformanceTable';
 import { LearningsTimeline } from './LearningsTimeline';
 import { BudgetHistoryChart } from './BudgetHistoryChart';
+import { SprintComparisonDashboard } from './SprintComparisonDashboard';
 import { DollarSign, Zap, Target, Clock } from 'lucide-react';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 
@@ -107,6 +108,11 @@ export function ProjectAnalyticsPage({ projectId }: ProjectAnalyticsPageProps) {
 
       {/* Learnings */}
       <LearningsTimeline learnings={learnings} />
+
+      {/* Sprint Comparison Section */}
+      <div className="border-t border-border pt-6 mt-6">
+        <SprintComparisonDashboard projectId={projectId} />
+      </div>
     </div>
   );
 }
