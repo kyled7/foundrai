@@ -92,6 +92,7 @@ class TestSprintStartCommand:
 class TestPrintSummary:
     def test_completed_sprint(self, capsys):
         from foundrai.models.sprint import SprintMetrics
+
         state = {
             "status": "completed",
             "sprint_number": 1,
@@ -109,6 +110,7 @@ class TestPrintSummary:
 
     def test_failed_sprint(self, capsys):
         from foundrai.models.sprint import SprintMetrics
+
         state = {
             "status": "failed",
             "sprint_number": 2,
@@ -123,6 +125,7 @@ class TestPrintSummary:
     def test_with_enum_status(self, capsys):
         from foundrai.models.enums import SprintStatus
         from foundrai.models.sprint import SprintMetrics
+
         state = {
             "status": SprintStatus.COMPLETED,
             "sprint_number": 1,

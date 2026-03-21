@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class Repository:
     """GitHub repository representation."""
+
     def __init__(self, name: str, full_name: str, url: str) -> None:
         self.name = name
         self.full_name = full_name
@@ -20,6 +21,7 @@ class Repository:
 
 class Reference:
     """GitHub reference (branch) representation."""
+
     def __init__(self, ref: str, sha: str) -> None:
         self.ref = ref
         self.sha = sha
@@ -27,6 +29,7 @@ class Reference:
 
 class PullRequest:
     """GitHub pull request representation."""
+
     def __init__(self, number: int, title: str, url: str) -> None:
         self.number = number
         self.title = title
@@ -35,6 +38,7 @@ class PullRequest:
 
 class Issue:
     """GitHub issue representation."""
+
     def __init__(self, number: int, title: str, url: str) -> None:
         self.number = number
         self.title = title
@@ -112,12 +116,7 @@ class GitHubService:
         return Reference(ref=f"refs/heads/{branch_name}", sha="abc123")
 
     async def create_pull_request(
-        self,
-        repo: Repository,
-        title: str,
-        body: str,
-        head_branch: str,
-        base_branch: str = "main"
+        self, repo: Repository, title: str, body: str, head_branch: str, base_branch: str = "main"
     ) -> PullRequest:
         """Create pull request with agent-generated changes.
 

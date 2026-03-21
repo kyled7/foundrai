@@ -94,11 +94,12 @@ class PluginRegistry:
             "Developer",
             "QAEngineer",
             "Designer",
-            "DevOps"
+            "DevOps",
         ]
 
         plugin_roles = [
-            plugin.role_spec.name for plugin in self._role_plugins.values()
+            plugin.role_spec.name
+            for plugin in self._role_plugins.values()
             if plugin.role_spec and plugin.enabled
         ]
 
@@ -110,13 +111,11 @@ class PluginRegistry:
         Returns:
             List of tool names
         """
-        base_tools = [
-            "file_manager",
-            "code_executor"
-        ]
+        base_tools = ["file_manager", "code_executor"]
 
         plugin_tools = [
-            plugin.tool_spec.name for plugin in self._tool_plugins.values()
+            plugin.tool_spec.name
+            for plugin in self._tool_plugins.values()
             if plugin.tool_spec and plugin.enabled
         ]
 
@@ -132,9 +131,7 @@ class PluginRegistry:
             Persona string if found, None otherwise
         """
         for plugin in self._role_plugins.values():
-            if (plugin.role_spec and
-                plugin.role_spec.name == role_name and
-                plugin.enabled):
+            if plugin.role_spec and plugin.role_spec.name == role_name and plugin.enabled:
                 return plugin.role_spec.persona
 
         # Return None for base roles - they have their own persona system
@@ -150,9 +147,7 @@ class PluginRegistry:
             List of tool names if role found in plugins, None otherwise
         """
         for plugin in self._role_plugins.values():
-            if (plugin.role_spec and
-                plugin.role_spec.name == role_name and
-                plugin.enabled):
+            if plugin.role_spec and plugin.role_spec.name == role_name and plugin.enabled:
                 return plugin.role_spec.tools
 
         return None
@@ -167,9 +162,7 @@ class PluginRegistry:
             Implementation module path if found, None otherwise
         """
         for plugin in self._tool_plugins.values():
-            if (plugin.tool_spec and
-                plugin.tool_spec.name == tool_name and
-                plugin.enabled):
+            if plugin.tool_spec and plugin.tool_spec.name == tool_name and plugin.enabled:
                 return plugin.tool_spec.implementation
 
         return None
@@ -184,9 +177,7 @@ class PluginRegistry:
             Configuration schema if found, None otherwise
         """
         for plugin in self._integration_plugins.values():
-            if (plugin.integration_spec and
-                plugin.name == integration_name and
-                plugin.enabled):
+            if plugin.integration_spec and plugin.name == integration_name and plugin.enabled:
                 return plugin.integration_spec.configuration_schema
 
         return None

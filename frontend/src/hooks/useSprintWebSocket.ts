@@ -12,6 +12,7 @@ export function useSprintWebSocket({ sprintId, onEvent, enabled = true }: UseSpr
   const reconnectAttempt = useRef(0);
   const maxReconnectDelay = 30_000;
   const onEventRef = useRef(onEvent);
+  const connectRef = useRef<(() => void) | null>(null);
   onEventRef.current = onEvent;
 
   const connect = useCallback(() => {
@@ -32,11 +33,17 @@ export function useSprintWebSocket({ sprintId, onEvent, enabled = true }: UseSpr
     ws.onclose = () => {
       const delay = Math.min(1000 * 2 ** reconnectAttempt.current, maxReconnectDelay);
       reconnectAttempt.current++;
-      setTimeout(connect, delay);
+      setTimeout(() => {
+        if (connectRef.current) {
+          connectRef.current();
+        }
+      }, delay);
     };
 
     wsRef.current = ws;
   }, [sprintId]);
+
+  connectRef.current = connect;
 
   useEffect(() => {
     if (!enabled || !sprintId) return;

@@ -28,8 +28,7 @@ class SprintContext:
     def to_prompt_string(self) -> str:
         """Build a prompt string from the sprint context."""
         task_summary = "\n".join(
-            f"- [{t.status}] {t.title} (assigned: {t.assigned_to})"
-            for t in self.tasks
+            f"- [{t.status}] {t.title} (assigned: {t.assigned_to})" for t in self.tasks
         )
         return (
             f"Project: {self.project_name}\n"

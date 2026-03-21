@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -15,6 +15,7 @@ router = APIRouter()
 
 class TaskStatusUpdate(BaseModel):
     """Request model for updating task status."""
+
     status: str
 
 
@@ -23,9 +24,7 @@ async def list_tasks(sprint_id: str) -> list[dict]:
     """List tasks in a sprint."""
     db = await get_db()
     # Verify sprint exists
-    cursor = await db.conn.execute(
-        "SELECT 1 FROM sprints WHERE sprint_id = ?", (sprint_id,)
-    )
+    cursor = await db.conn.execute("SELECT 1 FROM sprints WHERE sprint_id = ?", (sprint_id,))
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Sprint not found")
 
@@ -45,22 +44,24 @@ async def list_tasks(sprint_id: str) -> list[dict]:
         )
         cost_row = await cost_cursor.fetchone()
 
-        tasks.append({
-            "task_id": r["task_id"],
-            "title": r["title"],
-            "description": r["description"],
-            "acceptance_criteria": json.loads(r["acceptance_criteria_json"] or "[]"),
-            "assigned_to": r["assigned_to"],
-            "priority": r["priority"],
-            "status": r["status"],
-            "dependencies": json.loads(r["dependencies_json"] or "[]"),
-            "result": json.loads(r["result_json"]) if r["result_json"] else None,
-            "review": json.loads(r["review_json"]) if r["review_json"] else None,
-            "created_at": r["created_at"],
-            "updated_at": r["updated_at"],
-            "cost_usd": cost_row["cost_usd"] if cost_row["cost_usd"] > 0 else None,
-            "tokens_used": cost_row["tokens_used"] if cost_row["tokens_used"] > 0 else None,
-        })
+        tasks.append(
+            {
+                "task_id": r["task_id"],
+                "title": r["title"],
+                "description": r["description"],
+                "acceptance_criteria": json.loads(r["acceptance_criteria_json"] or "[]"),
+                "assigned_to": r["assigned_to"],
+                "priority": r["priority"],
+                "status": r["status"],
+                "dependencies": json.loads(r["dependencies_json"] or "[]"),
+                "result": json.loads(r["result_json"]) if r["result_json"] else None,
+                "review": json.loads(r["review_json"]) if r["review_json"] else None,
+                "created_at": r["created_at"],
+                "updated_at": r["updated_at"],
+                "cost_usd": cost_row["cost_usd"] if cost_row["cost_usd"] > 0 else None,
+                "tokens_used": cost_row["tokens_used"] if cost_row["tokens_used"] > 0 else None,
+            }
+        )
 
     return tasks
 
@@ -69,9 +70,7 @@ async def list_tasks(sprint_id: str) -> list[dict]:
 async def get_task(task_id: str) -> dict:
     """Get a task by ID."""
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT * FROM tasks WHERE task_id = ?", (task_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM tasks WHERE task_id = ?", (task_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -109,25 +108,21 @@ async def update_task_status(task_id: str, update: TaskStatusUpdate) -> dict:
     db = await get_db()
 
     # Verify task exists
-    cursor = await db.conn.execute(
-        "SELECT * FROM tasks WHERE task_id = ?", (task_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM tasks WHERE task_id = ?", (task_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Update task status
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     await db.conn.execute(
         "UPDATE tasks SET status = ?, updated_at = ? WHERE task_id = ?",
-        (update.status, now, task_id)
+        (update.status, now, task_id),
     )
     await db.conn.commit()
 
     # Return updated task
-    cursor = await db.conn.execute(
-        "SELECT * FROM tasks WHERE task_id = ?", (task_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM tasks WHERE task_id = ?", (task_id,))
     row = await cursor.fetchone()
 
     return {

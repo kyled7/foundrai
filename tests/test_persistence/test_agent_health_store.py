@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 import pytest_asyncio
 
-from foundrai.models.agent_health import AgentHealth, AgentHealthMetrics
+from foundrai.models.agent_health import AgentHealthMetrics
 from foundrai.models.enums import AgentRoleName
 from foundrai.persistence.agent_health_store import AgentHealthStore
 from foundrai.persistence.database import Database
@@ -118,11 +118,15 @@ async def test_normalize_cost_efficiency(health_store: AgentHealthStore) -> None
 
     # Higher tokens = lower score
     assert health_store._normalize_cost_efficiency(10000) < 50.0
-    assert health_store._normalize_cost_efficiency(20000) < health_store._normalize_cost_efficiency(10000)
+    assert health_store._normalize_cost_efficiency(20000) < health_store._normalize_cost_efficiency(
+        10000
+    )
 
     # Lower tokens = higher score
     assert health_store._normalize_cost_efficiency(1000) > 50.0
-    assert health_store._normalize_cost_efficiency(100) > health_store._normalize_cost_efficiency(1000)
+    assert health_store._normalize_cost_efficiency(100) > health_store._normalize_cost_efficiency(
+        1000
+    )
 
     # Score is capped at 100
     assert health_store._normalize_cost_efficiency(10) <= 100.0

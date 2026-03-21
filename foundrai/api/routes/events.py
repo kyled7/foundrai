@@ -16,9 +16,7 @@ async def list_events(sprint_id: str) -> dict:
     """List events for a sprint."""
     db = await get_db()
     # Verify sprint exists
-    cursor = await db.conn.execute(
-        "SELECT 1 FROM sprints WHERE sprint_id = ?", (sprint_id,)
-    )
+    cursor = await db.conn.execute("SELECT 1 FROM sprints WHERE sprint_id = ?", (sprint_id,))
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Sprint not found")
 
@@ -45,9 +43,7 @@ async def list_events(sprint_id: str) -> dict:
 async def list_messages(sprint_id: str) -> dict:
     """List agent messages for a sprint."""
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT 1 FROM sprints WHERE sprint_id = ?", (sprint_id,)
-    )
+    cursor = await db.conn.execute("SELECT 1 FROM sprints WHERE sprint_id = ?", (sprint_id,))
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Sprint not found")
 

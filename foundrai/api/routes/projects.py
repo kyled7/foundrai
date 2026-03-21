@@ -60,13 +60,15 @@ async def list_projects() -> dict:
             (row["project_id"],),
         )
         count_row = await sc.fetchone()
-        projects.append(ProjectResponse(
-            project_id=row["project_id"],
-            name=row["name"],
-            description=row["description"],
-            created_at=row["created_at"],
-            sprint_count=count_row["cnt"] if count_row else 0,
-        ))
+        projects.append(
+            ProjectResponse(
+                project_id=row["project_id"],
+                name=row["name"],
+                description=row["description"],
+                created_at=row["created_at"],
+                sprint_count=count_row["cnt"] if count_row else 0,
+            )
+        )
     return {"projects": projects, "total": len(projects)}
 
 
@@ -74,9 +76,7 @@ async def list_projects() -> dict:
 async def get_project(project_id: str) -> ProjectResponse:
     """Get project details."""
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT * FROM projects WHERE project_id = ?", (project_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM projects WHERE project_id = ?", (project_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")

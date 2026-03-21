@@ -4,21 +4,20 @@
 import sys
 import traceback
 
+
 def verify_imports():
     """Verify all backend imports work."""
     print("🔍 Verifying backend imports...")
     try:
-        from foundrai.models.agent_health import AgentHealth, AgentHealthMetrics
         print("  ✅ AgentHealth models imported")
 
-        from foundrai.persistence.agent_health_store import AgentHealthStore
         print("  ✅ AgentHealthStore imported")
 
-        from foundrai.api.routes.agent_health import router
         print("  ✅ Agent health router imported")
 
         from foundrai.persistence.database import SCHEMA_SQL
-        assert 'agent_health_metrics' in SCHEMA_SQL
+
+        assert "agent_health_metrics" in SCHEMA_SQL
         print("  ✅ Database schema includes agent_health_metrics table")
 
         return True
@@ -26,6 +25,7 @@ def verify_imports():
         print(f"  ❌ Import failed: {e}")
         traceback.print_exc()
         return False
+
 
 def verify_api_registration():
     """Verify API router is registered."""
@@ -35,7 +35,7 @@ def verify_api_registration():
 
         # Check if agent_health route is registered
         routes = [route.path for route in app.routes]
-        agent_health_routes = [r for r in routes if 'agent-health' in r]
+        agent_health_routes = [r for r in routes if "agent-health" in r]
 
         if agent_health_routes:
             print(f"  ✅ Found {len(agent_health_routes)} agent health route(s):")
@@ -50,6 +50,7 @@ def verify_api_registration():
         traceback.print_exc()
         return False
 
+
 def verify_models():
     """Verify model structure."""
     print("\n🔍 Verifying data models...")
@@ -63,7 +64,7 @@ def verify_models():
             cost_efficiency=0.75,
             avg_execution_time=120.5,
             task_count=10,
-            failure_count=1
+            failure_count=1,
         )
         print("  ✅ AgentHealthMetrics model works")
 
@@ -75,7 +76,7 @@ def verify_models():
             health_score=85,
             status=AgentHealthStatus.HEALTHY,
             metrics=metrics,
-            recommendations=["Keep up the good work!"]
+            recommendations=["Keep up the good work!"],
         )
         print("  ✅ AgentHealth model works")
         print(f"     - Health score: {health.health_score}")
@@ -86,6 +87,7 @@ def verify_models():
         print(f"  ❌ Model verification failed: {e}")
         traceback.print_exc()
         return False
+
 
 def main():
     """Run all verification checks."""
@@ -117,7 +119,9 @@ def main():
     if all_passed:
         print("\n🎉 All backend verifications passed!")
         print("\nNext steps for manual verification:")
-        print("1. Start backend: source .venv/bin/activate && uvicorn foundrai.api.app:app --reload")
+        print(
+            "1. Start backend: source .venv/bin/activate && uvicorn foundrai.api.app:app --reload"
+        )
         print("2. Start frontend: cd frontend && npm run dev")
         print("3. Test API endpoint: curl http://localhost:8000/api/projects/test/agent-health")
         print("4. Open browser to http://localhost:5173 and verify AgentHealthDashboard renders")
@@ -125,6 +129,7 @@ def main():
     else:
         print("\n❌ Some verifications failed. Please review the errors above.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

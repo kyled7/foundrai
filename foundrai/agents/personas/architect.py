@@ -15,20 +15,26 @@ if TYPE_CHECKING:
 class ArchitectAgent(BaseAgent):
     """Architect — system design, tech decisions, plan review."""
 
-    async def review_plan(
-        self, tasks: list[Task], context: Any
-    ) -> list[Task]:
+    async def review_plan(self, tasks: list[Task], context: Any) -> list[Task]:
         """Review and enhance the task plan with technical considerations."""
         messages = [
             {"role": "system", "content": self.get_system_prompt()},
-            {"role": "user", "content": (
-                "Review these tasks and add technical considerations:\n"
-                + json.dumps([
-                    {"title": t.title, "description": t.description,
-                     "acceptance_criteria": t.acceptance_criteria}
-                    for t in tasks
-                ])
-            )},
+            {
+                "role": "user",
+                "content": (
+                    "Review these tasks and add technical considerations:\n"
+                    + json.dumps(
+                        [
+                            {
+                                "title": t.title,
+                                "description": t.description,
+                                "acceptance_criteria": t.acceptance_criteria,
+                            }
+                            for t in tasks
+                        ]
+                    )
+                ),
+            },
         ]
         result = await self.runtime.run(messages, response_format="json")
 

@@ -62,20 +62,31 @@ class BudgetManager:
         if status.is_warning and not status.is_exceeded:
             logger.warning(
                 "Budget warning: %s %s at %.1f%% ($%.4f / $%.4f)",
-                sprint_id, agent_role or "total", pct, spent_usd, budget_usd,
+                sprint_id,
+                agent_role or "total",
+                pct,
+                spent_usd,
+                budget_usd,
             )
             # Emit budget_warning event
-            await self.event_log.append("budget_warning", {
-                "sprint_id": sprint_id,
-                "agent_role": agent_role,
-                "budget_usd": budget_usd,
-                "spent_usd": spent_usd,
-                "percentage_used": pct,
-            })
+            await self.event_log.append(
+                "budget_warning",
+                {
+                    "sprint_id": sprint_id,
+                    "agent_role": agent_role,
+                    "budget_usd": budget_usd,
+                    "spent_usd": spent_usd,
+                    "percentage_used": pct,
+                },
+            )
         elif status.is_exceeded:
             logger.error(
                 "Budget exceeded: %s %s at %.1f%% ($%.4f / $%.4f)",
-                sprint_id, agent_role or "total", pct, spent_usd, budget_usd,
+                sprint_id,
+                agent_role or "total",
+                pct,
+                spent_usd,
+                budget_usd,
             )
 
         return status
@@ -97,7 +108,9 @@ class BudgetManager:
         if status.is_warning and not status.is_exceeded:
             logger.info(
                 "Model tier-down recommended for %s %s (%.1f%% budget used)",
-                sprint_id, agent_role or "total", status.percentage_used,
+                sprint_id,
+                agent_role or "total",
+                status.percentage_used,
             )
             return True
 

@@ -44,8 +44,6 @@ class ArtifactStore:
 
     async def get_by_task(self, task_id: str) -> list[dict]:
         """Get all artifacts for a task."""
-        cursor = await self.db.conn.execute(
-            "SELECT * FROM artifacts WHERE task_id = ?", (task_id,)
-        )
+        cursor = await self.db.conn.execute("SELECT * FROM artifacts WHERE task_id = ?", (task_id,))
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]

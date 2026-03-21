@@ -31,21 +31,33 @@ def _mock_runtime(content, fmt=None):
         except json.JSONDecodeError:
             pass
     rt = AsyncMock()
-    rt.run = AsyncMock(return_value=RuntimeResult(
-        output=content, parsed=parsed, artifacts=[], tokens_used=50, success=True,
-    ))
+    rt.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=50,
+            success=True,
+        )
+    )
     return rt
 
 
 def _make_agents(message_bus, ctx, pm_resp, dev_resp="Done", qa_resp=None):
     pm = ProductManagerAgent(
-        role=get_role(AgentRoleName.PRODUCT_MANAGER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=ctx,
+        role=get_role(AgentRoleName.PRODUCT_MANAGER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=ctx,
         runtime=_mock_runtime(pm_resp, "json"),
     )
     dev = DeveloperAgent(
-        role=get_role(AgentRoleName.DEVELOPER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=ctx,
+        role=get_role(AgentRoleName.DEVELOPER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=ctx,
         runtime=_mock_runtime(dev_resp),
     )
     agents = {
@@ -54,8 +66,11 @@ def _make_agents(message_bus, ctx, pm_resp, dev_resp="Done", qa_resp=None):
     }
     if qa_resp is not None:
         qa = QAEngineerAgent(
-            role=get_role(AgentRoleName.QA_ENGINEER), model="t", tools=[],
-            message_bus=message_bus, sprint_context=ctx,
+            role=get_role(AgentRoleName.QA_ENGINEER),
+            model="t",
+            tools=[],
+            message_bus=message_bus,
+            sprint_context=ctx,
             runtime=_mock_runtime(qa_resp, "json"),
         )
         agents[AgentRoleName.QA_ENGINEER.value] = qa
@@ -65,8 +80,10 @@ def _make_agents(message_bus, ctx, pm_resp, dev_resp="Done", qa_resp=None):
 @pytest.fixture
 def ctx(tmp_path):
     return SprintContext(
-        project_name="test", project_path=str(tmp_path),
-        sprint_goal="test goal", sprint_number=1,
+        project_name="test",
+        project_path=str(tmp_path),
+        sprint_goal="test goal",
+        sprint_number=1,
     )
 
 
@@ -83,24 +100,64 @@ async def infra(db):
 
 
 # 3 independent tasks (can run in parallel)
-PARALLEL_TASKS = json.dumps([
-    {"title": "T1", "description": "D1", "acceptance_criteria": [],
-     "dependencies": [], "assigned_to": "developer", "priority": 1},
-    {"title": "T2", "description": "D2", "acceptance_criteria": [],
-     "dependencies": [], "assigned_to": "developer", "priority": 2},
-    {"title": "T3", "description": "D3", "acceptance_criteria": [],
-     "dependencies": [], "assigned_to": "developer", "priority": 3},
-])
+PARALLEL_TASKS = json.dumps(
+    [
+        {
+            "title": "T1",
+            "description": "D1",
+            "acceptance_criteria": [],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+        {
+            "title": "T2",
+            "description": "D2",
+            "acceptance_criteria": [],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 2,
+        },
+        {
+            "title": "T3",
+            "description": "D3",
+            "acceptance_criteria": [],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 3,
+        },
+    ]
+)
 
 # Tasks with dependency chain: T1 -> T2 -> T3
-CHAINED_TASKS = json.dumps([
-    {"title": "T1", "description": "D1", "acceptance_criteria": [],
-     "dependencies": [], "assigned_to": "developer", "priority": 1},
-    {"title": "T2", "description": "D2", "acceptance_criteria": [],
-     "dependencies": ["T1"], "assigned_to": "developer", "priority": 2},
-    {"title": "T3", "description": "D3", "acceptance_criteria": [],
-     "dependencies": ["T2"], "assigned_to": "developer", "priority": 3},
-])
+CHAINED_TASKS = json.dumps(
+    [
+        {
+            "title": "T1",
+            "description": "D1",
+            "acceptance_criteria": [],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+        {
+            "title": "T2",
+            "description": "D2",
+            "acceptance_criteria": [],
+            "dependencies": ["T1"],
+            "assigned_to": "developer",
+            "priority": 2,
+        },
+        {
+            "title": "T3",
+            "description": "D3",
+            "acceptance_criteria": [],
+            "dependencies": ["T2"],
+            "assigned_to": "developer",
+            "priority": 3,
+        },
+    ]
+)
 
 
 @pytest.mark.asyncio
@@ -111,8 +168,13 @@ async def test_parallel_independent_tasks(db, ctx, infra):
     agents = _make_agents(mb, ctx, PARALLEL_TASKS, qa_resp=qa_pass)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("parallel", "proj")
     assert result["status"] == SprintStatus.COMPLETED
@@ -128,8 +190,13 @@ async def test_chained_tasks_execute_in_order(db, ctx, infra):
     agents = _make_agents(mb, ctx, CHAINED_TASKS, qa_resp=qa_pass)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("chain", "proj")
     assert result["status"] == SprintStatus.COMPLETED
@@ -151,8 +218,13 @@ async def test_retrospective_runs_after_review(db, ctx, infra):
     el.register_listener(listener)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     await engine.run_sprint("retro", "proj")
 

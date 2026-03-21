@@ -10,10 +10,11 @@ format for the RetrospectiveView component to display:
 """
 
 import pytest
-from foundrai.persistence.database import Database
-from foundrai.persistence.vector_memory import VectorMemory
+
 from foundrai.config import MemoryConfig
 from foundrai.models.learning import Learning
+from foundrai.persistence.database import Database
+from foundrai.persistence.vector_memory import VectorMemory
 
 
 @pytest.mark.asyncio
@@ -25,8 +26,7 @@ async def test_retrospective_api_data_structure():
     await db.init_schema()
 
     memory_config = MemoryConfig(
-        provider="chromadb",
-        persist_directory="./test_chroma_retro_ui_pytest"
+        provider="chromadb", persist_directory="./test_chroma_retro_ui_pytest"
     )
     vector_memory = VectorMemory(config=memory_config, db=db)
 
@@ -41,21 +41,21 @@ async def test_retrospective_api_data_structure():
             category="security",
             sprint_id=sprint_id,
             project_id=project_id,
-            metadata={"went_well": False}
+            metadata={"went_well": False},
         ),
         Learning(
             content="Code reviews caught bugs early",
             category="code_quality",
             sprint_id=sprint_id,
             project_id=project_id,
-            metadata={"went_well": True}
+            metadata={"went_well": True},
         ),
         Learning(
             content="Test coverage prevented regressions",
             category="testing",
             sprint_id=sprint_id,
             project_id=project_id,
-            metadata={"went_well": True}
+            metadata={"went_well": True},
         ),
     ]
 
@@ -68,28 +68,21 @@ async def test_retrospective_api_data_structure():
     # 1. Fetch learnings from database (SQLite)
     db_learnings = await db.fetch_all(
         "SELECT learning_id, content, category, project_id, sprint_id, created_at FROM learnings WHERE sprint_id = ?",
-        (sprint_id,)
+        (sprint_id,),
     )
 
     # 2. Fetch learnings from VectorMemory (ChromaDB)
     vector_learnings = await vector_memory.query_relevant(
-        query="sprint learnings",
-        project_id=project_id,
-        limit=10
+        query="sprint learnings", project_id=project_id, limit=10
     )
 
     # 3. Build response structure (matching API endpoint)
     retrospective_response = {
-        "went_well": [
-            "Code reviews caught bugs early",
-            "Test coverage prevented regressions"
-        ],
-        "went_wrong": [
-            "Missing input validation in endpoints"
-        ],
+        "went_well": ["Code reviews caught bugs early", "Test coverage prevented regressions"],
+        "went_wrong": ["Missing input validation in endpoints"],
         "action_items": [
             "Add input validation to all API endpoints",
-            "Increase test coverage to 95%"
+            "Increase test coverage to 95%",
         ],
         "learnings_count": len(db_learnings),
         "learnings": [
@@ -99,7 +92,7 @@ async def test_retrospective_api_data_structure():
                 "category": row[2],
                 "project_id": row[3],
                 "sprint_id": row[4],
-                "created_at": row[5]
+                "created_at": row[5],
             }
             for row in db_learnings
         ],
@@ -110,7 +103,7 @@ async def test_retrospective_api_data_structure():
                 "category": learning.category,
                 "project_id": learning.project_id,
                 "sprint_id": learning.sprint_id,
-                "created_at": learning.created_at.isoformat()
+                "created_at": learning.created_at.isoformat(),
             }
             for learning in vector_learnings
         ],
@@ -119,13 +112,13 @@ async def test_retrospective_api_data_structure():
             "total_tokens": 5000,
             "by_agent": {
                 "product_manager": {"cost_usd": 0.0050, "tokens": 2000},
-                "developer": {"cost_usd": 0.0073, "tokens": 3000}
+                "developer": {"cost_usd": 0.0073, "tokens": 3000},
             },
             "by_task": {
                 "task-1": {"cost_usd": 0.0050, "tokens": 2000},
-                "task-2": {"cost_usd": 0.0073, "tokens": 3000}
-            }
-        }
+                "task-2": {"cost_usd": 0.0073, "tokens": 3000},
+            },
+        },
     }
 
     # === VERIFICATION: UI Data Requirements ===
@@ -155,7 +148,13 @@ async def test_retrospective_api_data_structure():
         assert "created_at" in learning
 
         # Verify category is one of the expected values
-        assert learning["category"] in {"security", "code_quality", "testing", "reliability", "performance"}
+        assert learning["category"] in {
+            "security",
+            "code_quality",
+            "testing",
+            "reliability",
+            "performance",
+        }
 
     # Verify learnings_vector also has correct structure
     assert len(retrospective_response["learnings_vector"]) >= 2
@@ -212,10 +211,7 @@ async def test_retrospective_ui_category_badges():
     db = Database.create(":memory:")
     await db.init_schema()
 
-    memory_config = MemoryConfig(
-        provider="chromadb",
-        persist_directory="./test_chroma_categories"
-    )
+    memory_config = MemoryConfig(provider="chromadb", persist_directory="./test_chroma_categories")
     vector_memory = VectorMemory(config=memory_config, db=db)
 
     # Create learnings with all expected categories
@@ -228,15 +224,12 @@ async def test_retrospective_ui_category_badges():
             content=f"Learning about {category}",
             category=category,
             sprint_id=sprint_id,
-            project_id=project_id
+            project_id=project_id,
         )
         await vector_memory.store_learning(learning)
 
     # Fetch from database
-    rows = await db.fetch_all(
-        "SELECT category FROM learnings WHERE sprint_id = ?",
-        (sprint_id,)
-    )
+    rows = await db.fetch_all("SELECT category FROM learnings WHERE sprint_id = ?", (sprint_id,))
 
     # Verify all categories are stored
     stored_categories = {row[0] for row in rows}
@@ -269,7 +262,7 @@ async def test_retrospective_ui_empty_state():
         "learnings_count": 0,
         "learnings": [],
         "learnings_vector": [],
-        "cost_summary": None
+        "cost_summary": None,
     }
 
     # Verify structure is still valid for UI

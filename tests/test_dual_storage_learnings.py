@@ -3,20 +3,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
 
 from foundrai.agents.context import SprintContext
-from foundrai.agents.personas.developer import DeveloperAgent
-from foundrai.agents.personas.product_manager import ProductManagerAgent
-from foundrai.agents.personas.qa_engineer import QAEngineerAgent
-from foundrai.agents.roles import get_role
 from foundrai.agents.runtime import AgentRuntime, RuntimeResult
-from foundrai.config import FoundrAIConfig, MemoryConfig
-from foundrai.models.enums import AgentRoleName, SprintStatus, TaskStatus
-from foundrai.orchestration.engine import SprintEngine
+from foundrai.config import MemoryConfig
 from foundrai.orchestration.message_bus import MessageBus
 from foundrai.orchestration.task_graph import TaskGraph
 from foundrai.persistence.artifact_store import ArtifactStore
@@ -25,34 +18,40 @@ from foundrai.persistence.sprint_store import SprintStore
 from foundrai.persistence.vector_memory import VectorMemory
 
 # Mock responses
-PM_RESPONSE = json.dumps([
-    {
-        "title": "Build feature",
-        "description": "Create a feature with intentional bug",
-        "acceptance_criteria": ["Feature works"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    }
-])
+PM_RESPONSE = json.dumps(
+    [
+        {
+            "title": "Build feature",
+            "description": "Create a feature with intentional bug",
+            "acceptance_criteria": ["Feature works"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        }
+    ]
+)
 
 DEV_RESPONSE = "Feature implemented with a known bug for testing"
 
-QA_FAIL_RESPONSE = json.dumps({
-    "passed": False,
-    "issues": ["Found critical bug in implementation"],
-    "suggestions": ["Fix the bug and add tests"],
-})
+QA_FAIL_RESPONSE = json.dumps(
+    {
+        "passed": False,
+        "issues": ["Found critical bug in implementation"],
+        "suggestions": ["Fix the bug and add tests"],
+    }
+)
 
-RETRO_RESPONSE = json.dumps({
-    "went_well": ["Task was completed on time"],
-    "went_wrong": ["Quality issues found by QA"],
-    "action_items": ["Improve code review process"],
-    "learnings": [
-        "Need more thorough testing before QA review",
-        "Should add unit tests before implementation"
-    ],
-})
+RETRO_RESPONSE = json.dumps(
+    {
+        "went_well": ["Task was completed on time"],
+        "went_wrong": ["Quality issues found by QA"],
+        "action_items": ["Improve code review process"],
+        "learnings": [
+            "Need more thorough testing before QA review",
+            "Should add unit tests before implementation",
+        ],
+    }
+)
 
 
 def _make_runtime_mock(response_content: str, response_format: str | None = None) -> AsyncMock:
@@ -65,13 +64,15 @@ def _make_runtime_mock(response_content: str, response_format: str | None = None
             parsed = json.loads(response_content)
         except json.JSONDecodeError:
             pass
-    runtime.run = AsyncMock(return_value=RuntimeResult(
-        output=response_content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=100,
-        success=True,
-    ))
+    runtime.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=response_content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=100,
+            success=True,
+        )
+    )
     return runtime
 
 
@@ -147,7 +148,7 @@ async def test_learnings_stored_in_both_chromadb_and_sqlite(db, tmp_path):
     # STEP 1: Query SQLite learnings table
     cursor = await db.conn.execute(
         "SELECT learning_id, project_id, sprint_id, content, category FROM learnings WHERE sprint_id = ?",
-        ("sprint-test-001",)
+        ("sprint-test-001",),
     )
     sqlite_rows = await cursor.fetchall()
 
@@ -182,15 +183,17 @@ async def test_learnings_stored_in_both_chromadb_and_sqlite(db, tmp_path):
     assert len(vector_learnings) > 0, "ChromaDB should contain learnings"
 
     # STEP 4: Verify both stores have the same number of learnings
-    assert len(sqlite_learnings) == len(vector_learnings), \
+    assert len(sqlite_learnings) == len(vector_learnings), (
         f"Both stores should have same count. SQLite: {len(sqlite_learnings)}, ChromaDB: {len(vector_learnings)}"
+    )
 
     # STEP 5: Verify content matches (order-independent)
     sqlite_contents = {lr["content"] for lr in sqlite_learnings}
     vector_contents = {lr.content for lr in vector_learnings}
 
-    assert sqlite_contents == vector_contents, \
+    assert sqlite_contents == vector_contents, (
         f"Learning content should match.\nSQLite: {sqlite_contents}\nChromaDB: {vector_contents}"
+    )
 
     # STEP 6: Verify metadata matches for each learning
     vector_by_id = {lr.id: lr for lr in vector_learnings}
@@ -202,18 +205,18 @@ async def test_learnings_stored_in_both_chromadb_and_sqlite(db, tmp_path):
         vector_lr = vector_by_id[learning_id]
 
         # Verify metadata matches
-        assert vector_lr.project_id == sqlite_lr["project_id"], \
+        assert vector_lr.project_id == sqlite_lr["project_id"], (
             f"Project ID mismatch for {learning_id}"
-        assert vector_lr.sprint_id == sqlite_lr["sprint_id"], \
+        )
+        assert vector_lr.sprint_id == sqlite_lr["sprint_id"], (
             f"Sprint ID mismatch for {learning_id}"
-        assert vector_lr.content == sqlite_lr["content"], \
-            f"Content mismatch for {learning_id}"
-        assert vector_lr.category == sqlite_lr["category"], \
-            f"Category mismatch for {learning_id}"
+        )
+        assert vector_lr.content == sqlite_lr["content"], f"Content mismatch for {learning_id}"
+        assert vector_lr.category == sqlite_lr["category"], f"Category mismatch for {learning_id}"
 
     print(f"\n✅ VERIFICATION PASSED: All {len(sqlite_learnings)} learnings match in both stores!")
-    print(f"   Sprint ID: sprint-test-001")
-    print(f"   Project ID: test-dual-storage")
+    print("   Sprint ID: sprint-test-001")
+    print("   Project ID: test-dual-storage")
 
 
 @pytest.mark.asyncio
@@ -225,6 +228,7 @@ async def test_learnings_persist_across_vector_memory_instances(db, tmp_path):
     vm1 = VectorMemory(config=memory_config, db=db)
 
     from foundrai.models.learning import Learning
+
     test_learning = Learning(
         content="Test learning for persistence",
         category="test",
@@ -250,8 +254,7 @@ async def test_learnings_persist_across_vector_memory_instances(db, tmp_path):
 
     # Verify it's also in SQLite
     cursor = await db.conn.execute(
-        "SELECT content FROM learnings WHERE learning_id = ?",
-        (test_learning.id,)
+        "SELECT content FROM learnings WHERE learning_id = ?", (test_learning.id,)
     )
     row = await cursor.fetchone()
     assert row is not None

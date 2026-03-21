@@ -33,15 +33,17 @@ class VectorMemory:
             self.collection.add(
                 ids=[learning.id],
                 documents=[learning.content],
-                metadatas=[{
-                    "sprint_id": learning.sprint_id,
-                    "project_id": learning.project_id,
-                    "category": learning.category,
-                    "timestamp": learning.timestamp,
-                    "pinned": learning.pinned,
-                    "status": learning.status,
-                    "updated_at": learning.updated_at,
-                }],
+                metadatas=[
+                    {
+                        "sprint_id": learning.sprint_id,
+                        "project_id": learning.project_id,
+                        "category": learning.category,
+                        "timestamp": learning.timestamp,
+                        "pinned": learning.pinned,
+                        "status": learning.status,
+                        "updated_at": learning.updated_at,
+                    }
+                ],
             )
 
             # Store in database if available
@@ -68,7 +70,7 @@ class VectorMemory:
         learning_id: str,
         content: str | None = None,
         pinned: bool | None = None,
-        status: str | None = None
+        status: str | None = None,
     ) -> None:
         """Update a learning in both ChromaDB and SQLite.
 
@@ -78,33 +80,29 @@ class VectorMemory:
             pinned: New pinned status (if updating)
             status: New status (if updating)
         """
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         async with self._lock:
             # Get current learning from ChromaDB
             result = self.collection.get(ids=[learning_id])
-            if not result or not result['ids']:
+            if not result or not result["ids"]:
                 raise ValueError(f"Learning {learning_id} not found")
 
-            metadata = result['metadatas'][0] if result.get('metadatas') else {}
-            document = result['documents'][0] if result.get('documents') else ""
+            metadata = result["metadatas"][0] if result.get("metadatas") else {}
+            document = result["documents"][0] if result.get("documents") else ""
 
             # Update fields
             if content is not None:
                 document = content
             if pinned is not None:
-                metadata['pinned'] = pinned
+                metadata["pinned"] = pinned
             if status is not None:
-                metadata['status'] = status
-            metadata['updated_at'] = datetime.now(UTC).isoformat()
+                metadata["status"] = status
+            metadata["updated_at"] = datetime.now(UTC).isoformat()
 
             # Update ChromaDB (delete and re-add with same ID)
             self.collection.delete(ids=[learning_id])
-            self.collection.add(
-                ids=[learning_id],
-                documents=[document],
-                metadatas=[metadata]
-            )
+            self.collection.add(ids=[learning_id], documents=[document], metadatas=[metadata])
 
             # Update SQLite
             if self.db:
@@ -123,12 +121,11 @@ class VectorMemory:
 
                 if updates:
                     updates.append("updated_at = ?")
-                    params.append(metadata['updated_at'])
+                    params.append(metadata["updated_at"])
                     params.append(learning_id)
 
                     await self.db.conn.execute(
-                        f"UPDATE learnings SET {', '.join(updates)} WHERE learning_id = ?",
-                        params
+                        f"UPDATE learnings SET {', '.join(updates)} WHERE learning_id = ?", params
                     )
                     await self.db.conn.commit()
 
@@ -149,8 +146,7 @@ class VectorMemory:
             # Delete from SQLite
             if self.db:
                 await self.db.conn.execute(
-                    "DELETE FROM learnings WHERE learning_id = ?",
-                    (learning_id,)
+                    "DELETE FROM learnings WHERE learning_id = ?", (learning_id,)
                 )
                 await self.db.conn.commit()
 
@@ -161,16 +157,16 @@ class VectorMemory:
         where = {"project_id": project_id} if project_id else None
         try:
             results = self.collection.query(
-                query_texts=[query], n_results=k, where=where,
+                query_texts=[query],
+                n_results=k,
+                where=where,
             )
         except Exception:
             return []
 
         return self._parse_results(results)
 
-    async def get_all_learnings(
-        self, project_id: str | None = None
-    ) -> list[Learning]:
+    async def get_all_learnings(self, project_id: str | None = None) -> list[Learning]:
         """Get all stored learnings."""
         where = {"project_id": project_id} if project_id else None
         try:
@@ -183,17 +179,19 @@ class VectorMemory:
             for i, doc_id in enumerate(results["ids"]):
                 meta = results["metadatas"][i] if results.get("metadatas") else {}
                 doc = results["documents"][i] if results.get("documents") else ""
-                learnings.append(Learning(
-                    id=doc_id,
-                    content=doc,
-                    category=meta.get("category", "general"),
-                    sprint_id=meta.get("sprint_id", ""),
-                    project_id=meta.get("project_id", ""),
-                    timestamp=meta.get("timestamp", ""),
-                    pinned=meta.get("pinned", False),
-                    status=meta.get("status", "pending"),
-                    updated_at=meta.get("updated_at", meta.get("timestamp", "")),
-                ))
+                learnings.append(
+                    Learning(
+                        id=doc_id,
+                        content=doc,
+                        category=meta.get("category", "general"),
+                        sprint_id=meta.get("sprint_id", ""),
+                        project_id=meta.get("project_id", ""),
+                        timestamp=meta.get("timestamp", ""),
+                        pinned=meta.get("pinned", False),
+                        status=meta.get("status", "pending"),
+                        updated_at=meta.get("updated_at", meta.get("timestamp", "")),
+                    )
+                )
         return learnings
 
     def _parse_results(self, results: dict) -> list[Learning]:
@@ -205,15 +203,17 @@ class VectorMemory:
         for i, doc_id in enumerate(results["ids"][0]):
             meta = results["metadatas"][0][i] if results.get("metadatas") else {}
             doc = results["documents"][0][i] if results.get("documents") else ""
-            learnings.append(Learning(
-                id=doc_id,
-                content=doc,
-                category=meta.get("category", "general"),
-                sprint_id=meta.get("sprint_id", ""),
-                project_id=meta.get("project_id", ""),
-                timestamp=meta.get("timestamp", ""),
-                pinned=meta.get("pinned", False),
-                status=meta.get("status", "pending"),
-                updated_at=meta.get("updated_at", meta.get("timestamp", "")),
-            ))
+            learnings.append(
+                Learning(
+                    id=doc_id,
+                    content=doc,
+                    category=meta.get("category", "general"),
+                    sprint_id=meta.get("sprint_id", ""),
+                    project_id=meta.get("project_id", ""),
+                    timestamp=meta.get("timestamp", ""),
+                    pinned=meta.get("pinned", False),
+                    status=meta.get("status", "pending"),
+                    updated_at=meta.get("updated_at", meta.get("timestamp", "")),
+                )
+            )
         return learnings

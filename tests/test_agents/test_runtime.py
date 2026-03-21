@@ -34,6 +34,7 @@ class TestAgentRuntimeInit:
 class TestToLangchainMessages:
     def test_system_message(self):
         from langchain_core.messages import SystemMessage
+
         runtime = AgentRuntime(llm_client=MagicMock(), event_log=MagicMock())
         msgs = runtime._to_langchain_messages([{"role": "system", "content": "You are helpful"}])
         assert len(msgs) == 1
@@ -42,23 +43,27 @@ class TestToLangchainMessages:
 
     def test_user_message(self):
         from langchain_core.messages import HumanMessage
+
         runtime = AgentRuntime(llm_client=MagicMock(), event_log=MagicMock())
         msgs = runtime._to_langchain_messages([{"role": "user", "content": "Hello"}])
         assert isinstance(msgs[0], HumanMessage)
 
     def test_assistant_message(self):
         from langchain_core.messages import AIMessage
+
         runtime = AgentRuntime(llm_client=MagicMock(), event_log=MagicMock())
         msgs = runtime._to_langchain_messages([{"role": "assistant", "content": "Hi"}])
         assert isinstance(msgs[0], AIMessage)
 
     def test_multiple_messages(self):
         runtime = AgentRuntime(llm_client=MagicMock(), event_log=MagicMock())
-        msgs = runtime._to_langchain_messages([
-            {"role": "system", "content": "sys"},
-            {"role": "user", "content": "usr"},
-            {"role": "assistant", "content": "ast"},
-        ])
+        msgs = runtime._to_langchain_messages(
+            [
+                {"role": "system", "content": "sys"},
+                {"role": "user", "content": "usr"},
+                {"role": "assistant", "content": "ast"},
+            ]
+        )
         assert len(msgs) == 3
 
 
@@ -70,7 +75,7 @@ class TestParseJson:
 
     def test_json_array(self):
         runtime = AgentRuntime(llm_client=MagicMock(), event_log=MagicMock())
-        result = runtime._parse_json('[1, 2, 3]')
+        result = runtime._parse_json("[1, 2, 3]")
         assert result == [1, 2, 3]
 
     def test_json_in_code_block(self):

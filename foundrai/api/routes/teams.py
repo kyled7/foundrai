@@ -22,15 +22,13 @@ def get_team_store() -> TeamStore:
     """Get team store dependency."""
     # In a real implementation, this would come from dependency injection
     from foundrai.persistence.database import Database
+
     db = Database("temp.db")  # This should be injected
     return TeamStore(db)
 
 
 @router.get("/projects/{project_id}/teams", response_model=list[Team])
-async def list_teams(
-    project_id: str,
-    store: TeamStore = Depends(get_team_store)
-) -> list[Team]:
+async def list_teams(project_id: str, store: TeamStore = Depends(get_team_store)) -> list[Team]:
     """List teams in project."""
     try:
         teams = await store.list_teams(project_id=project_id)
@@ -43,9 +41,7 @@ async def list_teams(
 
 @router.post("/projects/{project_id}/teams", response_model=Team)
 async def create_team(
-    project_id: str,
-    request: CreateTeamRequest,
-    store: TeamStore = Depends(get_team_store)
+    project_id: str, request: CreateTeamRequest, store: TeamStore = Depends(get_team_store)
 ) -> Team:
     """Create new team in project."""
     try:
@@ -60,7 +56,7 @@ async def create_team(
             template_id=request.template_id,
             lead_agent=request.lead_agent,
             coordination_channel=request.coordination_channel,
-            sprint_config=SprintConfig()  # Default configuration
+            sprint_config=SprintConfig(),  # Default configuration
         )
 
         # TODO: If template_id provided, load template and apply configuration
@@ -72,17 +68,11 @@ async def create_team(
 
     except Exception as e:
         logger.error(f"Failed to create team: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create team: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to create team: {str(e)}") from e
 
 
 @router.get("/teams/{team_id}", response_model=Team)
-async def get_team(
-    team_id: str,
-    store: TeamStore = Depends(get_team_store)
-) -> Team:
+async def get_team(team_id: str, store: TeamStore = Depends(get_team_store)) -> Team:
     """Get team details."""
     try:
         team = await store.get_team(team_id)
@@ -95,17 +85,12 @@ async def get_team(
         raise
     except Exception as e:
         logger.error(f"Failed to get team {team_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get team: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to get team: {str(e)}") from e
 
 
 @router.put("/teams/{team_id}", response_model=Team)
 async def update_team(
-    team_id: str,
-    request: CreateTeamRequest,
-    store: TeamStore = Depends(get_team_store)
+    team_id: str, request: CreateTeamRequest, store: TeamStore = Depends(get_team_store)
 ) -> Team:
     """Update team configuration."""
     try:
@@ -127,17 +112,11 @@ async def update_team(
         raise
     except Exception as e:
         logger.error(f"Failed to update team {team_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update team: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to update team: {str(e)}") from e
 
 
 @router.delete("/teams/{team_id}")
-async def delete_team(
-    team_id: str,
-    store: TeamStore = Depends(get_team_store)
-) -> dict[str, str]:
+async def delete_team(team_id: str, store: TeamStore = Depends(get_team_store)) -> dict[str, str]:
     """Delete team."""
     try:
         success = await store.delete_team(team_id)
@@ -150,16 +129,12 @@ async def delete_team(
         raise
     except Exception as e:
         logger.error(f"Failed to delete team {team_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to delete team: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to delete team: {str(e)}") from e
 
 
 @router.get("/teams/{team_id}/dependencies", response_model=list[CrossTeamDependency])
 async def list_dependencies(
-    team_id: str,
-    store: TeamStore = Depends(get_team_store)
+    team_id: str, store: TeamStore = Depends(get_team_store)
 ) -> list[CrossTeamDependency]:
     """List dependencies for team."""
     try:
@@ -173,9 +148,7 @@ async def list_dependencies(
 
 @router.post("/teams/{team_id}/dependencies", response_model=CrossTeamDependency)
 async def create_dependency(
-    team_id: str,
-    request: CreateDependencyRequest,
-    store: TeamStore = Depends(get_team_store)
+    team_id: str, request: CreateDependencyRequest, store: TeamStore = Depends(get_team_store)
 ) -> CrossTeamDependency:
     """Create cross-team dependency."""
     try:
@@ -186,7 +159,7 @@ async def create_dependency(
             title=request.title,
             description=request.description,
             due_date=request.due_date,
-            priority=request.priority
+            priority=request.priority,
         )
 
         created_dependency = await store.create_dependency(dependency)
@@ -194,16 +167,12 @@ async def create_dependency(
 
     except Exception as e:
         logger.error(f"Failed to create dependency: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create dependency: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to create dependency: {str(e)}") from e
 
 
 @router.get("/dependencies/{dependency_id}", response_model=CrossTeamDependency)
 async def get_dependency(
-    dependency_id: str,
-    store: TeamStore = Depends(get_team_store)
+    dependency_id: str, store: TeamStore = Depends(get_team_store)
 ) -> CrossTeamDependency:
     """Get dependency details."""
     try:
@@ -217,17 +186,12 @@ async def get_dependency(
         raise
     except Exception as e:
         logger.error(f"Failed to get dependency {dependency_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get dependency: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to get dependency: {str(e)}") from e
 
 
 @router.put("/dependencies/{dependency_id}", response_model=CrossTeamDependency)
 async def update_dependency(
-    dependency_id: str,
-    request: CreateDependencyRequest,
-    store: TeamStore = Depends(get_team_store)
+    dependency_id: str, request: CreateDependencyRequest, store: TeamStore = Depends(get_team_store)
 ) -> CrossTeamDependency:
     """Update dependency."""
     try:
@@ -249,16 +213,12 @@ async def update_dependency(
         raise
     except Exception as e:
         logger.error(f"Failed to update dependency {dependency_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update dependency: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to update dependency: {str(e)}") from e
 
 
 @router.get("/projects/{project_id}/dependencies", response_model=list[CrossTeamDependency])
 async def list_project_dependencies(
-    project_id: str,
-    store: TeamStore = Depends(get_team_store)
+    project_id: str, store: TeamStore = Depends(get_team_store)
 ) -> list[CrossTeamDependency]:
     """List all dependencies in a project."""
     try:

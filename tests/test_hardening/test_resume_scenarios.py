@@ -23,32 +23,36 @@ from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
 
 # Test data
-TWO_TASKS_JSON = json.dumps([
-    {
-        "title": "Implement feature",
-        "description": "Build the main feature",
-        "acceptance_criteria": ["Feature works", "Tests pass"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    },
-    {
-        "title": "Write documentation",
-        "description": "Document the feature",
-        "acceptance_criteria": ["Docs complete"],
-        "dependencies": ["Implement feature"],
-        "assigned_to": "developer",
-        "priority": 2,
-    },
-])
+TWO_TASKS_JSON = json.dumps(
+    [
+        {
+            "title": "Implement feature",
+            "description": "Build the main feature",
+            "acceptance_criteria": ["Feature works", "Tests pass"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+        {
+            "title": "Write documentation",
+            "description": "Document the feature",
+            "acceptance_criteria": ["Docs complete"],
+            "dependencies": ["Implement feature"],
+            "assigned_to": "developer",
+            "priority": 2,
+        },
+    ]
+)
 
 DEV_RESPONSE = "Feature implemented successfully"
 
-QA_PASS_JSON = json.dumps({
-    "passed": True,
-    "issues": [],
-    "suggestions": [],
-})
+QA_PASS_JSON = json.dumps(
+    {
+        "passed": True,
+        "issues": [],
+        "suggestions": [],
+    }
+)
 
 
 def _make_runtime_mock(response_content: str, response_format: str | None = None) -> AsyncMock:
@@ -61,13 +65,15 @@ def _make_runtime_mock(response_content: str, response_format: str | None = None
             parsed = json.loads(response_content)
         except json.JSONDecodeError:
             pass
-    runtime.run = AsyncMock(return_value=RuntimeResult(
-        output=response_content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=100,
-        success=True,
-    ))
+    runtime.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=response_content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=100,
+            success=True,
+        )
+    )
     return runtime
 
 
@@ -103,16 +109,28 @@ async def test_resume_from_after_planning_checkpoint(db, tmp_path, sprint_contex
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(DEV_RESPONSE),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(DEV_RESPONSE),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
@@ -167,8 +185,18 @@ async def test_resume_from_after_planning_checkpoint(db, tmp_path, sprint_contex
     # The tasks should maintain their status from the checkpoint
     # (they're in backlog because the checkpoint was saved right after planning)
     # This test verifies that resume doesn't crash, not that it re-executes tasks
-    assert resumed_result["tasks"][0].status in [TaskStatus.DONE, TaskStatus.BACKLOG, "done", "backlog"]
-    assert resumed_result["tasks"][1].status in [TaskStatus.DONE, TaskStatus.BACKLOG, "done", "backlog"]
+    assert resumed_result["tasks"][0].status in [
+        TaskStatus.DONE,
+        TaskStatus.BACKLOG,
+        "done",
+        "backlog",
+    ]
+    assert resumed_result["tasks"][1].status in [
+        TaskStatus.DONE,
+        TaskStatus.BACKLOG,
+        "done",
+        "backlog",
+    ]
 
     # Verify sprint.resumed event was logged
     events = await event_log.query(limit=100)
@@ -186,16 +214,28 @@ async def test_resume_from_after_execution_checkpoint(db, tmp_path, sprint_conte
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(DEV_RESPONSE),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(DEV_RESPONSE),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
@@ -273,16 +313,28 @@ async def test_resume_from_after_review_checkpoint(db, tmp_path, sprint_context,
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(DEV_RESPONSE),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(DEV_RESPONSE),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
@@ -360,16 +412,28 @@ async def test_resume_from_after_retrospective_checkpoint(db, tmp_path, sprint_c
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(DEV_RESPONSE),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(DEV_RESPONSE),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
@@ -470,16 +534,28 @@ async def test_resume_sprint_state_is_restored(db, tmp_path, sprint_context, com
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(TWO_TASKS_JSON, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(DEV_RESPONSE),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(DEV_RESPONSE),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
@@ -539,40 +615,54 @@ async def test_resume_sprint_with_task_dependencies(db, tmp_path, sprint_context
     event_log, sprint_store, artifact_store, message_bus, task_graph = components
 
     # Tasks with dependencies
-    dependent_tasks_json = json.dumps([
-        {
-            "title": "Setup project",
-            "description": "Initialize project structure",
-            "acceptance_criteria": ["Project initialized"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 1,
-        },
-        {
-            "title": "Build feature",
-            "description": "Build on top of setup",
-            "acceptance_criteria": ["Feature works"],
-            "dependencies": ["Setup project"],
-            "assigned_to": "developer",
-            "priority": 2,
-        },
-    ])
+    dependent_tasks_json = json.dumps(
+        [
+            {
+                "title": "Setup project",
+                "description": "Initialize project structure",
+                "acceptance_criteria": ["Project initialized"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 1,
+            },
+            {
+                "title": "Build feature",
+                "description": "Build on top of setup",
+                "acceptance_criteria": ["Feature works"],
+                "dependencies": ["Setup project"],
+                "assigned_to": "developer",
+                "priority": 2,
+            },
+        ]
+    )
 
     pm_role = get_role(AgentRoleName.PRODUCT_MANAGER)
     dev_role = get_role(AgentRoleName.DEVELOPER)
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(dependent_tasks_json, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(dependent_tasks_json, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(DEV_RESPONSE),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(DEV_RESPONSE),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)

@@ -69,7 +69,7 @@ async def main():
         print("\n[4] Querying SQLite learnings table...")
         cursor = await db.conn.execute(
             "SELECT learning_id, project_id, sprint_id, content, category FROM learnings WHERE sprint_id = ?",
-            ("sprint-001",)
+            ("sprint-001",),
         )
         sqlite_rows = await cursor.fetchall()
 
@@ -111,7 +111,9 @@ async def main():
             return False
 
         if len(sqlite_learnings) != len(vector_learnings):
-            print(f"    ✗ FAILED: Count mismatch! SQLite: {len(sqlite_learnings)}, ChromaDB: {len(vector_learnings)}")
+            print(
+                f"    ✗ FAILED: Count mismatch! SQLite: {len(sqlite_learnings)}, ChromaDB: {len(vector_learnings)}"
+            )
             return False
 
         print(f"    ✓ Count matches: {len(sqlite_learnings)} learnings in both stores")
@@ -174,7 +176,9 @@ async def main():
         vector_learnings2 = [lr for lr in vector_learnings2 if lr.sprint_id == "sprint-001"]
 
         if len(vector_learnings2) != len(learnings):
-            print(f"    ✗ FAILED: Persistence check failed! Expected {len(learnings)}, found {len(vector_learnings2)}")
+            print(
+                f"    ✗ FAILED: Persistence check failed! Expected {len(learnings)}, found {len(vector_learnings2)}"
+            )
             return False
 
         print(f"    ✓ Persistence verified: {len(vector_learnings2)} learnings survived restart")
@@ -186,12 +190,12 @@ async def main():
         print("\n" + "=" * 70)
         print("✅ VERIFICATION PASSED!")
         print("=" * 70)
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"  • Stored {len(learnings)} learnings via VectorMemory")
         print(f"  • SQLite contains {len(sqlite_learnings)} learnings")
         print(f"  • ChromaDB contains {len(vector_learnings)} learnings")
-        print(f"  • All content, IDs, and metadata match perfectly")
-        print(f"  • Learnings persist across VectorMemory recreation")
+        print("  • All content, IDs, and metadata match perfectly")
+        print("  • Learnings persist across VectorMemory recreation")
         print("\n✅ Dual storage is working correctly!")
 
         return True

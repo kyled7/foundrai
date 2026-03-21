@@ -101,7 +101,7 @@ export async function showNotification(options: ShowNotificationOptions): Promis
     }
 
     if (options.onError) {
-      notification.onerror = (event) => {
+      notification.onerror = () => {
         const error = new Error('Notification error');
         options.onError?.(error);
       };

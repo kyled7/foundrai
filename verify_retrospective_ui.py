@@ -16,10 +16,11 @@ This serves as backend verification that the UI has all the data it needs.
 
 import asyncio
 import sys
-from foundrai.persistence.database import Database
-from foundrai.persistence.vector_memory import VectorMemory
+
 from foundrai.config import MemoryConfig
 from foundrai.models.learning import Learning
+from foundrai.persistence.database import Database
+from foundrai.persistence.vector_memory import VectorMemory
 
 
 async def verify_retrospective_data():
@@ -33,10 +34,7 @@ async def verify_retrospective_data():
     db = Database.create(":memory:")
     await db.init_schema()
 
-    memory_config = MemoryConfig(
-        provider="chromadb",
-        persist_directory="./test_chroma_retro_ui"
-    )
+    memory_config = MemoryConfig(provider="chromadb", persist_directory="./test_chroma_retro_ui")
     vector_memory = VectorMemory(config=memory_config, db=db)
 
     # Create test data that simulates a retrospective
@@ -50,22 +48,22 @@ async def verify_retrospective_data():
         {
             "content": "Always validate user input before processing",
             "category": "security",
-            "metadata": {"importance": "high", "went_well": False}
+            "metadata": {"importance": "high", "went_well": False},
         },
         {
             "content": "Test coverage of 90% prevented major bugs",
             "category": "testing",
-            "metadata": {"importance": "high", "went_well": True}
+            "metadata": {"importance": "high", "went_well": True},
         },
         {
             "content": "Code reviews caught 3 critical issues early",
             "category": "code_quality",
-            "metadata": {"importance": "medium", "went_well": True}
+            "metadata": {"importance": "medium", "went_well": True},
         },
         {
             "content": "Missing error handling in API endpoints",
             "category": "reliability",
-            "metadata": {"importance": "high", "went_well": False}
+            "metadata": {"importance": "high", "went_well": False},
         },
     ]
 
@@ -76,7 +74,7 @@ async def verify_retrospective_data():
             category=data["category"],
             sprint_id=test_sprint_id,
             project_id=test_project_id,
-            metadata=data["metadata"]
+            metadata=data["metadata"],
         )
         await vector_memory.store_learning(learning)
         stored_learnings.append(learning)
@@ -88,7 +86,7 @@ async def verify_retrospective_data():
 
     rows = await db.fetch_all(
         "SELECT learning_id, content, category, project_id, sprint_id FROM learnings WHERE project_id = ?",
-        (test_project_id,)
+        (test_project_id,),
     )
 
     assert len(rows) == 4, f"Expected 4 learnings in SQLite, got {len(rows)}"
@@ -97,19 +95,21 @@ async def verify_retrospective_data():
     # Verify categories are present
     categories = [row[2] for row in rows]
     expected_categories = {"security", "testing", "code_quality", "reliability"}
-    assert set(categories) == expected_categories, f"Categories mismatch: {set(categories)} != {expected_categories}"
+    assert set(categories) == expected_categories, (
+        f"Categories mismatch: {set(categories)} != {expected_categories}"
+    )
     print(f"   ✅ All categories present: {', '.join(sorted(categories))}")
 
     # 3. Verify learnings are in ChromaDB
     print("\n3. Verifying learnings in ChromaDB (VectorMemory)...")
 
     vector_learnings = await vector_memory.query_relevant(
-        query="testing and code quality",
-        project_id=test_project_id,
-        limit=10
+        query="testing and code quality", project_id=test_project_id, limit=10
     )
 
-    assert len(vector_learnings) >= 2, f"Expected at least 2 learnings from VectorMemory, got {len(vector_learnings)}"
+    assert len(vector_learnings) >= 2, (
+        f"Expected at least 2 learnings from VectorMemory, got {len(vector_learnings)}"
+    )
     print(f"   ✅ Found {len(vector_learnings)} learnings in VectorMemory")
 
     # 4. Simulate retrospective response structure
@@ -119,16 +119,16 @@ async def verify_retrospective_data():
     retrospective_response = {
         "went_well": [
             "Test coverage of 90% prevented major bugs",
-            "Code reviews caught 3 critical issues early"
+            "Code reviews caught 3 critical issues early",
         ],
         "went_wrong": [
             "Missing error handling in API endpoints",
-            "Security vulnerabilities in input validation"
+            "Security vulnerabilities in input validation",
         ],
         "action_items": [
             "Add input validation to all API endpoints",
             "Implement comprehensive error handling",
-            "Increase test coverage to 95%"
+            "Increase test coverage to 95%",
         ],
         "learnings_count": len(rows),
         "learnings": [
@@ -138,7 +138,7 @@ async def verify_retrospective_data():
                 "category": row[2],
                 "project_id": row[3],
                 "sprint_id": row[4],
-                "created_at": "2026-03-21T00:00:00Z"
+                "created_at": "2026-03-21T00:00:00Z",
             }
             for row in rows
         ],
@@ -149,7 +149,7 @@ async def verify_retrospective_data():
                 "category": learning.category,
                 "project_id": learning.project_id,
                 "sprint_id": learning.sprint_id,
-                "created_at": learning.created_at.isoformat()
+                "created_at": learning.created_at.isoformat(),
             }
             for learning in vector_learnings
         ],
@@ -158,13 +158,13 @@ async def verify_retrospective_data():
             "total_tokens": 5000,
             "by_agent": {
                 "product_manager": {"cost_usd": 0.0050, "tokens": 2000},
-                "developer": {"cost_usd": 0.0073, "tokens": 3000}
+                "developer": {"cost_usd": 0.0073, "tokens": 3000},
             },
             "by_task": {
                 "task-1": {"cost_usd": 0.0050, "tokens": 2000},
-                "task-2": {"cost_usd": 0.0073, "tokens": 3000}
-            }
-        }
+                "task-2": {"cost_usd": 0.0073, "tokens": 3000},
+            },
+        },
     }
 
     # Verify structure
@@ -186,7 +186,9 @@ async def verify_retrospective_data():
         assert "content" in learning
         assert "category" in learning
         assert learning["category"] in expected_categories
-        print(f"   ✅ Learning '{learning['content'][:50]}...' has category '{learning['category']}'")
+        print(
+            f"   ✅ Learning '{learning['content'][:50]}...' has category '{learning['category']}'"
+        )
 
     # 6. Verify went_well/went_wrong/action_items display
     print("\n6. Verifying went_well/went_wrong/action_items are populated...")
@@ -249,5 +251,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ Verification failed: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

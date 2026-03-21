@@ -29,33 +29,51 @@ def _mock_runtime(content, fmt=None):
         except json.JSONDecodeError:
             pass
     rt = AsyncMock()
-    rt.run = AsyncMock(return_value=RuntimeResult(
-        output=content, parsed=parsed, artifacts=[], tokens_used=50, success=True,
-    ))
+    rt.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=50,
+            success=True,
+        )
+    )
     return rt
 
 
 def _make_pm(message_bus, ctx, resp):
     pm = ProductManagerAgent(
-        role=get_role(AgentRoleName.PRODUCT_MANAGER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=ctx,
+        role=get_role(AgentRoleName.PRODUCT_MANAGER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=ctx,
         runtime=_mock_runtime(resp, "json"),
     )
     return pm
 
 
-SINGLE_TASK = json.dumps([{
-    "title": "Task A", "description": "Do A",
-    "acceptance_criteria": ["A works"], "dependencies": [],
-    "assigned_to": "developer", "priority": 1,
-}])
+SINGLE_TASK = json.dumps(
+    [
+        {
+            "title": "Task A",
+            "description": "Do A",
+            "acceptance_criteria": ["A works"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        }
+    ]
+)
 
 
 @pytest.fixture
 def ctx(tmp_path):
     return SprintContext(
-        project_name="test", project_path=str(tmp_path),
-        sprint_goal="test goal", sprint_number=1,
+        project_name="test",
+        project_path=str(tmp_path),
+        sprint_goal="test goal",
+        sprint_number=1,
     )
 
 
@@ -63,6 +81,7 @@ def ctx(tmp_path):
 async def message_bus(db):
     from foundrai.orchestration.message_bus import MessageBus
     from foundrai.persistence.event_log import EventLog
+
     el = EventLog(db)
     mb = MessageBus(el)
     mb.register_agent("product_manager")
@@ -182,12 +201,14 @@ async def test_retrospective_basic():
 
 @pytest.mark.asyncio
 async def test_retrospective_with_pm(ctx, message_bus):
-    retro_resp = json.dumps({
-        "went_well": ["Good decomposition"],
-        "went_wrong": ["Slow execution"],
-        "action_items": ["Improve prompts"],
-        "learnings": ["Be more specific with acceptance criteria"],
-    })
+    retro_resp = json.dumps(
+        {
+            "went_well": ["Good decomposition"],
+            "went_wrong": ["Slow execution"],
+            "action_items": ["Improve prompts"],
+            "learnings": ["Be more specific with acceptance criteria"],
+        }
+    )
     pm = _make_pm(message_bus, ctx, SINGLE_TASK)
     pm.runtime = _mock_runtime(retro_resp, "json")
 

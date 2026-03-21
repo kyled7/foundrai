@@ -150,11 +150,7 @@ class PluginLoader:
         if self._has_dependency_cycle(plugin):
             errors.append("Plugin has circular dependencies")
 
-        return ValidationResult(
-            valid=len(errors) == 0,
-            errors=errors,
-            warnings=warnings
-        )
+        return ValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings)
 
     def unload_plugin(self, plugin_name: str) -> bool:
         """Unload a plugin from memory.
@@ -215,8 +211,7 @@ class PluginLoader:
             raise FileNotFoundError(f"Tool implementation not found: {implementation_path}")
 
         spec = importlib.util.spec_from_file_location(
-            plugin.tool_spec.implementation,
-            implementation_path
+            plugin.tool_spec.implementation, implementation_path
         )
         if not spec or not spec.loader:
             raise ImportError(f"Failed to load tool implementation: {implementation_path}")
@@ -229,10 +224,7 @@ class PluginLoader:
         """Check if version follows semantic versioning."""
         try:
             parts = version.split(".")
-            return (
-                len(parts) >= 2 and
-                all(part.isdigit() for part in parts[:3] if part)
-            )
+            return len(parts) >= 2 and all(part.isdigit() for part in parts[:3] if part)
         except Exception:
             return False
 

@@ -33,38 +33,42 @@ from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
 
 # Test data
-MULTI_TASK_JSON = json.dumps([
-    {
-        "title": "Task 1",
-        "description": "First task",
-        "acceptance_criteria": ["Done"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    },
-    {
-        "title": "Task 2",
-        "description": "Second task",
-        "acceptance_criteria": ["Done"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 2,
-    },
-    {
-        "title": "Task 3",
-        "description": "Third task - depends on Task 1",
-        "acceptance_criteria": ["Done"],
-        "dependencies": ["Task 1"],
-        "assigned_to": "developer",
-        "priority": 3,
-    },
-])
+MULTI_TASK_JSON = json.dumps(
+    [
+        {
+            "title": "Task 1",
+            "description": "First task",
+            "acceptance_criteria": ["Done"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+        {
+            "title": "Task 2",
+            "description": "Second task",
+            "acceptance_criteria": ["Done"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 2,
+        },
+        {
+            "title": "Task 3",
+            "description": "Third task - depends on Task 1",
+            "acceptance_criteria": ["Done"],
+            "dependencies": ["Task 1"],
+            "assigned_to": "developer",
+            "priority": 3,
+        },
+    ]
+)
 
-QA_PASS_JSON = json.dumps({
-    "passed": True,
-    "issues": [],
-    "suggestions": [],
-})
+QA_PASS_JSON = json.dumps(
+    {
+        "passed": True,
+        "issues": [],
+        "suggestions": [],
+    }
+)
 
 
 def _make_runtime_mock(response_content: str, response_format: str | None = None) -> AsyncMock:
@@ -77,13 +81,15 @@ def _make_runtime_mock(response_content: str, response_format: str | None = None
             parsed = json.loads(response_content)
         except json.JSONDecodeError:
             pass
-    runtime.run = AsyncMock(return_value=RuntimeResult(
-        output=response_content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=100,
-        success=True,
-    ))
+    runtime.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=response_content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=100,
+            success=True,
+        )
+    )
     return runtime
 
 
@@ -126,12 +132,20 @@ async def test_e2e_sprint_with_agent_failures_and_retries(db, tmp_path, sprint_c
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(MULTI_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(MULTI_TASK_JSON, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Create dev agent that fails with rate limit on first 2 calls, then succeeds
@@ -151,8 +165,12 @@ async def test_e2e_sprint_with_agent_failures_and_retries(db, tmp_path, sprint_c
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=fail_then_succeed)
 
@@ -202,7 +220,9 @@ async def test_e2e_sprint_with_agent_failures_and_retries(db, tmp_path, sprint_c
 
 
 @pytest.mark.asyncio
-async def test_e2e_sprint_with_timeouts_and_graceful_failure(db, tmp_path, sprint_context, components):
+async def test_e2e_sprint_with_timeouts_and_graceful_failure(
+    db, tmp_path, sprint_context, components
+):
     """
     E2E Test 2: Run sprint with simulated timeouts - verify tasks fail gracefully.
 
@@ -218,12 +238,20 @@ async def test_e2e_sprint_with_timeouts_and_graceful_failure(db, tmp_path, sprin
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(MULTI_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(MULTI_TASK_JSON, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Create dev agent that hangs on task execution
@@ -238,8 +266,12 @@ async def test_e2e_sprint_with_timeouts_and_graceful_failure(db, tmp_path, sprin
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=hang_forever)
 
@@ -291,7 +323,9 @@ async def test_e2e_sprint_with_timeouts_and_graceful_failure(db, tmp_path, sprin
 
 
 @pytest.mark.asyncio
-async def test_e2e_partial_failure_with_checkpoint_and_resume(db, tmp_path, sprint_context, components):
+async def test_e2e_partial_failure_with_checkpoint_and_resume(
+    db, tmp_path, sprint_context, components
+):
     """
     E2E Test 3 & 4: Run sprint to partial failure, create checkpoint, then resume.
 
@@ -308,8 +342,12 @@ async def test_e2e_partial_failure_with_checkpoint_and_resume(db, tmp_path, spri
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(MULTI_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(MULTI_TASK_JSON, "json"),
     )
 
     # Create dev agent that fails on second task
@@ -329,14 +367,22 @@ async def test_e2e_partial_failure_with_checkpoint_and_resume(db, tmp_path, spri
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=fail_on_second_task)
 
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Register agents
@@ -386,7 +432,9 @@ async def test_e2e_partial_failure_with_checkpoint_and_resume(db, tmp_path, spri
     tasks = result["tasks"]
     completed_before_resume = [t for t in tasks if t.status == TaskStatus.DONE]
 
-    print(f"✅ E2E Test 3 PASSED: Checkpoint created, {len(completed_before_resume)} tasks completed before failure")
+    print(
+        f"✅ E2E Test 3 PASSED: Checkpoint created, {len(completed_before_resume)} tasks completed before failure"
+    )
 
     # Now resume from checkpoint with fixed dev agent
     async def all_tasks_succeed(*args, **kwargs):
@@ -411,11 +459,13 @@ async def test_e2e_partial_failure_with_checkpoint_and_resume(db, tmp_path, spri
     completed_after_resume = [t for t in tasks_after_resume if t.status == TaskStatus.DONE]
     assert len(completed_after_resume) == 3  # All 3 tasks should be complete
 
-    print(f"✅ E2E Test 4 PASSED: Sprint resumed from checkpoint and completed successfully")
+    print("✅ E2E Test 4 PASSED: Sprint resumed from checkpoint and completed successfully")
 
 
 @pytest.mark.asyncio
-async def test_e2e_high_parallelism_with_race_condition_protection(db, tmp_path, sprint_context, components):
+async def test_e2e_high_parallelism_with_race_condition_protection(
+    db, tmp_path, sprint_context, components
+):
     """
     E2E Test 5: Run sprint with max_tasks_parallel=5 - verify no race conditions.
 
@@ -430,14 +480,16 @@ async def test_e2e_high_parallelism_with_race_condition_protection(db, tmp_path,
     # Create PM response with 10 independent tasks (no dependencies)
     many_tasks = []
     for i in range(10):
-        many_tasks.append({
-            "title": f"Task {i+1}",
-            "description": f"Parallel task {i+1}",
-            "acceptance_criteria": ["Done"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": i + 1,
-        })
+        many_tasks.append(
+            {
+                "title": f"Task {i + 1}",
+                "description": f"Parallel task {i + 1}",
+                "acceptance_criteria": ["Done"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": i + 1,
+            }
+        )
 
     many_tasks_json = json.dumps(many_tasks)
 
@@ -446,12 +498,20 @@ async def test_e2e_high_parallelism_with_race_condition_protection(db, tmp_path,
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(many_tasks_json, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(many_tasks_json, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Create dev agent with realistic async behavior
@@ -471,8 +531,12 @@ async def test_e2e_high_parallelism_with_race_condition_protection(db, tmp_path,
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=realistic_async_work)
 
@@ -523,7 +587,9 @@ async def test_e2e_high_parallelism_with_race_condition_protection(db, tmp_path,
 
     # Verify task titles are all unique and correct
     task_titles = [t.title for t in tasks]
-    assert len(task_titles) == len(set(task_titles)), "Duplicate task titles detected - race condition!"
+    assert len(task_titles) == len(set(task_titles)), (
+        "Duplicate task titles detected - race condition!"
+    )
 
     # Verify events were logged correctly (no race conditions in event log)
     all_events = await event_log.query(sprint_id=sprint_id, limit=500)
@@ -535,7 +601,9 @@ async def test_e2e_high_parallelism_with_race_condition_protection(db, tmp_path,
     # successfully. Let's just check that events were logged.
     assert len(task_completed_events) >= 0, "Task events should be logged"
 
-    print(f"✅ E2E Test 5 PASSED: {len(completed_tasks)} tasks completed in parallel with no race conditions")
+    print(
+        f"✅ E2E Test 5 PASSED: {len(completed_tasks)} tasks completed in parallel with no race conditions"
+    )
 
 
 @pytest.mark.asyncio
@@ -551,69 +619,81 @@ async def test_e2e_combined_stress_test(db, tmp_path, sprint_context, components
     event_log, sprint_store, artifact_store, message_bus, task_graph = components
 
     # Create PM response with 5 tasks
-    stress_tasks_json = json.dumps([
-        {
-            "title": "Task 1 - will retry",
-            "description": "Task that fails once then succeeds",
-            "acceptance_criteria": ["Done"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 1,
-        },
-        {
-            "title": "Task 2 - will timeout",
-            "description": "Task that times out",
-            "acceptance_criteria": ["Done"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 2,
-        },
-        {
-            "title": "Task 3 - succeeds fast",
-            "description": "Task that works immediately",
-            "acceptance_criteria": ["Done"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 3,
-        },
-        {
-            "title": "Task 4 - succeeds fast",
-            "description": "Another task that works immediately",
-            "acceptance_criteria": ["Done"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 4,
-        },
-        {
-            "title": "Task 5 - will retry twice",
-            "description": "Task that fails twice then succeeds",
-            "acceptance_criteria": ["Done"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 5,
-        },
-    ])
+    stress_tasks_json = json.dumps(
+        [
+            {
+                "title": "Task 1 - will retry",
+                "description": "Task that fails once then succeeds",
+                "acceptance_criteria": ["Done"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 1,
+            },
+            {
+                "title": "Task 2 - will timeout",
+                "description": "Task that times out",
+                "acceptance_criteria": ["Done"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 2,
+            },
+            {
+                "title": "Task 3 - succeeds fast",
+                "description": "Task that works immediately",
+                "acceptance_criteria": ["Done"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 3,
+            },
+            {
+                "title": "Task 4 - succeeds fast",
+                "description": "Another task that works immediately",
+                "acceptance_criteria": ["Done"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 4,
+            },
+            {
+                "title": "Task 5 - will retry twice",
+                "description": "Task that fails twice then succeeds",
+                "acceptance_criteria": ["Done"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 5,
+            },
+        ]
+    )
 
     pm_role = get_role(AgentRoleName.PRODUCT_MANAGER)
     dev_role = get_role(AgentRoleName.DEVELOPER)
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(stress_tasks_json, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(stress_tasks_json, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Complex dev agent with mixed behavior
     task_attempts = {}
 
     async def mixed_behavior(*args, **kwargs):
-        task = kwargs.get('task')
+        task = kwargs.get("task")
         if not task:
-            return RuntimeResult(output="Done", parsed=None, artifacts=[], tokens_used=100, success=True)
+            return RuntimeResult(
+                output="Done", parsed=None, artifacts=[], tokens_used=100, success=True
+            )
 
         task_id = task.id
         attempts = task_attempts.get(task_id, 0)
@@ -625,29 +705,43 @@ async def test_e2e_combined_stress_test(db, tmp_path, sprint_context, components
         if "Task 1" in title:
             if attempts < 1:
                 raise RuntimeError("rate_limit: simulated failure")
-            return RuntimeResult(output="Task 1 done", parsed=None, artifacts=[], tokens_used=100, success=True)
+            return RuntimeResult(
+                output="Task 1 done", parsed=None, artifacts=[], tokens_used=100, success=True
+            )
 
         # Task 2: Times out (hangs)
         elif "Task 2" in title:
             await asyncio.sleep(10)
-            return RuntimeResult(output="Task 2 done", parsed=None, artifacts=[], tokens_used=100, success=True)
+            return RuntimeResult(
+                output="Task 2 done", parsed=None, artifacts=[], tokens_used=100, success=True
+            )
 
         # Task 3 & 4: Succeed immediately
         elif "Task 3" in title or "Task 4" in title:
             await asyncio.sleep(0.01)
-            return RuntimeResult(output=f"{title} done", parsed=None, artifacts=[], tokens_used=100, success=True)
+            return RuntimeResult(
+                output=f"{title} done", parsed=None, artifacts=[], tokens_used=100, success=True
+            )
 
         # Task 5: Fails twice, then succeeds
         elif "Task 5" in title:
             if attempts < 2:
                 raise RuntimeError("timeout: simulated failure")
-            return RuntimeResult(output="Task 5 done", parsed=None, artifacts=[], tokens_used=100, success=True)
+            return RuntimeResult(
+                output="Task 5 done", parsed=None, artifacts=[], tokens_used=100, success=True
+            )
 
-        return RuntimeResult(output="Done", parsed=None, artifacts=[], tokens_used=100, success=True)
+        return RuntimeResult(
+            output="Done", parsed=None, artifacts=[], tokens_used=100, success=True
+        )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=mixed_behavior)
 
@@ -712,10 +806,14 @@ async def test_e2e_combined_stress_test(db, tmp_path, sprint_context, components
 
     # Verify retry events
     all_events = await event_log.query(sprint_id=sprint_id, limit=500)
-    retry_events = [e for e in all_events if "retry" in e["event_type"] or "retrying" in e["data"].get("message", "").lower()]
+    retry_events = [
+        e
+        for e in all_events
+        if "retry" in e["event_type"] or "retrying" in e["data"].get("message", "").lower()
+    ]
     # Note: retry events might not be explicitly logged depending on implementation
     # Let's just verify that events were logged
 
     print(f"✅ Bonus E2E Test PASSED: {len(completed)} succeeded, {len(failed)} failed")
     print(f"   - Checkpoints: {checkpoint_count} created")
-    print(f"   - All hardening features working together!")
+    print("   - All hardening features working together!")

@@ -122,13 +122,15 @@ class AgentHealthStore:
 
         # Get token usage and cost
         token_cursor = await self.db.conn.execute(
-            f"""SELECT
+            """SELECT
                 COALESCE(SUM(total_tokens), 0) as total_tokens,
                 COALESCE(SUM(cost_usd), 0.0) as total_cost
             FROM token_usage
-            WHERE agent_role = ? AND project_id = ?""" +
-            (f" AND sprint_id = ?" if sprint_id else ""),
-            (str(agent_role), project_id, sprint_id) if sprint_id else (str(agent_role), project_id),
+            WHERE agent_role = ? AND project_id = ?"""
+            + (" AND sprint_id = ?" if sprint_id else ""),
+            (str(agent_role), project_id, sprint_id)
+            if sprint_id
+            else (str(agent_role), project_id),
         )
         token_row = await token_cursor.fetchone()
 
@@ -295,10 +297,12 @@ class AgentHealthStore:
         """Get the most recent health record for an agent."""
         cursor = await self.db.conn.execute(
             """SELECT * FROM agent_health_metrics
-               WHERE agent_role = ? AND project_id = ?""" +
-            (" AND sprint_id = ?" if sprint_id else " AND sprint_id IS NULL") +
-            " ORDER BY timestamp DESC LIMIT 1",
-            (str(agent_role), project_id, sprint_id) if sprint_id else (str(agent_role), project_id),
+               WHERE agent_role = ? AND project_id = ?"""
+            + (" AND sprint_id = ?" if sprint_id else " AND sprint_id IS NULL")
+            + " ORDER BY timestamp DESC LIMIT 1",
+            (str(agent_role), project_id, sprint_id)
+            if sprint_id
+            else (str(agent_role), project_id),
         )
         row = await cursor.fetchone()
 

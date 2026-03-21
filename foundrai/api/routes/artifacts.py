@@ -13,9 +13,7 @@ router = APIRouter()
 async def list_artifacts(sprint_id: str) -> dict:
     """List artifacts for a sprint."""
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT * FROM artifacts WHERE sprint_id = ?", (sprint_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM artifacts WHERE sprint_id = ?", (sprint_id,))
     rows = await cursor.fetchall()
     artifacts = [
         {

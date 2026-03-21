@@ -18,7 +18,7 @@ import aiosqlite
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from foundrai.models.enums import ActionType, AgentRoleName, AutonomyLevel
+from foundrai.models.enums import ActionType, AgentRoleName
 
 
 async def test_mixed_scenario():
@@ -42,6 +42,7 @@ async def test_mixed_scenario():
     db.row_factory = aiosqlite.Row
 
     from foundrai.persistence.database import SCHEMA_SQL
+
     await db.executescript(SCHEMA_SQL)
     await db.commit()
 
@@ -102,7 +103,13 @@ async def test_mixed_scenario():
                        success_count = success_count + 1,
                        trust_score = CAST(success_count + 1 AS REAL) / (success_count + 1 + failure_count),
                        last_updated = ?""",
-                (project_id, AgentRoleName.DEVELOPER.value, ActionType.CODE_WRITE.value, resolved_at, resolved_at),
+                (
+                    project_id,
+                    AgentRoleName.DEVELOPER.value,
+                    ActionType.CODE_WRITE.value,
+                    resolved_at,
+                    resolved_at,
+                ),
             )
         else:
             await db.execute(
@@ -114,7 +121,13 @@ async def test_mixed_scenario():
                        failure_count = failure_count + 1,
                        trust_score = CAST(success_count AS REAL) / (success_count + failure_count + 1),
                        last_updated = ?""",
-                (project_id, AgentRoleName.DEVELOPER.value, ActionType.CODE_WRITE.value, resolved_at, resolved_at),
+                (
+                    project_id,
+                    AgentRoleName.DEVELOPER.value,
+                    ActionType.CODE_WRITE.value,
+                    resolved_at,
+                    resolved_at,
+                ),
             )
 
         await db.commit()
@@ -128,7 +141,9 @@ async def test_mixed_scenario():
         row = await cursor.fetchone()
         if row:
             success_rate = row["trust_score"] * 100
-            print(f"  Iteration {i}: {status:8} → {success_rate:.1f}% ({row['success_count']}S, {row['failure_count']}F)")
+            print(
+                f"  Iteration {i}: {status:8} → {success_rate:.1f}% ({row['success_count']}S, {row['failure_count']}F)"
+            )
 
     # Verify final results
     print("\n📊 Final Results:")
@@ -149,9 +164,11 @@ async def test_mixed_scenario():
         # Verify calculations
         expected_rate = 70.0  # 7 out of 10
         if abs(success_rate - expected_rate) < 0.1:
-            print(f"\n✅ Success rate calculation correct (expected ~70%)")
+            print("\n✅ Success rate calculation correct (expected ~70%)")
         else:
-            print(f"\n❌ Success rate calculation incorrect (expected ~70%, got {success_rate:.1f}%)")
+            print(
+                f"\n❌ Success rate calculation incorrect (expected ~70%, got {success_rate:.1f}%)"
+            )
 
         # Check recommendations (should NOT recommend upgrade at 70%)
         cursor = await db.execute(
@@ -162,10 +179,10 @@ async def test_mixed_scenario():
         recommendations = await cursor.fetchall()
 
         if len(recommendations) == 0:
-            print(f"✅ No upgrade recommendation (70% is below 90% threshold)")
+            print("✅ No upgrade recommendation (70% is below 90% threshold)")
             result = True
         else:
-            print(f"❌ Unexpected upgrade recommendation at 70% success rate")
+            print("❌ Unexpected upgrade recommendation at 70% success rate")
             result = False
     else:
         print("\n❌ No trust score found")
@@ -203,6 +220,7 @@ async def test_recovery_scenario():
     db.row_factory = aiosqlite.Row
 
     from foundrai.persistence.database import SCHEMA_SQL
+
     await db.executescript(SCHEMA_SQL)
     await db.commit()
 
@@ -226,8 +244,15 @@ async def test_recovery_scenario():
             """INSERT INTO approvals
                (approval_id, sprint_id, agent_id, action_type, title, status, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (approval_id, sprint_id, AgentRoleName.QA_ENGINEER.value, ActionType.CODE_REVIEW.value,
-             f"Review #{i}", "rejected", datetime.utcnow().isoformat()),
+            (
+                approval_id,
+                sprint_id,
+                AgentRoleName.QA_ENGINEER.value,
+                ActionType.CODE_REVIEW.value,
+                f"Review #{i}",
+                "rejected",
+                datetime.utcnow().isoformat(),
+            ),
         )
 
         resolved_at = datetime.utcnow().isoformat()
@@ -240,7 +265,13 @@ async def test_recovery_scenario():
                    failure_count = failure_count + 1,
                    trust_score = CAST(success_count AS REAL) / (success_count + failure_count + 1),
                    last_updated = ?""",
-            (project_id, AgentRoleName.QA_ENGINEER.value, ActionType.CODE_REVIEW.value, resolved_at, resolved_at),
+            (
+                project_id,
+                AgentRoleName.QA_ENGINEER.value,
+                ActionType.CODE_REVIEW.value,
+                resolved_at,
+                resolved_at,
+            ),
         )
         await db.commit()
 
@@ -251,8 +282,15 @@ async def test_recovery_scenario():
             """INSERT INTO approvals
                (approval_id, sprint_id, agent_id, action_type, title, status, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (approval_id, sprint_id, AgentRoleName.QA_ENGINEER.value, ActionType.CODE_REVIEW.value,
-             f"Review #{i}", "approved", datetime.utcnow().isoformat()),
+            (
+                approval_id,
+                sprint_id,
+                AgentRoleName.QA_ENGINEER.value,
+                ActionType.CODE_REVIEW.value,
+                f"Review #{i}",
+                "approved",
+                datetime.utcnow().isoformat(),
+            ),
         )
 
         resolved_at = datetime.utcnow().isoformat()
@@ -265,7 +303,13 @@ async def test_recovery_scenario():
                    success_count = success_count + 1,
                    trust_score = CAST(success_count + 1 AS REAL) / (success_count + 1 + failure_count),
                    last_updated = ?""",
-            (project_id, AgentRoleName.QA_ENGINEER.value, ActionType.CODE_REVIEW.value, resolved_at, resolved_at),
+            (
+                project_id,
+                AgentRoleName.QA_ENGINEER.value,
+                ActionType.CODE_REVIEW.value,
+                resolved_at,
+                resolved_at,
+            ),
         )
         await db.commit()
 
@@ -279,7 +323,7 @@ async def test_recovery_scenario():
 
     if row:
         success_rate = row["trust_score"] * 100
-        print(f"\n📊 Final Results:")
+        print("\n📊 Final Results:")
         print(f"  Success Count: {row['success_count']}")
         print(f"  Failure Count: {row['failure_count']}")
         print(f"  Trust Score: {row['trust_score']:.3f}")
@@ -291,7 +335,9 @@ async def test_recovery_scenario():
             print(f"\n✅ Recovery scenario correct: {success_rate:.1f}% (10/13)")
             result = True
         else:
-            print(f"\n❌ Recovery scenario incorrect: expected {expected_rate:.1f}%, got {success_rate:.1f}%")
+            print(
+                f"\n❌ Recovery scenario incorrect: expected {expected_rate:.1f}%, got {success_rate:.1f}%"
+            )
             result = False
     else:
         print("\n❌ No trust score found")

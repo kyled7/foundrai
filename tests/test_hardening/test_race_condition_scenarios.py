@@ -35,13 +35,15 @@ def _make_runtime_mock(response_content: str, response_format: str | None = None
             parsed = json.loads(response_content)
         except json.JSONDecodeError:
             pass
-    runtime.run = AsyncMock(return_value=RuntimeResult(
-        output=response_content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=100,
-        success=True,
-    ))
+    runtime.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=response_content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=100,
+            success=True,
+        )
+    )
     return runtime
 
 
@@ -120,7 +122,7 @@ async def test_concurrent_task_graph_with_dependencies(components):
         """Add a task that depends on a root task."""
         task = Task(
             title=f"Dependent {idx}",
-            description=f"Depends on root",
+            description="Depends on root",
             acceptance_criteria=[],
             dependencies=[depends_on_id],
             assigned_to="developer",
@@ -153,6 +155,7 @@ async def test_concurrent_message_bus_publishing(components):
     async def publish_message(idx: int) -> None:
         """Publish a single message."""
         from foundrai.models.message import AgentMessage, MessageType
+
         msg = AgentMessage(
             from_agent=f"agent-{idx % 10}",
             to_agent=f"agent-{(idx + 1) % 10}",
@@ -406,9 +409,7 @@ async def test_high_parallelism_mixed_operations(db, components):
     # Mix of different operations
     for i in range(20):
         # Event logging
-        operations.append(
-            event_log.append(f"stress.event.{i % 5}", {"index": i})
-        )
+        operations.append(event_log.append(f"stress.event.{i % 5}", {"index": i}))
 
         # Task creation
         task = Task(
@@ -450,17 +451,19 @@ async def test_concurrent_sprint_execution_simulation(db, tmp_path, sprint_conte
     event_log, sprint_store, artifact_store, message_bus, task_graph = components
 
     # Create agents
-    pm_tasks = json.dumps([
-        {
-            "title": f"Feature {i}",
-            "description": f"Build feature {i}",
-            "acceptance_criteria": ["Works"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": i,
-        }
-        for i in range(10)
-    ])
+    pm_tasks = json.dumps(
+        [
+            {
+                "title": f"Feature {i}",
+                "description": f"Build feature {i}",
+                "acceptance_criteria": ["Works"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": i,
+            }
+            for i in range(10)
+        ]
+    )
 
     qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
 
@@ -635,6 +638,7 @@ async def test_message_bus_listener_concurrency(components):
     async def publish_message(idx: int) -> None:
         """Publish a message."""
         from foundrai.models.message import AgentMessage, MessageType
+
         msg = AgentMessage(
             from_agent="sender",
             to_agent="receiver",

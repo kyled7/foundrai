@@ -19,9 +19,7 @@ class FileManager(BaseTool):
     """Read, write, and list files within the project directory."""
 
     name = "file_manager"
-    description = (
-        "Manage project files. Actions: read, write, list, exists."
-    )
+    description = "Manage project files. Actions: read, write, list, exists."
     input_schema = FileManagerInput
 
     def __init__(self, project_path: Path | str) -> None:
@@ -33,9 +31,7 @@ class FileManager(BaseTool):
 
         # Sandbox check
         if not str(target).startswith(str(self.project_path)):
-            return ToolOutput(
-                success=False, output="", error="Path outside project directory"
-            )
+            return ToolOutput(success=False, output="", error="Path outside project directory")
 
         match input.action:
             case "read":
@@ -48,14 +44,16 @@ class FileManager(BaseTool):
                 return ToolOutput(success=True, output=str(target.exists()))
             case _:
                 return ToolOutput(
-                    success=False, output="",
+                    success=False,
+                    output="",
                     error=f"Unknown action: {input.action}",
                 )
 
     async def _read(self, path: Path) -> ToolOutput:
         if not path.exists():
             return ToolOutput(
-                success=False, output="",
+                success=False,
+                output="",
                 error=f"File not found: {path.name}",
             )
         content = path.read_text(encoding="utf-8")
@@ -64,17 +62,14 @@ class FileManager(BaseTool):
     async def _write(self, path: Path, content: str) -> ToolOutput:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
-        return ToolOutput(
-            success=True, output=f"Written {len(content)} bytes to {path.name}"
-        )
+        return ToolOutput(success=True, output=f"Written {len(content)} bytes to {path.name}")
 
     async def _list(self, path: Path) -> ToolOutput:
         if not path.exists():
             return ToolOutput(
-                success=False, output="",
+                success=False,
+                output="",
                 error=f"Directory not found: {path.name}",
             )
-        entries = sorted(
-            p.name + ("/" if p.is_dir() else "") for p in path.iterdir()
-        )
+        entries = sorted(p.name + ("/" if p.is_dir() else "") for p in path.iterdir())
         return ToolOutput(success=True, output="\n".join(entries))

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -14,16 +12,19 @@ router = APIRouter()
 
 class LearningUpdate(BaseModel):
     """Request model for updating learning content."""
+
     content: str = Field(..., min_length=1)
 
 
 class LearningPin(BaseModel):
     """Request model for pinning/unpinning a learning."""
+
     pinned: bool
 
 
 class LearningSearch(BaseModel):
     """Request model for searching learnings."""
+
     query: str = Field(..., min_length=1)
     k: int = Field(default=5, ge=1, le=50)
 
@@ -58,9 +59,7 @@ async def get_vector_learnings(project_id: str) -> dict:
     db = await get_db()
 
     # Check project exists
-    cursor = await db.conn.execute(
-        "SELECT 1 FROM projects WHERE project_id = ?", (project_id,)
-    )
+    cursor = await db.conn.execute("SELECT 1 FROM projects WHERE project_id = ?", (project_id,))
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -88,19 +87,13 @@ async def search_learnings(project_id: str, search: LearningSearch) -> dict:
     db = await get_db()
 
     # Check project exists
-    cursor = await db.conn.execute(
-        "SELECT 1 FROM projects WHERE project_id = ?", (project_id,)
-    )
+    cursor = await db.conn.execute("SELECT 1 FROM projects WHERE project_id = ?", (project_id,))
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Project not found")
 
     # Search using VectorMemory
     vm = await get_vector_memory()
-    learnings_list = await vm.query_relevant(
-        query=search.query,
-        k=search.k,
-        project_id=project_id
-    )
+    learnings_list = await vm.query_relevant(query=search.query, k=search.k, project_id=project_id)
 
     learnings = [
         {
@@ -123,9 +116,7 @@ async def update_learning(learning_id: str, update: LearningUpdate) -> dict:
     vm = await get_vector_memory()
 
     # Verify learning exists
-    cursor = await db.conn.execute(
-        "SELECT * FROM learnings WHERE learning_id = ?", (learning_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM learnings WHERE learning_id = ?", (learning_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Learning not found")
@@ -134,9 +125,7 @@ async def update_learning(learning_id: str, update: LearningUpdate) -> dict:
     await vm.update_learning(learning_id, content=update.content)
 
     # Return updated learning
-    cursor = await db.conn.execute(
-        "SELECT * FROM learnings WHERE learning_id = ?", (learning_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM learnings WHERE learning_id = ?", (learning_id,))
     row = await cursor.fetchone()
 
     return {
@@ -158,9 +147,7 @@ async def delete_learning(learning_id: str) -> None:
     vm = await get_vector_memory()
 
     # Verify learning exists
-    cursor = await db.conn.execute(
-        "SELECT 1 FROM learnings WHERE learning_id = ?", (learning_id,)
-    )
+    cursor = await db.conn.execute("SELECT 1 FROM learnings WHERE learning_id = ?", (learning_id,))
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Learning not found")
 
@@ -175,9 +162,7 @@ async def pin_learning(learning_id: str, pin_request: LearningPin) -> dict:
     vm = await get_vector_memory()
 
     # Verify learning exists
-    cursor = await db.conn.execute(
-        "SELECT * FROM learnings WHERE learning_id = ?", (learning_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM learnings WHERE learning_id = ?", (learning_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Learning not found")
@@ -186,9 +171,7 @@ async def pin_learning(learning_id: str, pin_request: LearningPin) -> dict:
     await vm.update_learning(learning_id, pinned=pin_request.pinned)
 
     # Return updated learning
-    cursor = await db.conn.execute(
-        "SELECT * FROM learnings WHERE learning_id = ?", (learning_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM learnings WHERE learning_id = ?", (learning_id,))
     row = await cursor.fetchone()
 
     return {

@@ -20,32 +20,38 @@ class PluginStore:
 
     async def create_plugin(self, plugin: Plugin) -> Plugin:
         """Create a new plugin record."""
-        await self.db.conn.execute("""
+        await self.db.conn.execute(
+            """
             INSERT INTO plugins (
                 id, name, version, type, metadata, config_schema,
                 installed_at, enabled
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            plugin.id,
-            plugin.name,
-            plugin.version,
-            plugin.plugin_type.value,
-            plugin.model_dump_json(),
-            json.dumps(plugin.configuration),
-            plugin.installed_at.isoformat(),
-            int(plugin.enabled)
-        ))
+        """,
+            (
+                plugin.id,
+                plugin.name,
+                plugin.version,
+                plugin.plugin_type.value,
+                plugin.model_dump_json(),
+                json.dumps(plugin.configuration),
+                plugin.installed_at.isoformat(),
+                int(plugin.enabled),
+            ),
+        )
 
         await self.db.conn.commit()
         return plugin
 
     async def get_plugin(self, plugin_id: str) -> Plugin | None:
         """Get plugin by ID."""
-        cursor = await self.db.conn.execute("""
+        cursor = await self.db.conn.execute(
+            """
             SELECT id, name, version, type, metadata, config_schema,
                    installed_at, enabled
             FROM plugins WHERE id = ?
-        """, (plugin_id,))
+        """,
+            (plugin_id,),
+        )
 
         row = await cursor.fetchone()
         if not row:
@@ -56,18 +62,24 @@ class PluginStore:
     async def get_plugin_by_name(self, name: str, version: str | None = None) -> Plugin | None:
         """Get plugin by name and optional version."""
         if version:
-            cursor = await self.db.conn.execute("""
+            cursor = await self.db.conn.execute(
+                """
                 SELECT id, name, version, type, metadata, config_schema,
                        installed_at, enabled
                 FROM plugins WHERE name = ? AND version = ?
-            """, (name, version))
+            """,
+                (name, version),
+            )
         else:
-            cursor = await self.db.conn.execute("""
+            cursor = await self.db.conn.execute(
+                """
                 SELECT id, name, version, type, metadata, config_schema,
                        installed_at, enabled
                 FROM plugins WHERE name = ?
                 ORDER BY installed_at DESC LIMIT 1
-            """, (name,))
+            """,
+                (name,),
+            )
 
         row = await cursor.fetchone()
         if not row:
@@ -76,9 +88,7 @@ class PluginStore:
         return self._row_to_plugin(row)
 
     async def list_plugins(
-        self,
-        plugin_type: PluginType | None = None,
-        enabled_only: bool = False
+        self, plugin_type: PluginType | None = None, enabled_only: bool = False
     ) -> list[Plugin]:
         """List plugins with optional filtering."""
         query = """
@@ -105,20 +115,23 @@ class PluginStore:
 
     async def update_plugin(self, plugin: Plugin) -> Plugin:
         """Update an existing plugin."""
-        await self.db.conn.execute("""
+        await self.db.conn.execute(
+            """
             UPDATE plugins SET
                 name = ?, version = ?, type = ?, metadata = ?, config_schema = ?,
                 enabled = ?
             WHERE id = ?
-        """, (
-            plugin.name,
-            plugin.version,
-            plugin.plugin_type.value,
-            plugin.model_dump_json(),
-            json.dumps(plugin.configuration),
-            int(plugin.enabled),
-            plugin.id
-        ))
+        """,
+            (
+                plugin.name,
+                plugin.version,
+                plugin.plugin_type.value,
+                plugin.model_dump_json(),
+                json.dumps(plugin.configuration),
+                int(plugin.enabled),
+                plugin.id,
+            ),
+        )
 
         await self.db.conn.commit()
         return plugin
@@ -131,9 +144,12 @@ class PluginStore:
 
     async def toggle_plugin(self, plugin_id: str, enabled: bool) -> bool:
         """Enable or disable a plugin."""
-        cursor = await self.db.conn.execute("""
+        cursor = await self.db.conn.execute(
+            """
             UPDATE plugins SET enabled = ? WHERE id = ?
-        """, (int(enabled), plugin_id))
+        """,
+            (int(enabled), plugin_id),
+        )
 
         await self.db.conn.commit()
         return cursor.rowcount > 0

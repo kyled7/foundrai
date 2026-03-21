@@ -57,7 +57,9 @@ async def test_approval_rejection_with_feedback(client: AsyncClient, project_id:
     assert data["approvals"][0]["status"] == "pending"
 
     # Step 4: Reject with detailed feedback
-    feedback_comment = "This approach is too risky. Please implement unit tests first and use a safer algorithm."
+    feedback_comment = (
+        "This approach is too risky. Please implement unit tests first and use a safer algorithm."
+    )
     reject_resp = await client.post(
         f"/api/approvals/{approval_id}/reject",
         json={"comment": feedback_comment},
@@ -135,9 +137,7 @@ async def test_rejection_without_comment(client: AsyncClient, project_id: str):
 
 
 @pytest.mark.asyncio
-async def test_multiple_approvals_mixed_decisions(
-    client: AsyncClient, project_id: str
-):
+async def test_multiple_approvals_mixed_decisions(client: AsyncClient, project_id: str):
     """Test that multiple approvals can have different outcomes (approve/reject)."""
     # Create sprint
     create_resp = await client.post(
@@ -155,7 +155,14 @@ async def test_multiple_approvals_mixed_decisions(
             """INSERT INTO approvals
                (approval_id, sprint_id, agent_id, action_type, title, status)
                VALUES (?, ?, ?, ?, ?, ?)""",
-            (approval_id, sprint_id, "developer", "task_execution", f"Task {approval_id}", "pending"),
+            (
+                approval_id,
+                sprint_id,
+                "developer",
+                "task_execution",
+                f"Task {approval_id}",
+                "pending",
+            ),
         )
     await db.conn.commit()
 
@@ -165,13 +172,13 @@ async def test_multiple_approvals_mixed_decisions(
 
     # Approve first one
     await client.post(
-        f"/api/approvals/mixed-1/approve",
+        "/api/approvals/mixed-1/approve",
         json={"comment": "Good work"},
     )
 
     # Reject second one with feedback
     await client.post(
-        f"/api/approvals/mixed-2/reject",
+        "/api/approvals/mixed-2/reject",
         json={"comment": "Needs more work"},
     )
 
@@ -184,15 +191,15 @@ async def test_multiple_approvals_mixed_decisions(
     assert data["total"] == 3
 
     # Verify individual statuses
-    resp1 = await client.get(f"/api/approvals/mixed-1")
+    resp1 = await client.get("/api/approvals/mixed-1")
     assert resp1.json()["status"] == "approved"
     assert resp1.json()["comment"] == "Good work"
 
-    resp2 = await client.get(f"/api/approvals/mixed-2")
+    resp2 = await client.get("/api/approvals/mixed-2")
     assert resp2.json()["status"] == "rejected"
     assert resp2.json()["comment"] == "Needs more work"
 
-    resp3 = await client.get(f"/api/approvals/mixed-3")
+    resp3 = await client.get("/api/approvals/mixed-3")
     assert resp3.json()["status"] == "pending"
     assert resp3.json()["comment"] is None or resp3.json()["comment"] == ""
 
@@ -214,7 +221,14 @@ async def test_rejection_comment_max_length(client: AsyncClient, project_id: str
         """INSERT INTO approvals
            (approval_id, sprint_id, agent_id, action_type, title, status)
            VALUES (?, ?, ?, ?, ?, ?)""",
-        (approval_id, sprint_id, "developer", "task_execution", "Task with long feedback", "pending"),
+        (
+            approval_id,
+            sprint_id,
+            "developer",
+            "task_execution",
+            "Task with long feedback",
+            "pending",
+        ),
     )
     await db.conn.commit()
 
@@ -250,9 +264,7 @@ Please address these issues and resubmit for approval.
 
 
 @pytest.mark.asyncio
-async def test_rejection_special_characters_in_comment(
-    client: AsyncClient, project_id: str
-):
+async def test_rejection_special_characters_in_comment(client: AsyncClient, project_id: str):
     """Test rejection comment with special characters and formatting."""
     # Create sprint and approval
     create_resp = await client.post(
@@ -268,7 +280,14 @@ async def test_rejection_special_characters_in_comment(
         """INSERT INTO approvals
            (approval_id, sprint_id, agent_id, action_type, title, status)
            VALUES (?, ?, ?, ?, ?, ?)""",
-        (approval_id, sprint_id, "developer", "task_execution", "Task with special chars", "pending"),
+        (
+            approval_id,
+            sprint_id,
+            "developer",
+            "task_execution",
+            "Task with special chars",
+            "pending",
+        ),
     )
     await db.conn.commit()
 

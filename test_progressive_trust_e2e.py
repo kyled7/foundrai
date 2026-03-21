@@ -11,7 +11,6 @@ This test verifies that:
 """
 
 import asyncio
-import json
 import sys
 import uuid
 from datetime import datetime, timedelta
@@ -67,12 +66,24 @@ class ProgressiveTrustE2ETest:
         # Create test project and sprint
         await self.db.execute(
             "INSERT INTO projects (project_id, name, description, created_at) VALUES (?, ?, ?, ?)",
-            (self.project_id, "Test Project", "Progressive trust test", datetime.utcnow().isoformat()),
+            (
+                self.project_id,
+                "Test Project",
+                "Progressive trust test",
+                datetime.utcnow().isoformat(),
+            ),
         )
 
         await self.db.execute(
             "INSERT INTO sprints (sprint_id, project_id, sprint_number, goal, status, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (self.sprint_id, self.project_id, 1, "Test progressive trust", "in_progress", datetime.utcnow().isoformat()),
+            (
+                self.sprint_id,
+                self.project_id,
+                1,
+                "Test progressive trust",
+                "in_progress",
+                datetime.utcnow().isoformat(),
+            ),
         )
 
         await self.db.commit()
@@ -180,7 +191,7 @@ class ProgressiveTrustE2ETest:
                 ),
             )
             await self.db.commit()
-            print(f"  ✓ Approved request and updated trust score")
+            print("  ✓ Approved request and updated trust score")
 
             # Verify trust score update
             cursor = await self.db.execute(
@@ -197,14 +208,18 @@ class ProgressiveTrustE2ETest:
 
             if row:
                 success_rate = row["trust_score"] * 100
-                self.test_results["trust_score_updates"].append({
-                    "iteration": iteration,
-                    "success_count": row["success_count"],
-                    "failure_count": row["failure_count"],
-                    "trust_score": row["trust_score"],
-                    "success_rate_pct": success_rate,
-                })
-                print(f"  ✓ Trust score: {row['trust_score']:.3f} ({success_rate:.1f}% success rate)")
+                self.test_results["trust_score_updates"].append(
+                    {
+                        "iteration": iteration,
+                        "success_count": row["success_count"],
+                        "failure_count": row["failure_count"],
+                        "trust_score": row["trust_score"],
+                        "success_rate_pct": success_rate,
+                    }
+                )
+                print(
+                    f"  ✓ Trust score: {row['trust_score']:.3f} ({success_rate:.1f}% success rate)"
+                )
                 print(f"    Success: {row['success_count']}, Failures: {row['failure_count']}")
                 return True
             else:
@@ -237,7 +252,7 @@ class ProgressiveTrustE2ETest:
                 success_count = row["success_count"]
                 failure_count = row["failure_count"]
 
-                print(f"  Final Statistics:")
+                print("  Final Statistics:")
                 print(f"    Success Count: {success_count}")
                 print(f"    Failure Count: {failure_count}")
                 print(f"    Trust Score: {row['trust_score']:.3f}")
@@ -303,10 +318,14 @@ class ProgressiveTrustE2ETest:
                 print(f"  ✅ Found {len(recommendations)} recommendation(s):")
                 for rec in recommendations:
                     print(f"    • {rec['agent_role']} × {rec['action_type']}")
-                    print(f"      Current: {rec['current_mode']} → Suggested: {rec['suggested_mode']}")
+                    print(
+                        f"      Current: {rec['current_mode']} → Suggested: {rec['suggested_mode']}"
+                    )
                     print(f"      Reason: {rec['reason']}")
             else:
-                self.test_results["errors"].append("No recommendations found despite high success rate")
+                self.test_results["errors"].append(
+                    "No recommendations found despite high success rate"
+                )
                 print("  ❌ No recommendations found")
 
         except Exception as e:
@@ -379,9 +398,15 @@ class ProgressiveTrustE2ETest:
 
         print(f"\n✓ Setup: {'PASS' if self.test_results['setup'] else 'FAIL'}")
         print(f"✓ Configuration: {'PASS' if self.test_results['configuration'] else 'FAIL'}")
-        print(f"✓ Approval Creation: {'PASS' if self.test_results['approval_creation'] else 'FAIL'}")
-        print(f"✓ Success Rate >90%: {'PASS' if self.test_results['success_rate_validation'] else 'FAIL'}")
-        print(f"✓ Recommendations: {'PASS' if self.test_results['recommendation_validation'] else 'FAIL'}")
+        print(
+            f"✓ Approval Creation: {'PASS' if self.test_results['approval_creation'] else 'FAIL'}"
+        )
+        print(
+            f"✓ Success Rate >90%: {'PASS' if self.test_results['success_rate_validation'] else 'FAIL'}"
+        )
+        print(
+            f"✓ Recommendations: {'PASS' if self.test_results['recommendation_validation'] else 'FAIL'}"
+        )
 
         if self.test_results["trust_score_updates"]:
             print("\n📈 Trust Score Progress:")

@@ -64,8 +64,10 @@ logging:
   level: INFO
   file: .foundrai/logs/foundrai.log
 budget:
-  sprint_budget_usd: 10.0
+  sprint_budget_usd: 5.0
   warning_threshold: 0.75
   model_tierdown_map:
     anthropic/claude-sonnet-4-20250514: anthropic/claude-haiku-20250513
-  agent_budgets: {}
+  agent_budgets:
+    product_manager: 2.0
+    developer: 3.0

@@ -21,42 +21,48 @@ class TemplateStore:
 
     async def create_template(self, template: TeamTemplate) -> TeamTemplate:
         """Create a new team template."""
-        await self.db.conn.execute("""
+        await self.db.conn.execute(
+            """
             INSERT INTO team_templates (
                 id, name, description, author, version, tags,
                 team_config, sprint_config, required_plugins, recommended_plugins,
                 created_at, updated_at, is_public, marketplace_url, downloads, rating
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            template.id,
-            template.name,
-            template.description,
-            template.author,
-            template.version,
-            json.dumps(template.tags),
-            json.dumps(template.team_config),
-            json.dumps(template.sprint_config),
-            json.dumps(template.required_plugins),
-            json.dumps(template.recommended_plugins),
-            template.created_at.isoformat(),
-            template.updated_at.isoformat(),
-            int(template.is_public),
-            template.marketplace_url,
-            template.downloads,
-            template.rating
-        ))
+        """,
+            (
+                template.id,
+                template.name,
+                template.description,
+                template.author,
+                template.version,
+                json.dumps(template.tags),
+                json.dumps(template.team_config),
+                json.dumps(template.sprint_config),
+                json.dumps(template.required_plugins),
+                json.dumps(template.recommended_plugins),
+                template.created_at.isoformat(),
+                template.updated_at.isoformat(),
+                int(template.is_public),
+                template.marketplace_url,
+                template.downloads,
+                template.rating,
+            ),
+        )
 
         await self.db.conn.commit()
         return template
 
     async def get_template(self, template_id: str) -> TeamTemplate | None:
         """Get template by ID."""
-        cursor = await self.db.conn.execute("""
+        cursor = await self.db.conn.execute(
+            """
             SELECT id, name, description, author, version, tags,
                    team_config, sprint_config, required_plugins, recommended_plugins,
                    created_at, updated_at, is_public, marketplace_url, downloads, rating
             FROM team_templates WHERE id = ?
-        """, (template_id,))
+        """,
+            (template_id,),
+        )
 
         row = await cursor.fetchone()
         if not row:
@@ -65,9 +71,7 @@ class TemplateStore:
         return self._row_to_template(row)
 
     async def list_templates(
-        self,
-        author: str | None = None,
-        public_only: bool = False
+        self, author: str | None = None, public_only: bool = False
     ) -> list[TeamTemplate]:
         """List templates with optional filtering."""
         query = """
@@ -97,29 +101,32 @@ class TemplateStore:
         """Update an existing template."""
         template.updated_at = datetime.utcnow()
 
-        await self.db.conn.execute("""
+        await self.db.conn.execute(
+            """
             UPDATE team_templates SET
                 name = ?, description = ?, author = ?, version = ?, tags = ?,
                 team_config = ?, sprint_config = ?, required_plugins = ?, recommended_plugins = ?,
                 updated_at = ?, is_public = ?, marketplace_url = ?, downloads = ?, rating = ?
             WHERE id = ?
-        """, (
-            template.name,
-            template.description,
-            template.author,
-            template.version,
-            json.dumps(template.tags),
-            json.dumps(template.team_config),
-            json.dumps(template.sprint_config),
-            json.dumps(template.required_plugins),
-            json.dumps(template.recommended_plugins),
-            template.updated_at.isoformat(),
-            int(template.is_public),
-            template.marketplace_url,
-            template.downloads,
-            template.rating,
-            template.id
-        ))
+        """,
+            (
+                template.name,
+                template.description,
+                template.author,
+                template.version,
+                json.dumps(template.tags),
+                json.dumps(template.team_config),
+                json.dumps(template.sprint_config),
+                json.dumps(template.required_plugins),
+                json.dumps(template.recommended_plugins),
+                template.updated_at.isoformat(),
+                int(template.is_public),
+                template.marketplace_url,
+                template.downloads,
+                template.rating,
+                template.id,
+            ),
+        )
 
         await self.db.conn.commit()
         return template
@@ -133,9 +140,7 @@ class TemplateStore:
         return cursor.rowcount > 0
 
     async def search_templates(
-        self,
-        query: str,
-        tags: list[str] | None = None
+        self, query: str, tags: list[str] | None = None
     ) -> list[TeamTemplate]:
         """Search templates by name/description and tags."""
         sql_query = """
@@ -177,5 +182,5 @@ class TemplateStore:
             is_public=bool(row[12]),
             marketplace_url=row[13],
             downloads=row[14] or 0,
-            rating=row[15] or 0.0
+            rating=row[15] or 0.0,
         )

@@ -1,4 +1,4 @@
-import type { ProjectCreate, SprintCreate, Task, GoalTree, TaskNode } from './types';
+import type { ProjectCreate, SprintCreate, Task, GoalTree } from './types';
 import type { WizardStep1Data } from './schemas';
 
 /**

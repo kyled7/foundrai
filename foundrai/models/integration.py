@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 class IntegrationStatus(str, Enum):
     """Integration status enumeration."""
+
     DISABLED = "disabled"
     ENABLED = "enabled"
     ERROR = "error"
@@ -19,6 +20,7 @@ class IntegrationStatus(str, Enum):
 
 class IntegrationType(str, Enum):
     """Integration type enumeration."""
+
     SOURCE_CONTROL = "source_control"
     PROJECT_MANAGEMENT = "project_management"
     COMMUNICATION = "communication"
@@ -28,6 +30,7 @@ class IntegrationType(str, Enum):
 
 class IntegrationConfig(BaseModel):
     """Integration configuration model."""
+
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     name: str  # 'github', 'jira', 'slack'
     project_id: str
@@ -50,6 +53,7 @@ class IntegrationConfig(BaseModel):
 
 class ExternalTaskMapping(BaseModel):
     """Mapping between FoundrAI tasks and external system tasks."""
+
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     task_id: str
     external_system: str  # 'jira', 'linear', 'github'
@@ -67,6 +71,7 @@ class ExternalTaskMapping(BaseModel):
 
 class GitHubWebhookRequest(BaseModel):
     """GitHub webhook request model."""
+
     event: str
     action: str
     repository: dict[str, Any]
@@ -76,6 +81,7 @@ class GitHubWebhookRequest(BaseModel):
 
 class SlackEventRequest(BaseModel):
     """Slack event request model."""
+
     type: str
     event: dict[str, Any] | None = None
     challenge: str | None = None  # For URL verification

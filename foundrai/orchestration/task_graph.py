@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+
 import networkx as nx
 
 from foundrai.models.enums import TaskStatus
@@ -81,10 +82,7 @@ class TaskGraph:
                 }
                 for tid, t in self._tasks.items()
             ]
-            edges = [
-                {"source": u, "target": v}
-                for u, v in self._graph.edges
-            ]
+            edges = [{"source": u, "target": v} for u, v in self._graph.edges]
             return {"nodes": nodes, "edges": edges}
 
     async def get_task(self, task_id: str) -> Task:

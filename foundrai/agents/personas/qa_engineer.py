@@ -49,7 +49,7 @@ class QAEngineerAgent(BaseAgent):
             "Pass the task if the core functionality works correctly.\n"
             "Only fail if there are critical issues that would break functionality.\n\n"
             "If sandbox is unavailable, do a code-review-only analysis.\n"
-            "Return JSON: {\"passed\": bool, \"issues\": [...], \"suggestions\": [...]}"
+            'Return JSON: {"passed": bool, "issues": [...], "suggestions": [...]}'
         )
 
     async def execute_task(self, task: Task) -> TaskResult:

@@ -31,9 +31,8 @@ import type {
   TeamTemplate, CreateTemplateRequest, Team, CreateTeamRequest, Learning,
   SprintCostPoint, SprintSummary, SprintComparison, AgentMetrics, GlobalAnalytics,
   GlobalSettings, ApiKeyInfo, AgentHealth, ProjectAgentHealthResponse, SprintAgentHealthResponse,
-  BudgetConfig, BudgetHistoryPoint, ModelRecommendation, CostSavingsEstimate,
-  ModelPerformanceComparison, TaskComplexity, AutonomyMatrix, AutonomyProfile, TrustScore,
-  ActionType, AutonomyMode,
+  BudgetHistoryPoint, ModelRecommendation, CostSavingsEstimate,
+  ModelPerformanceComparison, TaskComplexity, AutonomyProfile, TrustScore,
 } from './types';
 
 export const api = {

@@ -81,9 +81,13 @@ class SprintEngine:
         }
 
         await self.sprint_store.create_sprint(state)
-        await self.event_log.append("sprint.started", {
-            "sprint_id": sprint_id, "goal": goal,
-        })
+        await self.event_log.append(
+            "sprint.started",
+            {
+                "sprint_id": sprint_id,
+                "goal": goal,
+            },
+        )
 
         # Plan
         state = await self._plan_node(state)
@@ -121,7 +125,9 @@ class SprintEngine:
         for sprint_num in range(max_sprints):
             logger.info(
                 "Starting sprint %d/%d for goal: %s",
-                sprint_num + 1, max_sprints, remaining_goal[:100],
+                sprint_num + 1,
+                max_sprints,
+                remaining_goal[:100],
             )
 
             state = await self.run_sprint(remaining_goal, project_id)
@@ -135,11 +141,14 @@ class SprintEngine:
 
             if failed == 0 and done == total and total > 0:
                 logger.info("All tasks completed in sprint %d. Goal achieved.", sprint_num + 1)
-                await self.event_log.append("multi_sprint.goal_achieved", {
-                    "project_id": project_id,
-                    "sprints_used": sprint_num + 1,
-                    "goal": goal,
-                })
+                await self.event_log.append(
+                    "multi_sprint.goal_achieved",
+                    {
+                        "project_id": project_id,
+                        "sprints_used": sprint_num + 1,
+                        "goal": goal,
+                    },
+                )
                 break
 
             # Check if auto_start_next is disabled
@@ -153,21 +162,22 @@ class SprintEngine:
                 logger.info("No failed tasks to retry. Stopping.")
                 break
 
-            failed_descriptions = "\n".join(
-                f"- {t.title}: {t.description}" for t in failed_tasks
-            )
+            failed_descriptions = "\n".join(f"- {t.title}: {t.description}" for t in failed_tasks)
             remaining_goal = (
                 f"Continue working on the original goal: {goal}\n\n"
                 f"The following tasks from the previous sprint need to be completed:\n"
                 f"{failed_descriptions}"
             )
 
-            await self.event_log.append("multi_sprint.continuing", {
-                "project_id": project_id,
-                "sprint_number": sprint_num + 1,
-                "failed_tasks": len(failed_tasks),
-                "remaining_goal": remaining_goal[:500],
-            })
+            await self.event_log.append(
+                "multi_sprint.continuing",
+                {
+                    "project_id": project_id,
+                    "sprint_number": sprint_num + 1,
+                    "failed_tasks": len(failed_tasks),
+                    "remaining_goal": remaining_goal[:500],
+                },
+            )
 
             # Reset task graph for next sprint
             await self.task_graph.reset()
@@ -203,7 +213,9 @@ class SprintEngine:
 
         logger.info(
             "Resuming sprint %s from checkpoint %s (%s)",
-            sprint_id, checkpoint_id, checkpoint_name,
+            sprint_id,
+            checkpoint_id,
+            checkpoint_name,
         )
 
         # Load the state
@@ -217,11 +229,14 @@ class SprintEngine:
             for task in state["tasks"]:
                 await self.task_graph.add_task(task, depends_on=task.dependencies)
 
-        await self.event_log.append("sprint.resumed", {
-            "sprint_id": sprint_id,
-            "checkpoint_name": checkpoint_name,
-            "checkpoint_id": checkpoint_id,
-        })
+        await self.event_log.append(
+            "sprint.resumed",
+            {
+                "sprint_id": sprint_id,
+                "checkpoint_name": checkpoint_name,
+                "checkpoint_id": checkpoint_id,
+            },
+        )
 
         # Resume from the appropriate phase based on checkpoint name
         if checkpoint_name == "after_planning":
@@ -287,15 +302,16 @@ class SprintEngine:
         state["tasks"] = tasks
         await self.sprint_store.update_tasks(state["sprint_id"], tasks)
 
-        await self.event_log.append("sprint.planning_completed", {
-            "sprint_id": state["sprint_id"],
-            "task_count": len(tasks),
-        })
+        await self.event_log.append(
+            "sprint.planning_completed",
+            {
+                "sprint_id": state["sprint_id"],
+                "task_count": len(tasks),
+            },
+        )
 
         # Create checkpoint after planning
-        await self.sprint_store.save_checkpoint(
-            state["sprint_id"], "after_planning", state
-        )
+        await self.sprint_store.save_checkpoint(state["sprint_id"], "after_planning", state)
 
         return state
 
@@ -313,18 +329,23 @@ class SprintEngine:
                 budget_status = await self.budget_manager.check_budget(state["sprint_id"])
                 if budget_status.is_exceeded:
                     # Emit budget_exceeded event
-                    await self.event_log.append("budget_exceeded", {
-                        "sprint_id": state["sprint_id"],
-                        "spent_usd": budget_status.spent_usd,
-                        "budget_usd": budget_status.budget_usd,
-                        "percentage_used": budget_status.percentage_used,
-                    })
+                    await self.event_log.append(
+                        "budget_exceeded",
+                        {
+                            "sprint_id": state["sprint_id"],
+                            "spent_usd": budget_status.spent_usd,
+                            "budget_usd": budget_status.budget_usd,
+                            "percentage_used": budget_status.percentage_used,
+                        },
+                    )
                     # Pause sprint
                     state["status"] = SprintStatus.PAUSED
                     await self._emit_status_change(state)
                     logger.error(
                         "Sprint %s paused: budget exceeded ($%.4f / $%.4f)",
-                        state["sprint_id"], budget_status.spent_usd, budget_status.budget_usd,
+                        state["sprint_id"],
+                        budget_status.spent_usd,
+                        budget_status.budget_usd,
                     )
                     break
 
@@ -358,9 +379,7 @@ class SprintEngine:
             async def execute_one(task: Task, agent: Any, role_name: str) -> None:
                 async with sem:
                     # --- Approval gate ---
-                    approved = await self._check_approval_gate(
-                        task, role_name, state["sprint_id"]
-                    )
+                    approved = await self._check_approval_gate(task, role_name, state["sprint_id"])
                     if not approved:
                         task.status = TaskStatus.BLOCKED
                         await self.task_graph.mark_completed(task.id)
@@ -403,18 +422,24 @@ class SprintEngine:
                         task.status = TaskStatus.FAILED
                         logger.warning(
                             "Task %s timed out after %s seconds in sprint %s",
-                            task.id, timeout, state["sprint_id"],
+                            task.id,
+                            timeout,
+                            state["sprint_id"],
                         )
-                        await self.event_log.append("task.timeout", {
-                            "task_id": task.id,
-                            "sprint_id": state["sprint_id"],
-                            "timeout_seconds": timeout,
-                            "task_title": task.title,
-                        })
+                        await self.event_log.append(
+                            "task.timeout",
+                            {
+                                "task_id": task.id,
+                                "sprint_id": state["sprint_id"],
+                                "timeout_seconds": timeout,
+                                "task_title": task.title,
+                            },
+                        )
                     except Exception as exc:
                         task.status = TaskStatus.FAILED
                         await self._record_error(
-                            exc, task_id=task.id,
+                            exc,
+                            task_id=task.id,
                             sprint_id=state["sprint_id"],
                             agent_role=role_name,
                         )
@@ -428,9 +453,7 @@ class SprintEngine:
             )
 
         # Create checkpoint after execution
-        await self.sprint_store.save_checkpoint(
-            state["sprint_id"], "after_execution", state
-        )
+        await self.sprint_store.save_checkpoint(state["sprint_id"], "after_execution", state)
 
         return state
 
@@ -466,7 +489,9 @@ class SprintEngine:
             except (ValueError, KeyError):
                 logger.warning(
                     "Invalid autonomy_mode '%s' for %s/%s, falling back to REQUIRE_APPROVAL",
-                    row.get("autonomy_mode"), agent_role, action_type,
+                    row.get("autonomy_mode"),
+                    agent_role,
+                    action_type,
                 )
                 return AutonomyLevel.REQUIRE_APPROVAL
 
@@ -479,9 +504,7 @@ class SprintEngine:
         # Default to REQUIRE_APPROVAL if not configured anywhere
         return AutonomyLevel.REQUIRE_APPROVAL
 
-    async def _check_approval_gate(
-        self, task: Task, agent_role: str, sprint_id: str
-    ) -> bool:
+    async def _check_approval_gate(self, task: Task, agent_role: str, sprint_id: str) -> bool:
         """Check if this task/agent requires human approval before execution.
 
         Returns True if approved (or no approval needed), False if rejected/timed out.
@@ -498,6 +521,7 @@ class SprintEngine:
             # Query autonomy matrix for task_execution action
             # Map task execution to CODE_EXECUTE action type as it's the most relevant
             from foundrai.models.enums import ActionType
+
             action_type = ActionType.CODE_EXECUTE.value
             autonomy = await self._get_autonomy_level_for_action(
                 agent_role, action_type, project_id
@@ -505,35 +529,44 @@ class SprintEngine:
 
         # Handle AUTO_APPROVE
         if autonomy == AutonomyLevel.AUTO_APPROVE:
-            await self.event_log.append("approval.auto_approved", {
-                "sprint_id": sprint_id,
-                "task_id": task.id,
-                "agent_role": agent_role,
-                "task_title": task.title,
-                "autonomy_level": autonomy.value,
-            })
+            await self.event_log.append(
+                "approval.auto_approved",
+                {
+                    "sprint_id": sprint_id,
+                    "task_id": task.id,
+                    "agent_role": agent_role,
+                    "task_title": task.title,
+                    "autonomy_level": autonomy.value,
+                },
+            )
             return True
 
         # Handle NOTIFY
         if autonomy == AutonomyLevel.NOTIFY:
-            await self.event_log.append("approval.notify", {
-                "sprint_id": sprint_id,
-                "task_id": task.id,
-                "agent_role": agent_role,
-                "task_title": task.title,
-                "message": f"Agent '{agent_role}' is starting task: {task.title}",
-            })
+            await self.event_log.append(
+                "approval.notify",
+                {
+                    "sprint_id": sprint_id,
+                    "task_id": task.id,
+                    "agent_role": agent_role,
+                    "task_title": task.title,
+                    "message": f"Agent '{agent_role}' is starting task: {task.title}",
+                },
+            )
             return True
 
         # Handle BLOCK
         if autonomy == AutonomyLevel.BLOCK:
-            await self.event_log.append("approval.blocked", {
-                "sprint_id": sprint_id,
-                "task_id": task.id,
-                "agent_role": agent_role,
-                "task_title": task.title,
-                "autonomy_level": autonomy.value,
-            })
+            await self.event_log.append(
+                "approval.blocked",
+                {
+                    "sprint_id": sprint_id,
+                    "task_id": task.id,
+                    "agent_role": agent_role,
+                    "task_title": task.title,
+                    "autonomy_level": autonomy.value,
+                },
+            )
             return False
 
         # REQUIRE_APPROVAL — create approval request and wait
@@ -553,20 +586,29 @@ class SprintEngine:
                 title, description, status, expires_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
             (
-                approval_id, sprint_id, task.id, agent_role,
-                "task_execution", task.title, task.description, expires_at,
+                approval_id,
+                sprint_id,
+                task.id,
+                agent_role,
+                "task_execution",
+                task.title,
+                task.description,
+                expires_at,
             ),
         )
         await self.db.conn.commit()
 
-        await self.event_log.append("approval.requested", {
-            "approval_id": approval_id,
-            "sprint_id": sprint_id,
-            "task_id": task.id,
-            "agent_role": agent_role,
-            "action_type": "task_execution",
-            "task_title": task.title,
-        })
+        await self.event_log.append(
+            "approval.requested",
+            {
+                "approval_id": approval_id,
+                "sprint_id": sprint_id,
+                "task_id": task.id,
+                "agent_role": agent_role,
+                "action_type": "task_execution",
+                "task_title": task.title,
+            },
+        )
 
         # Poll for approval decision
         approval_timeout = self._get_approval_timeout(agent_role)
@@ -581,18 +623,24 @@ class SprintEngine:
             )
             row = await cursor.fetchone()
             if row and row["status"] == "approved":
-                await self.event_log.append("approval.approved", {
-                    "approval_id": approval_id,
-                    "sprint_id": sprint_id,
-                    "task_id": task.id,
-                })
+                await self.event_log.append(
+                    "approval.approved",
+                    {
+                        "approval_id": approval_id,
+                        "sprint_id": sprint_id,
+                        "task_id": task.id,
+                    },
+                )
                 return True
             if row and row["status"] == "rejected":
-                await self.event_log.append("approval.rejected", {
-                    "approval_id": approval_id,
-                    "sprint_id": sprint_id,
-                    "task_id": task.id,
-                })
+                await self.event_log.append(
+                    "approval.rejected",
+                    {
+                        "approval_id": approval_id,
+                        "sprint_id": sprint_id,
+                        "task_id": task.id,
+                    },
+                )
                 return False
 
         # Timed out
@@ -601,11 +649,14 @@ class SprintEngine:
             (approval_id,),
         )
         await self.db.conn.commit()
-        await self.event_log.append("approval.expired", {
-            "approval_id": approval_id,
-            "sprint_id": sprint_id,
-            "task_id": task.id,
-        })
+        await self.event_log.append(
+            "approval.expired",
+            {
+                "approval_id": approval_id,
+                "sprint_id": sprint_id,
+                "task_id": task.id,
+            },
+        )
         return False
 
     def _get_agent_autonomy(self, agent_role: str) -> AutonomyLevel:
@@ -639,9 +690,12 @@ class SprintEngine:
         # Run review ceremony
         review = SprintReview()
         await review.run(state, self.agents)
-        await self.event_log.append("sprint.review_completed", {
-            "sprint_id": state["sprint_id"],
-        })
+        await self.event_log.append(
+            "sprint.review_completed",
+            {
+                "sprint_id": state["sprint_id"],
+            },
+        )
 
         if not qa:
             # Auto-pass tasks without QA
@@ -662,36 +716,40 @@ class SprintEngine:
             except Exception as exc:
                 task.status = TaskStatus.FAILED
                 await self._record_error(
-                    exc, task_id=task.id,
-                    sprint_id=state["sprint_id"], agent_role="qa_engineer",
+                    exc,
+                    task_id=task.id,
+                    sprint_id=state["sprint_id"],
+                    agent_role="qa_engineer",
                 )
 
             await self._emit_task_status(task)
 
         # Create checkpoint after review
-        await self.sprint_store.save_checkpoint(
-            state["sprint_id"], "after_review", state
-        )
+        await self.sprint_store.save_checkpoint(state["sprint_id"], "after_review", state)
 
         return state
 
     async def _retrospective_node(self, state: SprintState) -> SprintState:
         """RETROSPECTIVE node: Analyze sprint and generate learnings."""
-        await self.event_log.append("sprint.retrospective_started", {
-            "sprint_id": state["sprint_id"],
-        })
+        await self.event_log.append(
+            "sprint.retrospective_started",
+            {
+                "sprint_id": state["sprint_id"],
+            },
+        )
 
         retro = SprintRetrospective()
         await retro.run(state, self.agents, self.vector_memory, self.db)
 
-        await self.event_log.append("sprint.retrospective_completed", {
-            "sprint_id": state["sprint_id"],
-        })
+        await self.event_log.append(
+            "sprint.retrospective_completed",
+            {
+                "sprint_id": state["sprint_id"],
+            },
+        )
 
         # Create checkpoint after retrospective
-        await self.sprint_store.save_checkpoint(
-            state["sprint_id"], "after_retrospective", state
-        )
+        await self.sprint_store.save_checkpoint(state["sprint_id"], "after_retrospective", state)
 
         return state
 
@@ -700,19 +758,9 @@ class SprintEngine:
         state["status"] = SprintStatus.COMPLETED
 
         total = len(state["tasks"])
-        done = sum(
-            1 for t in state["tasks"]
-            if t.status in (TaskStatus.DONE, "done")
-        )
-        failed = sum(
-            1 for t in state["tasks"]
-            if t.status in (TaskStatus.FAILED, "failed")
-        )
-        total_tokens = sum(
-            t.result.tokens_used
-            for t in state["tasks"]
-            if t.result
-        )
+        done = sum(1 for t in state["tasks"] if t.status in (TaskStatus.DONE, "done"))
+        failed = sum(1 for t in state["tasks"] if t.status in (TaskStatus.FAILED, "failed"))
+        total_tokens = sum(t.result.tokens_used for t in state["tasks"] if t.result)
 
         state["metrics"] = SprintMetrics(
             total_tasks=total,

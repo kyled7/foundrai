@@ -38,14 +38,24 @@ async def test_record_and_get_errors(error_store: ErrorStore) -> None:
 @pytest.mark.asyncio
 async def test_get_sprint_errors(error_store: ErrorStore) -> None:
     for i in range(3):
-        await error_store.record_error(ErrorLog(
-            task_id=f"task-{i}", sprint_id="sprint-1", agent_role="developer",
-            error_type="unknown", error_message=f"error {i}",
-        ))
-    await error_store.record_error(ErrorLog(
-        task_id="task-x", sprint_id="sprint-2", agent_role="developer",
-        error_type="unknown", error_message="other",
-    ))
+        await error_store.record_error(
+            ErrorLog(
+                task_id=f"task-{i}",
+                sprint_id="sprint-1",
+                agent_role="developer",
+                error_type="unknown",
+                error_message=f"error {i}",
+            )
+        )
+    await error_store.record_error(
+        ErrorLog(
+            task_id="task-x",
+            sprint_id="sprint-2",
+            agent_role="developer",
+            error_type="unknown",
+            error_message="other",
+        )
+    )
 
     errors = await error_store.get_sprint_errors("sprint-1")
     assert len(errors) == 3
@@ -55,7 +65,9 @@ async def test_get_sprint_errors(error_store: ErrorStore) -> None:
 async def test_classify_error() -> None:
     assert ErrorStore.classify_error(Exception("rate limit exceeded")) == "rate_limit"
     assert ErrorStore.classify_error(Exception("429 too many requests")) == "rate_limit"
-    assert ErrorStore.classify_error(Exception("context token limit exceeded")) == "context_overflow"
+    assert (
+        ErrorStore.classify_error(Exception("context token limit exceeded")) == "context_overflow"
+    )
     assert ErrorStore.classify_error(TimeoutError("timed out")) == "timeout"
     assert ErrorStore.classify_error(Exception("json decode error")) == "parse_error"
     assert ErrorStore.classify_error(Exception("something random")) == "unknown"

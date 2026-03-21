@@ -68,17 +68,20 @@ class LLMClient:
         if hasattr(message, "tool_calls") and message.tool_calls:
             for tc in message.tool_calls:
                 import json
+
                 args = tc.function.arguments
                 if isinstance(args, str):
                     try:
                         args = json.loads(args)
                     except json.JSONDecodeError:
                         args = {"raw": args}
-                tool_calls.append({
-                    "id": tc.id,
-                    "name": tc.function.name,
-                    "arguments": args,
-                })
+                tool_calls.append(
+                    {
+                        "id": tc.id,
+                        "name": tc.function.name,
+                        "arguments": args,
+                    }
+                )
 
         return LLMResponse(
             content=message.content or "",

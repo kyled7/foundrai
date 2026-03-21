@@ -27,32 +27,36 @@ from foundrai.persistence.artifact_store import ArtifactStore
 from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
 
-PM_RESPONSE = json.dumps([
-    {
-        "title": "Create Flask app",
-        "description": "Create a basic Flask hello world app",
-        "acceptance_criteria": ["App returns 200 on /", "Response is 'Hello World'"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    },
-    {
-        "title": "Write tests",
-        "description": "Write pytest tests for the Flask app",
-        "acceptance_criteria": ["Tests pass", "Coverage > 80%"],
-        "dependencies": ["Create Flask app"],
-        "assigned_to": "developer",
-        "priority": 2,
-    },
-])
+PM_RESPONSE = json.dumps(
+    [
+        {
+            "title": "Create Flask app",
+            "description": "Create a basic Flask hello world app",
+            "acceptance_criteria": ["App returns 200 on /", "Response is 'Hello World'"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+        {
+            "title": "Write tests",
+            "description": "Write pytest tests for the Flask app",
+            "acceptance_criteria": ["Tests pass", "Coverage > 80%"],
+            "dependencies": ["Create Flask app"],
+            "assigned_to": "developer",
+            "priority": 2,
+        },
+    ]
+)
 
 DEV_RESPONSE = "I've implemented the Flask app with a hello world endpoint at /."
 
-QA_RESPONSE = json.dumps({
-    "passed": True,
-    "issues": [],
-    "suggestions": ["Consider adding error handling"],
-})
+QA_RESPONSE = json.dumps(
+    {
+        "passed": True,
+        "issues": [],
+        "suggestions": ["Consider adding error handling"],
+    }
+)
 
 
 def _make_runtime_mock(response_content: str, response_format: str | None = None) -> AsyncMock:
@@ -65,13 +69,15 @@ def _make_runtime_mock(response_content: str, response_format: str | None = None
             parsed = json.loads(response_content)
         except json.JSONDecodeError:
             pass
-    runtime.run = AsyncMock(return_value=RuntimeResult(
-        output=response_content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=100,
-        success=True,
-    ))
+    runtime.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=response_content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=100,
+            success=True,
+        )
+    )
     return runtime
 
 
@@ -114,16 +120,28 @@ async def test_full_sprint_flow(db, tmp_path, sprint_context, components):
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(PM_RESPONSE, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(PM_RESPONSE, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(DEV_RESPONSE),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(DEV_RESPONSE),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_RESPONSE, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_RESPONSE, "json"),
     )
 
     # Register agents on message bus
@@ -138,6 +156,7 @@ async def test_full_sprint_flow(db, tmp_path, sprint_context, components):
     }
 
     from foundrai.config import FoundrAIConfig
+
     config = FoundrAIConfig()
 
     engine = SprintEngine(
@@ -206,7 +225,10 @@ async def test_sprint_fails_when_planning_fails(db, tmp_path, sprint_context, co
 
     pm_role = get_role(AgentRoleName.PRODUCT_MANAGER)
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
         sprint_context=sprint_context,
     )
     # Make runtime raise an error
@@ -216,10 +238,15 @@ async def test_sprint_fails_when_planning_fails(db, tmp_path, sprint_context, co
     agent_map = {AgentRoleName.PRODUCT_MANAGER.value: pm}
 
     from foundrai.config import FoundrAIConfig
+
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agent_map, task_graph=task_graph,
-        message_bus=message_bus, sprint_store=sprint_store,
-        event_log=event_log, artifact_store=artifact_store,
+        config=FoundrAIConfig(),
+        agents=agent_map,
+        task_graph=task_graph,
+        message_bus=message_bus,
+        sprint_store=sprint_store,
+        event_log=event_log,
+        artifact_store=artifact_store,
     )
 
     result = await engine.run_sprint(goal="Fail test", project_id="test")
@@ -234,18 +261,27 @@ async def test_sprint_fails_when_no_tasks_produced(db, tmp_path, sprint_context,
 
     pm_role = get_role(AgentRoleName.PRODUCT_MANAGER)
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("[]", "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("[]", "json"),
     )
     message_bus.register_agent(AgentRoleName.PRODUCT_MANAGER.value)
 
     agent_map = {AgentRoleName.PRODUCT_MANAGER.value: pm}
 
     from foundrai.config import FoundrAIConfig
+
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agent_map, task_graph=task_graph,
-        message_bus=message_bus, sprint_store=sprint_store,
-        event_log=event_log, artifact_store=artifact_store,
+        config=FoundrAIConfig(),
+        agents=agent_map,
+        task_graph=task_graph,
+        message_bus=message_bus,
+        sprint_store=sprint_store,
+        event_log=event_log,
+        artifact_store=artifact_store,
     )
 
     result = await engine.run_sprint(goal="Empty", project_id="test")
@@ -265,28 +301,41 @@ async def test_sprint_with_qa_failure(db, tmp_path, sprint_context, components):
 
     qa_fail = json.dumps({"passed": False, "issues": ["Code is buggy"], "suggestions": []})
 
-    pm_single_task = json.dumps([{
-        "title": "Build feature",
-        "description": "Build it",
-        "acceptance_criteria": ["Works"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    }])
+    pm_single_task = json.dumps(
+        [
+            {
+                "title": "Build feature",
+                "description": "Build it",
+                "acceptance_criteria": ["Works"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 1,
+            }
+        ]
+    )
 
     pm = ProductManagerAgent(
-        role=get_role(AgentRoleName.PRODUCT_MANAGER), model="test/model", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.PRODUCT_MANAGER),
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_make_runtime_mock(pm_single_task, "json"),
     )
     dev = DeveloperAgent(
-        role=get_role(AgentRoleName.DEVELOPER), model="test/model", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.DEVELOPER),
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_make_runtime_mock(DEV_RESPONSE),
     )
     qa = QAEngineerAgent(
-        role=get_role(AgentRoleName.QA_ENGINEER), model="test/model", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.QA_ENGINEER),
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_make_runtime_mock(qa_fail, "json"),
     )
 
@@ -300,10 +349,15 @@ async def test_sprint_with_qa_failure(db, tmp_path, sprint_context, components):
     }
 
     from foundrai.config import FoundrAIConfig
+
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agent_map, task_graph=task_graph,
-        message_bus=message_bus, sprint_store=sprint_store,
-        event_log=event_log, artifact_store=artifact_store,
+        config=FoundrAIConfig(),
+        agents=agent_map,
+        task_graph=task_graph,
+        message_bus=message_bus,
+        sprint_store=sprint_store,
+        event_log=event_log,
+        artifact_store=artifact_store,
     )
 
     result = await engine.run_sprint(goal="QA fail test", project_id="test")
@@ -322,19 +376,33 @@ async def test_sprint_without_qa_agent(db, tmp_path, sprint_context, components)
     """
     event_log, sprint_store, artifact_store, message_bus, task_graph = components
 
-    pm_single = json.dumps([{
-        "title": "Solo task", "description": "Do it", "acceptance_criteria": [],
-        "dependencies": [], "assigned_to": "developer", "priority": 1,
-    }])
+    pm_single = json.dumps(
+        [
+            {
+                "title": "Solo task",
+                "description": "Do it",
+                "acceptance_criteria": [],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 1,
+            }
+        ]
+    )
 
     pm = ProductManagerAgent(
-        role=get_role(AgentRoleName.PRODUCT_MANAGER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.PRODUCT_MANAGER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_make_runtime_mock(pm_single, "json"),
     )
     dev = DeveloperAgent(
-        role=get_role(AgentRoleName.DEVELOPER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.DEVELOPER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_make_runtime_mock("Done"),
     )
     for r in [AgentRoleName.PRODUCT_MANAGER, AgentRoleName.DEVELOPER]:
@@ -346,10 +414,15 @@ async def test_sprint_without_qa_agent(db, tmp_path, sprint_context, components)
     }
 
     from foundrai.config import FoundrAIConfig
+
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agent_map, task_graph=task_graph,
-        message_bus=message_bus, sprint_store=sprint_store,
-        event_log=event_log, artifact_store=artifact_store,
+        config=FoundrAIConfig(),
+        agents=agent_map,
+        task_graph=task_graph,
+        message_bus=message_bus,
+        sprint_store=sprint_store,
+        event_log=event_log,
+        artifact_store=artifact_store,
     )
 
     result = await engine.run_sprint(goal="No QA", project_id="test")
@@ -371,28 +444,41 @@ async def test_backward_compatibility_default_configs(db, tmp_path, sprint_conte
     """
     event_log, sprint_store, artifact_store, message_bus, task_graph = components
 
-    pm_response = json.dumps([{
-        "title": "Quick task",
-        "description": "A fast task",
-        "acceptance_criteria": ["Done quickly"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    }])
+    pm_response = json.dumps(
+        [
+            {
+                "title": "Quick task",
+                "description": "A fast task",
+                "acceptance_criteria": ["Done quickly"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 1,
+            }
+        ]
+    )
 
     pm = ProductManagerAgent(
-        role=get_role(AgentRoleName.PRODUCT_MANAGER), model="test/model", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.PRODUCT_MANAGER),
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_make_runtime_mock(pm_response, "json"),
     )
     dev = DeveloperAgent(
-        role=get_role(AgentRoleName.DEVELOPER), model="test/model", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.DEVELOPER),
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_make_runtime_mock("Task completed quickly"),
     )
     qa = QAEngineerAgent(
-        role=get_role(AgentRoleName.QA_ENGINEER), model="test/model", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.QA_ENGINEER),
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_make_runtime_mock(QA_RESPONSE, "json"),
     )
 
@@ -406,6 +492,7 @@ async def test_backward_compatibility_default_configs(db, tmp_path, sprint_conte
     }
 
     from foundrai.config import FoundrAIConfig
+
     config = FoundrAIConfig()
 
     # Verify default config values exist (they're optional, so presence matters)

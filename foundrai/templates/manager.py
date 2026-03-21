@@ -33,7 +33,7 @@ class TemplateManager:
         description: str = "",
         author: str = "local",
         tags: list[str] | None = None,
-        is_public: bool = False
+        is_public: bool = False,
     ) -> TeamTemplate:
         """Save current project configuration as a reusable template.
 
@@ -55,7 +55,7 @@ class TemplateManager:
             tags=tags or [],
             team_config=config.team.model_dump(),
             sprint_config=config.sprint.model_dump(),
-            is_public=is_public
+            is_public=is_public,
         )
 
         # Save to database
@@ -86,9 +86,7 @@ class TemplateManager:
         return None
 
     async def apply_template(
-        self,
-        template: TeamTemplate,
-        config: FoundrAIConfig
+        self, template: TeamTemplate, config: FoundrAIConfig
     ) -> FoundrAIConfig:
         """Apply template configuration to current project.
 
@@ -160,11 +158,7 @@ class TemplateManager:
         logger.info(f"Deleted template: {template.name}")
         return True
 
-    async def export_template(
-        self,
-        template_id: str,
-        output_path: Path | str
-    ) -> bool:
+    async def export_template(self, template_id: str, output_path: Path | str) -> bool:
         """Export template to shareable file.
 
         Args:

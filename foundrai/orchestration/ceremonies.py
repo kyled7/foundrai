@@ -55,7 +55,8 @@ class SprintPlanning:
         # Retrieve past learnings
         if vector_memory:
             learnings = await vector_memory.query_relevant(
-                goal, k=5,
+                goal,
+                k=5,
                 project_id=context.project_id if hasattr(context, "project_id") else None,
             )
             if learnings and hasattr(pm, "refine_with_learnings"):
@@ -91,7 +92,8 @@ class SprintReview:
             failed_count=len(failed),
             quality_score=quality_score,
             incomplete_tasks=[
-                t for t in tasks
+                t
+                for t in tasks
                 if t.status not in (TaskStatus.DONE, TaskStatus.FAILED, "done", "failed")
             ],
         )
@@ -130,19 +132,23 @@ class SprintRetrospective:
                 if parsed and isinstance(parsed, dict):
                     learnings = []
                     for text in parsed.get("learnings", []):
-                        learnings.append(Learning(
-                            content=text,
+                        learnings.append(
+                            Learning(
+                                content=text,
+                                category="process",
+                                sprint_id=state.get("sprint_id", ""),
+                                project_id=state.get("project_id", ""),
+                            )
+                        )
+                    # Add auto-generated completion rate learning
+                    learnings.append(
+                        Learning(
+                            content=f"Sprint completion rate: {rate:.0%}",
                             category="process",
                             sprint_id=state.get("sprint_id", ""),
                             project_id=state.get("project_id", ""),
-                        ))
-                    # Add auto-generated completion rate learning
-                    learnings.append(Learning(
-                        content=f"Sprint completion rate: {rate:.0%}",
-                        category="process",
-                        sprint_id=state.get("sprint_id", ""),
-                        project_id=state.get("project_id", ""),
-                    ))
+                        )
+                    )
 
                     if vector_memory:
                         for lr in learnings:
@@ -167,12 +173,14 @@ class SprintRetrospective:
             )
         ]
         if failed:
-            learnings.append(Learning(
-                content=f"{len(failed)} task(s) failed. Review task complexity.",
-                category="quality",
-                sprint_id=state.get("sprint_id", ""),
-                project_id=state.get("project_id", ""),
-            ))
+            learnings.append(
+                Learning(
+                    content=f"{len(failed)} task(s) failed. Review task complexity.",
+                    category="quality",
+                    sprint_id=state.get("sprint_id", ""),
+                    project_id=state.get("project_id", ""),
+                )
+            )
 
         if vector_memory:
             for lr in learnings:

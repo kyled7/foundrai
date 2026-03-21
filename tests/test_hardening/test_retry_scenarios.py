@@ -24,22 +24,26 @@ from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
 
 # Test data
-SINGLE_TASK_JSON = json.dumps([
-    {
-        "title": "Build feature",
-        "description": "Implement a new feature",
-        "acceptance_criteria": ["Feature works", "Tests pass"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    },
-])
+SINGLE_TASK_JSON = json.dumps(
+    [
+        {
+            "title": "Build feature",
+            "description": "Implement a new feature",
+            "acceptance_criteria": ["Feature works", "Tests pass"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+    ]
+)
 
-QA_PASS_JSON = json.dumps({
-    "passed": True,
-    "issues": [],
-    "suggestions": [],
-})
+QA_PASS_JSON = json.dumps(
+    {
+        "passed": True,
+        "issues": [],
+        "suggestions": [],
+    }
+)
 
 
 def _make_runtime_mock(response_content: str, response_format: str | None = None) -> AsyncMock:
@@ -52,13 +56,15 @@ def _make_runtime_mock(response_content: str, response_format: str | None = None
             parsed = json.loads(response_content)
         except json.JSONDecodeError:
             pass
-    runtime.run = AsyncMock(return_value=RuntimeResult(
-        output=response_content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=100,
-        success=True,
-    ))
+    runtime.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=response_content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=100,
+            success=True,
+        )
+    )
     return runtime
 
 
@@ -94,12 +100,20 @@ async def test_retry_on_rate_limit_error(db, tmp_path, sprint_context, component
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Create dev agent that fails with rate limit twice, then succeeds
@@ -119,8 +133,12 @@ async def test_retry_on_rate_limit_error(db, tmp_path, sprint_context, component
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=rate_limit_then_succeed)
 
@@ -170,12 +188,20 @@ async def test_retry_on_timeout_error(db, tmp_path, sprint_context, components):
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Create dev agent that fails with timeout once, then succeeds
@@ -195,8 +221,12 @@ async def test_retry_on_timeout_error(db, tmp_path, sprint_context, components):
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=timeout_then_succeed)
 
@@ -244,8 +274,12 @@ async def test_no_retry_on_context_overflow(db, tmp_path, sprint_context, compon
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # Create dev agent that always fails with context overflow
@@ -257,8 +291,12 @@ async def test_no_retry_on_context_overflow(db, tmp_path, sprint_context, compon
         raise RuntimeError("Context token limit exceeded - maximum 128k tokens allowed")
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=context_overflow_error)
 
@@ -304,8 +342,12 @@ async def test_no_retry_on_parse_error(db, tmp_path, sprint_context, components)
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # Create dev agent that always fails with parse error
@@ -317,8 +359,12 @@ async def test_no_retry_on_parse_error(db, tmp_path, sprint_context, components)
         raise ValueError("JSON decode error: malformed response")
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=parse_error)
 
@@ -364,8 +410,12 @@ async def test_max_retries_exhausted(db, tmp_path, sprint_context, components):
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # Create dev agent that always fails with retryable error
@@ -377,8 +427,12 @@ async def test_max_retries_exhausted(db, tmp_path, sprint_context, components):
         raise RuntimeError("Rate limit exceeded: 429")
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=always_rate_limit)
 
@@ -425,12 +479,20 @@ async def test_retry_with_exponential_backoff(db, tmp_path, sprint_context, comp
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Track timing to verify exponential backoff
@@ -452,8 +514,12 @@ async def test_retry_with_exponential_backoff(db, tmp_path, sprint_context, comp
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=rate_limit_with_timing)
 
@@ -509,40 +575,50 @@ async def test_multiple_tasks_with_mixed_retry_scenarios(db, tmp_path, sprint_co
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     # Create multiple tasks
-    multi_tasks_json = json.dumps([
-        {
-            "title": "Task succeeds first try",
-            "description": "This will work immediately",
-            "acceptance_criteria": ["Works"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 1,
-        },
-        {
-            "title": "Task needs retry",
-            "description": "This will fail once then succeed",
-            "acceptance_criteria": ["Works after retry"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 2,
-        },
-        {
-            "title": "Task fails permanently",
-            "description": "This will fail with non-retryable error",
-            "acceptance_criteria": ["Should fail"],
-            "dependencies": [],
-            "assigned_to": "developer",
-            "priority": 3,
-        },
-    ])
+    multi_tasks_json = json.dumps(
+        [
+            {
+                "title": "Task succeeds first try",
+                "description": "This will work immediately",
+                "acceptance_criteria": ["Works"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 1,
+            },
+            {
+                "title": "Task needs retry",
+                "description": "This will fail once then succeed",
+                "acceptance_criteria": ["Works after retry"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 2,
+            },
+            {
+                "title": "Task fails permanently",
+                "description": "This will fail with non-retryable error",
+                "acceptance_criteria": ["Should fail"],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": 3,
+            },
+        ]
+    )
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(multi_tasks_json, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(multi_tasks_json, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Track which task is being executed
@@ -587,8 +663,12 @@ async def test_multiple_tasks_with_mixed_retry_scenarios(db, tmp_path, sprint_co
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.execute_task = AsyncMock(side_effect=mixed_behavior)
 
@@ -649,8 +729,12 @@ async def test_retry_behavior_at_runtime_level(db, tmp_path, sprint_context, com
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # Test that runtime-level retries work by having dev fail at runtime.run() level
@@ -672,8 +756,12 @@ async def test_retry_behavior_at_runtime_level(db, tmp_path, sprint_context, com
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     # Mock at runtime.run level to test AgentRuntime retry integration
     dev.runtime.run = AsyncMock(side_effect=runtime_rate_limit_then_succeed)

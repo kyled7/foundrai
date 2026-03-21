@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 from foundrai.api import deps
 from foundrai.api.app import create_app
@@ -26,6 +26,7 @@ async def client(test_config):
     deps._config = None
     app = create_app(test_config)
     from foundrai.api.app import lifespan
+
     async with lifespan(app):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:

@@ -26,8 +26,7 @@ async def get_autonomy_config(project_id: str) -> dict:
     """Get autonomy configuration for a project."""
     db = await get_db()
     cursor = await db.conn.execute(
-        "SELECT agent_role, action_type, autonomy_mode FROM autonomy_config"
-        " WHERE project_id = ?",
+        "SELECT agent_role, action_type, autonomy_mode FROM autonomy_config WHERE project_id = ?",
         (project_id,),
     )
     rows = await cursor.fetchall()
@@ -51,9 +50,7 @@ async def get_autonomy_config(project_id: str) -> dict:
 
 
 @router.put("/projects/{project_id}/autonomy/config")
-async def update_autonomy_config(
-    project_id: str, body: AutonomyConfigUpdate
-) -> dict:
+async def update_autonomy_config(project_id: str, body: AutonomyConfigUpdate) -> dict:
     """Update autonomy configuration for a project."""
     db = await get_db()
     updated_at = datetime.utcnow().isoformat()
@@ -66,16 +63,14 @@ async def update_autonomy_config(
         except ValueError:
             raise HTTPException(
                 status_code=400, detail=f"Invalid agent role: {agent_role}"
-            )
+            ) from None
 
         for action_type, autonomy_mode in actions.items():
             # Validate action type
             try:
                 ActionType(action_type)
             except ValueError:
-                raise HTTPException(
-                    status_code=400, detail=f"Invalid action type: {action_type}"
-                )
+                raise HTTPException(status_code=400, detail=f"Invalid action type: {action_type}") from None
 
             # Validate autonomy level
             try:
@@ -84,7 +79,7 @@ async def update_autonomy_config(
                 raise HTTPException(
                     status_code=400,
                     detail=f"Invalid autonomy mode: {autonomy_mode}",
-                )
+                ) from None
 
             # Upsert the configuration
             await db.conn.execute(
@@ -219,9 +214,7 @@ async def apply_autonomy_profile(project_id: str, profile_id: str) -> dict:
     updated_at = datetime.utcnow().isoformat()
 
     # Delete existing config for this project
-    await db.conn.execute(
-        "DELETE FROM autonomy_config WHERE project_id = ?", (project_id,)
-    )
+    await db.conn.execute("DELETE FROM autonomy_config WHERE project_id = ?", (project_id,))
 
     # Insert new configuration from profile
     for agent_role, actions in profile.matrix.items():

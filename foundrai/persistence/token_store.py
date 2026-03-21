@@ -38,6 +38,7 @@ class TokenStore:
         # Lazy import to avoid circular dependency
         try:
             from foundrai.api.app import ws_manager
+
             await ws_manager.broadcast(
                 usage.sprint_id,
                 "cost_updated",

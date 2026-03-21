@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from foundrai.models.enums import AgentRoleName
 from foundrai.models.recommendation import (
@@ -94,9 +93,7 @@ class RecommendationEngine:
         )
 
         # Get alternative models
-        alternative_models = [
-            m.model for m in performance_data if m.model != recommended_model
-        ][:3]
+        alternative_models = [m.model for m in performance_data if m.model != recommended_model][:3]
 
         recommendation = ModelRecommendation(
             project_id=project_id,
@@ -146,9 +143,7 @@ class RecommendationEngine:
 
         for role in AgentRoleName:
             current_model = current_config.get(role.value)
-            recommendation = await self.get_recommendation(
-                project_id, role, current_model
-            )
+            recommendation = await self.get_recommendation(project_id, role, current_model)
             recommendations.append(recommendation)
 
         return recommendations
@@ -171,12 +166,8 @@ class RecommendationEngine:
         """
         # Generate recommended config if not provided
         if recommended_config is None:
-            recommendations = await self.get_all_recommendations(
-                project_id, current_config
-            )
-            recommended_config = {
-                rec.agent_role: rec.recommended_model for rec in recommendations
-            }
+            recommendations = await self.get_all_recommendations(project_id, current_config)
+            recommended_config = {rec.agent_role: rec.recommended_model for rec in recommendations}
 
         # Calculate costs for each configuration
         current_total = 0.0
@@ -194,21 +185,15 @@ class RecommendationEngine:
             # Get performance metrics for current and recommended models
             performance_data = await self.store.get_agent_performance(project_id, role)
 
-            current_metrics = next(
-                (m for m in performance_data if m.model == current_model), None
-            )
+            current_metrics = next((m for m in performance_data if m.model == current_model), None)
             recommended_model = recommended_config.get(role_str, current_model)
             recommended_metrics = next(
                 (m for m in performance_data if m.model == recommended_model), None
             )
 
             # Calculate costs based on historical data
-            current_cost = (
-                current_metrics.avg_cost_per_task if current_metrics else 0.0
-            )
-            recommended_cost = (
-                recommended_metrics.avg_cost_per_task if recommended_metrics else 0.0
-            )
+            current_cost = current_metrics.avg_cost_per_task if current_metrics else 0.0
+            recommended_cost = recommended_metrics.avg_cost_per_task if recommended_metrics else 0.0
 
             current_total += current_cost
             recommended_total += recommended_cost
@@ -224,9 +209,7 @@ class RecommendationEngine:
 
         # Calculate overall savings
         total_savings = current_total - recommended_total
-        savings_pct = (
-            (total_savings / current_total * 100.0) if current_total > 0 else 0.0
-        )
+        savings_pct = (total_savings / current_total * 100.0) if current_total > 0 else 0.0
 
         # Determine quality impact (simplified - could be enhanced)
         quality_impact = "neutral"
@@ -297,12 +280,8 @@ class RecommendationEngine:
             )
 
         # Identify best models
-        best_for_quality = await self.store.get_best_performing_model(
-            project_id, agent_role
-        )
-        best_for_cost = await self.store.get_most_cost_efficient_model(
-            project_id, agent_role
-        )
+        best_for_quality = await self.store.get_best_performing_model(project_id, agent_role)
+        best_for_cost = await self.store.get_most_cost_efficient_model(project_id, agent_role)
 
         # Determine best overall (balance quality and cost)
         best_overall = self._determine_best_overall(performance_data)
@@ -346,9 +325,7 @@ class RecommendationEngine:
         cost_constraints: float | None,
     ) -> ModelRecommendation:
         """Provide default recommendation when insufficient historical data."""
-        recommended_model = DEFAULT_ROLE_RECOMMENDATIONS.get(
-            agent_role, "gpt-4o-mini"
-        )
+        recommended_model = DEFAULT_ROLE_RECOMMENDATIONS.get(agent_role, "gpt-4o-mini")
 
         # Adjust based on task complexity if provided
         if task_complexity == TaskComplexity.CRITICAL:
@@ -436,9 +413,7 @@ class RecommendationEngine:
         best_metrics = next((m for m in viable_models if m.model == best), None)
         return best, reasoning, best_metrics
 
-    def _determine_best_overall(
-        self, performance_data: list[PerformanceMetrics]
-    ) -> str | None:
+    def _determine_best_overall(self, performance_data: list[PerformanceMetrics]) -> str | None:
         """Determine best overall model balancing quality and cost.
 
         Uses a simple scoring formula: score = success_rate / (avg_cost * 1000)

@@ -49,9 +49,7 @@ async def execute_sprint(sprint_id: str, body: ExecuteRequest | None = None) -> 
         raise HTTPException(status_code=409, detail="Sprint is already executing")
 
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT * FROM sprints WHERE sprint_id = ?", (sprint_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM sprints WHERE sprint_id = ?", (sprint_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Sprint not found")
@@ -83,9 +81,7 @@ async def execute_sprint(sprint_id: str, body: ExecuteRequest | None = None) -> 
 async def get_execution_status(sprint_id: str) -> SprintStatusResponse:
     """Check whether a sprint's background execution is still running."""
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT status FROM sprints WHERE sprint_id = ?", (sprint_id,)
-    )
+    cursor = await db.conn.execute("SELECT status FROM sprints WHERE sprint_id = ?", (sprint_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Sprint not found")
@@ -171,16 +167,19 @@ async def _run_sprint_engine(sprint_id: str, project_id: str, goal: str) -> None
         error_store = None
         try:
             from foundrai.persistence.token_store import TokenStore
+
             token_store = TokenStore(db)
         except Exception:
             pass
         try:
             from foundrai.persistence.trace_store import TraceStore
+
             trace_store = TraceStore(db)
         except Exception:
             pass
         try:
             from foundrai.persistence.error_store import ErrorStore
+
             error_store = ErrorStore(db)
         except Exception:
             pass
@@ -219,10 +218,13 @@ async def _run_sprint_engine(sprint_id: str, project_id: str, goal: str) -> None
         )
         await db.conn.commit()
 
-        await event_log.append("sprint.started", {
-            "sprint_id": sprint_id,
-            "goal": goal,
-        })
+        await event_log.append(
+            "sprint.started",
+            {
+                "sprint_id": sprint_id,
+                "goal": goal,
+            },
+        )
 
         # Build initial state matching what the engine expects
         from foundrai.models.enums import SprintStatus

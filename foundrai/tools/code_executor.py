@@ -59,31 +59,34 @@ class CodeExecutor(BaseTool):
         image = self.DOCKER_IMAGES.get(input.language)
         if not image:
             return ToolOutput(
-                success=False, output="",
+                success=False,
+                output="",
                 error=f"Unsupported language: {input.language}",
             )
 
-        ext = {
-            "python": ".py", "javascript": ".js", "bash": ".sh"
-        }.get(input.language, ".py")
-        run_cmd = {
-            "python": "python", "javascript": "node", "bash": "bash"
-        }.get(input.language, "python")
+        ext = {"python": ".py", "javascript": ".js", "bash": ".sh"}.get(input.language, ".py")
+        run_cmd = {"python": "python", "javascript": "node", "bash": "bash"}.get(
+            input.language, "python"
+        )
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=ext, delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=ext, delete=False) as f:
             f.write(input.code)
             code_path = f.name
 
         try:
             cmd = [
-                "docker", "run", "--rm",
-                "--memory", f"{self.max_memory}m",
-                "--network", "none",
+                "docker",
+                "run",
+                "--rm",
+                "--memory",
+                f"{self.max_memory}m",
+                "--network",
+                "none",
                 "--read-only",
-                "--tmpfs", "/tmp:size=64m",
-                "-v", f"{code_path}:/code/main{ext}:ro",
+                "--tmpfs",
+                "/tmp:size=64m",
+                "-v",
+                f"{code_path}:/code/main{ext}:ro",
                 image,
                 run_cmd,
                 f"/code/main{ext}",
@@ -102,15 +105,10 @@ class CodeExecutor(BaseTool):
             return ToolOutput(
                 success=proc.returncode == 0,
                 output=stdout.decode("utf-8", errors="replace"),
-                error=(
-                    stderr.decode("utf-8", errors="replace")
-                    if proc.returncode != 0 else None
-                ),
+                error=(stderr.decode("utf-8", errors="replace") if proc.returncode != 0 else None),
             )
         except TimeoutError:
-            return ToolOutput(
-                success=False, output="", error="Execution timed out"
-            )
+            return ToolOutput(success=False, output="", error="Execution timed out")
         finally:
             os.unlink(code_path)
 
@@ -133,9 +131,7 @@ class E2BCodeExecutor(BaseTool):
         self.max_memory = max_memory
         self.api_key = os.getenv("E2B_API_KEY")
         if not self.api_key:
-            raise ValueError(
-                "E2B_API_KEY environment variable is required for E2BCodeExecutor"
-            )
+            raise ValueError("E2B_API_KEY environment variable is required for E2BCodeExecutor")
 
     async def execute(self, input: CodeExecutorInput) -> ToolOutput:  # type: ignore[override] # noqa: A002
         """Run code in E2B sandbox."""
@@ -194,7 +190,7 @@ class E2BCodeExecutor(BaseTool):
                 error=result.stderr if result.exit_code != 0 else None,
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return ToolOutput(
                 success=False,
                 output="",

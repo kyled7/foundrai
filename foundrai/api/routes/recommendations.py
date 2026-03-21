@@ -97,7 +97,9 @@ async def get_agent_recommendation(
         "expected_cost_per_task": recommendation.expected_cost_per_task,
         "expected_success_rate": recommendation.expected_success_rate,
         "alternative_models": recommendation.alternative_models,
-        "performance_metrics": recommendation.performance_metrics.dict() if recommendation.performance_metrics else None,
+        "performance_metrics": recommendation.performance_metrics.dict()
+        if recommendation.performance_metrics
+        else None,
     }
 
 
@@ -105,18 +107,14 @@ async def get_agent_recommendation(
 
 
 class CostSavingsRequest(BaseModel):
-    current_config: dict[str, str] = Field(
-        description="Dict mapping agent_role to current model"
-    )
+    current_config: dict[str, str] = Field(description="Dict mapping agent_role to current model")
     recommended_config: dict[str, str] | None = Field(
         default=None, description="Dict mapping agent_role to recommended model (optional)"
     )
 
 
 @router.post("/projects/{project_id}/cost-savings")
-async def calculate_cost_savings(
-    project_id: str, body: CostSavingsRequest
-) -> dict:
+async def calculate_cost_savings(project_id: str, body: CostSavingsRequest) -> dict:
     """Calculate potential cost savings from recommended model configuration."""
     engine = await _get_recommendation_engine()
 

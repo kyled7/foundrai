@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class PluginInfo(BaseModel):
     """Plugin information for API responses."""
+
     id: str
     name: str
     version: str
@@ -32,6 +33,7 @@ class PluginInfo(BaseModel):
 
 class InstallPluginRequest(BaseModel):
     """Request to install a plugin."""
+
     source: str  # "marketplace", "local", "url"
     identifier: str  # Plugin name/ID/URL
     version: str | None = None
@@ -39,6 +41,7 @@ class InstallPluginRequest(BaseModel):
 
 class TogglePluginRequest(BaseModel):
     """Request to toggle plugin state."""
+
     enabled: bool
 
 
@@ -58,7 +61,7 @@ def get_plugin_registry() -> PluginRegistry:
 async def list_plugins(
     plugin_type: PluginType | None = None,
     enabled_only: bool = True,
-    store: PluginStore = Depends(get_plugin_store)
+    store: PluginStore = Depends(get_plugin_store),
 ) -> list[PluginInfo]:
     """List installed plugins."""
     try:
@@ -74,7 +77,7 @@ async def list_plugins(
                 description=plugin.description,
                 enabled=plugin.enabled,
                 dependencies=plugin.dependencies,
-                tags=plugin.tags
+                tags=plugin.tags,
             )
             for plugin in plugins
         ]
@@ -87,7 +90,7 @@ async def list_plugins(
 async def install_plugin(
     request: InstallPluginRequest,
     store: PluginStore = Depends(get_plugin_store),
-    registry: PluginRegistry = Depends(get_plugin_registry)
+    registry: PluginRegistry = Depends(get_plugin_registry),
 ) -> PluginInfo:
     """Install plugin from marketplace or local file."""
     try:
@@ -102,13 +105,11 @@ async def install_plugin(
         elif request.source == "marketplace":
             # TODO: Download from marketplace
             raise HTTPException(
-                status_code=501,
-                detail="Marketplace installation not yet implemented"
+                status_code=501, detail="Marketplace installation not yet implemented"
             )
         else:
             raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported plugin source: {request.source}"
+                status_code=400, detail=f"Unsupported plugin source: {request.source}"
             )
 
         return PluginInfo(
@@ -120,21 +121,17 @@ async def install_plugin(
             description=plugin.description,
             enabled=plugin.enabled,
             dependencies=plugin.dependencies,
-            tags=plugin.tags
+            tags=plugin.tags,
         )
 
     except Exception as e:
         logger.error(f"Failed to install plugin {request.identifier}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to install plugin: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to install plugin: {str(e)}") from e
 
 
 @router.delete("/plugins/{plugin_id}")
 async def uninstall_plugin(
-    plugin_id: str,
-    store: PluginStore = Depends(get_plugin_store)
+    plugin_id: str, store: PluginStore = Depends(get_plugin_store)
 ) -> dict[str, str]:
     """Uninstall plugin."""
     try:
@@ -148,17 +145,12 @@ async def uninstall_plugin(
         raise
     except Exception as e:
         logger.error(f"Failed to uninstall plugin {plugin_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to uninstall plugin: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to uninstall plugin: {str(e)}") from e
 
 
 @router.put("/plugins/{plugin_id}/toggle", response_model=PluginInfo)
 async def toggle_plugin(
-    plugin_id: str,
-    request: TogglePluginRequest,
-    store: PluginStore = Depends(get_plugin_store)
+    plugin_id: str, request: TogglePluginRequest, store: PluginStore = Depends(get_plugin_store)
 ) -> PluginInfo:
     """Enable or disable plugin."""
     try:
@@ -180,23 +172,19 @@ async def toggle_plugin(
             description=plugin.description,
             enabled=plugin.enabled,
             dependencies=plugin.dependencies,
-            tags=plugin.tags
+            tags=plugin.tags,
         )
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to toggle plugin {plugin_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to toggle plugin: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to toggle plugin: {str(e)}") from e
 
 
 @router.get("/plugins/marketplace", response_model=list[PluginListing])
 async def browse_marketplace(
-    plugin_type: PluginType | None = None,
-    search: str | None = None
+    plugin_type: PluginType | None = None, search: str | None = None
 ) -> list[PluginListing]:
     """Browse plugins in the marketplace."""
     try:

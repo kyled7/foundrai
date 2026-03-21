@@ -37,21 +37,33 @@ def _mock_runtime(content: str, fmt: str | None = None):
         except json.JSONDecodeError:
             pass
     rt = AsyncMock()
-    rt.run = AsyncMock(return_value=RuntimeResult(
-        output=content, parsed=parsed, artifacts=[], tokens_used=50, success=True,
-    ))
+    rt.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=50,
+            success=True,
+        )
+    )
     return rt
 
 
 def _make_agents(message_bus, sprint_context, pm_resp, dev_resp="Done", qa_resp=None):
     pm = ProductManagerAgent(
-        role=get_role(AgentRoleName.PRODUCT_MANAGER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.PRODUCT_MANAGER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_mock_runtime(pm_resp, "json"),
     )
     dev = DeveloperAgent(
-        role=get_role(AgentRoleName.DEVELOPER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=sprint_context,
+        role=get_role(AgentRoleName.DEVELOPER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
         runtime=_mock_runtime(dev_resp),
     )
     agents = {
@@ -60,8 +72,11 @@ def _make_agents(message_bus, sprint_context, pm_resp, dev_resp="Done", qa_resp=
     }
     if qa_resp is not None:
         qa = QAEngineerAgent(
-            role=get_role(AgentRoleName.QA_ENGINEER), model="t", tools=[],
-            message_bus=message_bus, sprint_context=sprint_context,
+            role=get_role(AgentRoleName.QA_ENGINEER),
+            model="t",
+            tools=[],
+            message_bus=message_bus,
+            sprint_context=sprint_context,
             runtime=_mock_runtime(qa_resp, "json"),
         )
         agents[AgentRoleName.QA_ENGINEER.value] = qa
@@ -71,8 +86,10 @@ def _make_agents(message_bus, sprint_context, pm_resp, dev_resp="Done", qa_resp=
 @pytest.fixture
 def ctx(tmp_path):
     return SprintContext(
-        project_name="test", project_path=str(tmp_path),
-        sprint_goal="test goal", sprint_number=1,
+        project_name="test",
+        project_path=str(tmp_path),
+        sprint_goal="test goal",
+        sprint_number=1,
     )
 
 
@@ -88,18 +105,39 @@ async def infra(db):
     return el, ss, art, mb, tg
 
 
-SINGLE_TASK = json.dumps([{
-    "title": "Task A", "description": "Do A",
-    "acceptance_criteria": ["A works"], "dependencies": [],
-    "assigned_to": "developer", "priority": 1,
-}])
+SINGLE_TASK = json.dumps(
+    [
+        {
+            "title": "Task A",
+            "description": "Do A",
+            "acceptance_criteria": ["A works"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        }
+    ]
+)
 
-TWO_TASKS = json.dumps([
-    {"title": "T1", "description": "D1", "acceptance_criteria": [],
-     "dependencies": [], "assigned_to": "developer", "priority": 1},
-    {"title": "T2", "description": "D2", "acceptance_criteria": [],
-     "dependencies": ["T1"], "assigned_to": "developer", "priority": 2},
-])
+TWO_TASKS = json.dumps(
+    [
+        {
+            "title": "T1",
+            "description": "D1",
+            "acceptance_criteria": [],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+        {
+            "title": "T2",
+            "description": "D2",
+            "acceptance_criteria": [],
+            "dependencies": ["T1"],
+            "assigned_to": "developer",
+            "priority": 2,
+        },
+    ]
+)
 
 
 @pytest.mark.asyncio
@@ -107,8 +145,13 @@ async def test_engine_build_graph(db, ctx, infra):
     el, ss, art, mb, tg = infra
     agents = _make_agents(mb, ctx, SINGLE_TASK)
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     assert engine.graph is not None
 
@@ -120,8 +163,13 @@ async def test_engine_run_sprint_basic(db, ctx, infra):
     agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("test", "proj")
     assert result["status"] == SprintStatus.COMPLETED
@@ -135,8 +183,13 @@ async def test_engine_route_after_plan_no_tasks(db, ctx, infra):
     agents = _make_agents(mb, ctx, "[]")
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("empty", "proj")
     assert result["status"] == SprintStatus.FAILED
@@ -152,8 +205,13 @@ async def test_engine_route_after_plan_error(db, ctx, infra):
     )
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("err", "proj")
     assert result["status"] == SprintStatus.FAILED
@@ -172,8 +230,13 @@ async def test_engine_task_execution_failure(db, ctx, infra):
     )
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("dev fail", "proj")
     assert result["status"] == SprintStatus.COMPLETED
@@ -190,8 +253,13 @@ async def test_engine_no_pm_agent(db, ctx, infra):
         )
     }
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("no pm", "proj")
     assert result["status"] == SprintStatus.FAILED
@@ -208,8 +276,13 @@ async def test_engine_no_dev_agent(db, ctx, infra):
         )
     }
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("no dev", "proj")
     # Phase 2: sprint completes but tasks remain in backlog (no agent to execute)
@@ -224,8 +297,13 @@ async def test_engine_with_dependencies(db, ctx, infra):
     agents = _make_agents(mb, ctx, TWO_TASKS, qa_resp=qa_pass)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("deps", "proj")
     assert result["status"] == SprintStatus.COMPLETED
@@ -239,8 +317,13 @@ async def test_engine_metrics_calculated(db, ctx, infra):
     agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("metrics", "proj")
     m = result["metrics"]
@@ -263,8 +346,13 @@ async def test_engine_event_listener(db, ctx, infra):
     el.register_listener(listener)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     await engine.run_sprint("events", "proj")
 
@@ -292,18 +380,25 @@ async def test_engine_retries_failed_tasks(db, ctx, infra):
             raise RuntimeError("Request timed out after 30 seconds")
         # Third call: succeed
         return RuntimeResult(
-            output="Success", parsed=None, artifacts=[], tokens_used=50, success=True,
+            output="Success",
+            parsed=None,
+            artifacts=[],
+            tokens_used=50,
+            success=True,
         )
 
-    agents[AgentRoleName.DEVELOPER.value].runtime.run = AsyncMock(
-        side_effect=side_effect_fn
-    )
+    agents[AgentRoleName.DEVELOPER.value].runtime.run = AsyncMock(side_effect=side_effect_fn)
 
     config = FoundrAIConfig()
     config.sprint.max_task_retries = 3
     engine = SprintEngine(
-        config=config, agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=config,
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("retry test", "proj")
 
@@ -325,18 +420,25 @@ async def test_engine_times_out_long_tasks(db, ctx, infra):
         # Sleep for longer than the timeout
         await asyncio.sleep(2.0)
         return RuntimeResult(
-            output="Should not complete", parsed=None, artifacts=[], tokens_used=50, success=True,
+            output="Should not complete",
+            parsed=None,
+            artifacts=[],
+            tokens_used=50,
+            success=True,
         )
 
-    agents[AgentRoleName.DEVELOPER.value].execute_task = AsyncMock(
-        side_effect=slow_task
-    )
+    agents[AgentRoleName.DEVELOPER.value].execute_task = AsyncMock(side_effect=slow_task)
 
     config = FoundrAIConfig()
     config.sprint.task_timeout_seconds = 1  # 1 second timeout
     engine = SprintEngine(
-        config=config, agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=config,
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("timeout test", "proj")
 
@@ -353,8 +455,13 @@ async def test_engine_creates_checkpoints(db, ctx, infra):
     agents = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
     result = await engine.run_sprint("checkpoint test", "proj")
 
@@ -385,8 +492,13 @@ async def test_engine_resumes_from_checkpoint(db, ctx, infra):
 
     # Create initial engine and run sprint until planning completes
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
 
     # Run a sprint that will create checkpoints
@@ -411,8 +523,13 @@ async def test_engine_resumes_from_checkpoint(db, ctx, infra):
     # Create new engine with fresh agents (simulating restart)
     agents2 = _make_agents(mb, ctx, SINGLE_TASK, qa_resp=qa_pass)
     engine2 = SprintEngine(
-        config=FoundrAIConfig(), agents=agents2, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents2,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
 
     # Resume from the checkpoint using checkpoint_id
@@ -431,11 +548,19 @@ async def test_engine_parallel_task_updates(db, ctx, infra):
     qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
 
     # Create 5 tasks that can all run in parallel
-    many_tasks = json.dumps([
-        {"title": f"Task{i}", "description": f"Do {i}", "acceptance_criteria": [],
-         "dependencies": [], "assigned_to": "developer", "priority": i}
-        for i in range(5)
-    ])
+    many_tasks = json.dumps(
+        [
+            {
+                "title": f"Task{i}",
+                "description": f"Do {i}",
+                "acceptance_criteria": [],
+                "dependencies": [],
+                "assigned_to": "developer",
+                "priority": i,
+            }
+            for i in range(5)
+        ]
+    )
 
     agents = _make_agents(mb, ctx, many_tasks, qa_resp=qa_pass)
 
@@ -443,19 +568,26 @@ async def test_engine_parallel_task_updates(db, ctx, infra):
     async def slow_execute(*args, **kwargs):
         await asyncio.sleep(0.05)  # Small delay to ensure parallel execution
         return RuntimeResult(
-            output="Done", parsed=None, artifacts=[], tokens_used=10, success=True,
+            output="Done",
+            parsed=None,
+            artifacts=[],
+            tokens_used=10,
+            success=True,
         )
 
-    agents[AgentRoleName.DEVELOPER.value].execute_task = AsyncMock(
-        side_effect=slow_execute
-    )
+    agents[AgentRoleName.DEVELOPER.value].execute_task = AsyncMock(side_effect=slow_execute)
 
     config = FoundrAIConfig()
     config.sprint.max_tasks_parallel = 5  # Allow all tasks to run in parallel
 
     engine = SprintEngine(
-        config=config, agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=config,
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
 
     result = await engine.run_sprint("parallel test", "proj")

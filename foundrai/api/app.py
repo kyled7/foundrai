@@ -179,12 +179,14 @@ def create_app(config: FoundrAIConfig | None = None) -> FastAPI:
     async def websocket_endpoint(websocket: WebSocket, sprint_id: str) -> None:
         await ws_manager.connect(websocket, sprint_id)
         # Send handshake
-        await websocket.send_json({
-            "type": "connection.established",
-            "data": {"sprint_id": sprint_id, "status": "connected"},
-            "timestamp": datetime.now(UTC).isoformat(),
-            "sequence": 0,
-        })
+        await websocket.send_json(
+            {
+                "type": "connection.established",
+                "data": {"sprint_id": sprint_id, "status": "connected"},
+                "timestamp": datetime.now(UTC).isoformat(),
+                "sequence": 0,
+            }
+        )
         try:
             while True:
                 data = await websocket.receive_text()

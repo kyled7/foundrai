@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 class PluginType(str, Enum):
     """Plugin type enumeration."""
+
     ROLE = "role"
     TOOL = "tool"
     INTEGRATION = "integration"
@@ -18,6 +19,7 @@ class PluginType(str, Enum):
 
 class PluginStatus(str, Enum):
     """Plugin status enumeration."""
+
     INSTALLED = "installed"
     ENABLED = "enabled"
     DISABLED = "disabled"
@@ -26,6 +28,7 @@ class PluginStatus(str, Enum):
 
 class RolePluginSpec(BaseModel):
     """Specification for a role plugin."""
+
     name: str
     persona: str
     skills: list[str]
@@ -36,6 +39,7 @@ class RolePluginSpec(BaseModel):
 
 class ToolPluginSpec(BaseModel):
     """Specification for a tool plugin."""
+
     name: str
     description: str
     implementation: str  # Python module path
@@ -44,6 +48,7 @@ class ToolPluginSpec(BaseModel):
 
 class IntegrationPluginSpec(BaseModel):
     """Specification for an integration plugin."""
+
     name: str
     service_type: str
     webhook_endpoints: list[str] = Field(default_factory=list)
@@ -53,6 +58,7 @@ class IntegrationPluginSpec(BaseModel):
 
 class Plugin(BaseModel):
     """Plugin model."""
+
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     name: str
     version: str
@@ -83,6 +89,7 @@ class Plugin(BaseModel):
 
 class PluginListing(BaseModel):
     """Plugin listing from marketplace."""
+
     id: str
     name: str
     description: str
@@ -109,6 +116,7 @@ class PluginListing(BaseModel):
 
 class ValidationResult(BaseModel):
     """Plugin validation result."""
+
     valid: bool
     errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)

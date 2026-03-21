@@ -38,10 +38,16 @@ async def test_check_budget_no_spending(budget_setup) -> None:
 @pytest.mark.asyncio
 async def test_check_budget_warning(budget_setup) -> None:
     mgr, store = budget_setup
-    await store.record_usage(TokenUsage(
-        sprint_id="sprint-1", project_id="p1", agent_role="developer",
-        model="gpt-4", cost_usd=0.85, total_tokens=1000,
-    ))
+    await store.record_usage(
+        TokenUsage(
+            sprint_id="sprint-1",
+            project_id="p1",
+            agent_role="developer",
+            model="gpt-4",
+            cost_usd=0.85,
+            total_tokens=1000,
+        )
+    )
     status = await mgr.check_budget("sprint-1")
     assert status.is_warning
     assert not status.is_exceeded
@@ -50,10 +56,16 @@ async def test_check_budget_warning(budget_setup) -> None:
 @pytest.mark.asyncio
 async def test_check_budget_exceeded(budget_setup) -> None:
     mgr, store = budget_setup
-    await store.record_usage(TokenUsage(
-        sprint_id="sprint-1", project_id="p1", agent_role="developer",
-        model="gpt-4", cost_usd=1.10, total_tokens=1000,
-    ))
+    await store.record_usage(
+        TokenUsage(
+            sprint_id="sprint-1",
+            project_id="p1",
+            agent_role="developer",
+            model="gpt-4",
+            cost_usd=1.10,
+            total_tokens=1000,
+        )
+    )
     status = await mgr.check_budget("sprint-1")
     assert status.is_exceeded
 
@@ -67,20 +79,32 @@ async def test_enforce_budget_allows(budget_setup) -> None:
 @pytest.mark.asyncio
 async def test_enforce_budget_blocks(budget_setup) -> None:
     mgr, store = budget_setup
-    await store.record_usage(TokenUsage(
-        sprint_id="sprint-1", project_id="p1", agent_role="developer",
-        model="gpt-4", cost_usd=1.50, total_tokens=1000,
-    ))
+    await store.record_usage(
+        TokenUsage(
+            sprint_id="sprint-1",
+            project_id="p1",
+            agent_role="developer",
+            model="gpt-4",
+            cost_usd=1.50,
+            total_tokens=1000,
+        )
+    )
     assert await mgr.enforce_budget("sprint-1") is False
 
 
 @pytest.mark.asyncio
 async def test_agent_budget(budget_setup) -> None:
     mgr, store = budget_setup
-    await store.record_usage(TokenUsage(
-        sprint_id="sprint-1", project_id="p1", agent_role="developer",
-        model="gpt-4", cost_usd=0.45, total_tokens=1000,
-    ))
+    await store.record_usage(
+        TokenUsage(
+            sprint_id="sprint-1",
+            project_id="p1",
+            agent_role="developer",
+            model="gpt-4",
+            cost_usd=0.45,
+            total_tokens=1000,
+        )
+    )
     status = await mgr.check_budget("sprint-1", "developer")
     assert status.is_warning  # 90% of 0.5
 
@@ -89,10 +113,16 @@ async def test_agent_budget(budget_setup) -> None:
 async def test_budget_override(budget_setup) -> None:
     mgr, store = budget_setup
     await mgr.set_override("sprint-1", 10.0)
-    await store.record_usage(TokenUsage(
-        sprint_id="sprint-1", project_id="p1", agent_role="developer",
-        model="gpt-4", cost_usd=1.50, total_tokens=1000,
-    ))
+    await store.record_usage(
+        TokenUsage(
+            sprint_id="sprint-1",
+            project_id="p1",
+            agent_role="developer",
+            model="gpt-4",
+            cost_usd=1.50,
+            total_tokens=1000,
+        )
+    )
     status = await mgr.check_budget("sprint-1")
     assert not status.is_exceeded  # 1.50 < 10.0
 
@@ -100,8 +130,11 @@ async def test_budget_override(budget_setup) -> None:
 @pytest.mark.asyncio
 async def test_unlimited_budget() -> None:
     """Zero budget means unlimited."""
+    import os
+    import tempfile
+
     from foundrai.persistence.database import Database
-    import tempfile, os
+
     db = Database(os.path.join(tempfile.mkdtemp(), "test.db"))
     await db.connect()
     try:

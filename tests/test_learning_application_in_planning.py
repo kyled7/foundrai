@@ -10,7 +10,7 @@ This test focuses on the SprintPlanning ceremony and verifies:
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -26,33 +26,36 @@ from foundrai.orchestration.message_bus import MessageBus
 from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.vector_memory import VectorMemory
 
-
 # Mock PM responses
-INITIAL_TASKS_JSON = json.dumps([
-    {
-        "title": "Build feature X",
-        "description": "Basic implementation",
-        "acceptance_criteria": ["Feature works"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    }
-])
+INITIAL_TASKS_JSON = json.dumps(
+    [
+        {
+            "title": "Build feature X",
+            "description": "Basic implementation",
+            "acceptance_criteria": ["Feature works"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        }
+    ]
+)
 
-REFINED_TASKS_JSON = json.dumps([
-    {
-        "title": "Build secure feature X",
-        "description": "Implementation with security best practices",
-        "acceptance_criteria": [
-            "Feature works",
-            "Input validation added",
-            "Security review completed"
-        ],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    }
-])
+REFINED_TASKS_JSON = json.dumps(
+    [
+        {
+            "title": "Build secure feature X",
+            "description": "Implementation with security best practices",
+            "acceptance_criteria": [
+                "Feature works",
+                "Input validation added",
+                "Security review completed",
+            ],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        }
+    ]
+)
 
 
 @pytest.fixture
@@ -106,9 +109,9 @@ async def test_sprint_planning_retrieves_and_applies_learnings(
     """
 
     # STEP 1: Store learnings from "previous sprint"
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 1: Store learnings in VectorMemory (simulating Sprint 1)")
-    print("="*80)
+    print("=" * 80)
 
     learnings = [
         Learning(
@@ -143,9 +146,9 @@ async def test_sprint_planning_retrieves_and_applies_learnings(
     assert len(all_learnings) == len(learnings), "All learnings should be stored"
 
     # STEP 2: Create PM agent with mocked runtime
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 2: Create PM agent and SprintPlanning")
-    print("="*80)
+    print("=" * 80)
 
     pm = ProductManagerAgent(
         role=get_role(AgentRoleName.PRODUCT_MANAGER),
@@ -161,24 +164,26 @@ async def test_sprint_planning_retrieves_and_applies_learnings(
     refine_calls = []
 
     # Mock PM runtime to return different responses
-    pm.runtime.run = AsyncMock(side_effect=[
-        # First call: decompose_goal
-        RuntimeResult(
-            output=INITIAL_TASKS_JSON,
-            parsed=json.loads(INITIAL_TASKS_JSON),
-            artifacts=[],
-            tokens_used=100,
-            success=True,
-        ),
-        # Second call: refine_with_learnings
-        RuntimeResult(
-            output=REFINED_TASKS_JSON,
-            parsed=json.loads(REFINED_TASKS_JSON),
-            artifacts=[],
-            tokens_used=150,
-            success=True,
-        ),
-    ])
+    pm.runtime.run = AsyncMock(
+        side_effect=[
+            # First call: decompose_goal
+            RuntimeResult(
+                output=INITIAL_TASKS_JSON,
+                parsed=json.loads(INITIAL_TASKS_JSON),
+                artifacts=[],
+                tokens_used=100,
+                success=True,
+            ),
+            # Second call: refine_with_learnings
+            RuntimeResult(
+                output=REFINED_TASKS_JSON,
+                parsed=json.loads(REFINED_TASKS_JSON),
+                artifacts=[],
+                tokens_used=150,
+                success=True,
+            ),
+        ]
+    )
 
     # Spy on PM methods to track calls
     original_decompose = pm.decompose_goal
@@ -198,9 +203,9 @@ async def test_sprint_planning_retrieves_and_applies_learnings(
     agents = {"product_manager": pm}
 
     # STEP 3: Run SprintPlanning with vector_memory
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 3: Run SprintPlanning with vector_memory")
-    print("="*80)
+    print("=" * 80)
 
     planning = SprintPlanning()
 
@@ -226,9 +231,9 @@ async def test_sprint_planning_retrieves_and_applies_learnings(
     print(f"\n✓ Planning completed, returned {len(tasks)} tasks")
 
     # STEP 4: Verify vector_memory.query_relevant was called
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("VERIFICATION 1: vector_memory.query_relevant called")
-    print("="*80)
+    print("=" * 80)
 
     assert len(query_relevant_calls) > 0, "query_relevant should have been called"
 
@@ -237,18 +242,19 @@ async def test_sprint_planning_retrieves_and_applies_learnings(
         query = args[0] if args else kwargs.get("query", "N/A")
         k = kwargs.get("k", "N/A")
         proj_id = kwargs.get("project_id", "N/A")
-        print(f"  Call {i+1}: query='{query}', k={k}, project_id={proj_id}")
+        print(f"  Call {i + 1}: query='{query}', k={k}, project_id={proj_id}")
 
     # Verify it queried for the sprint goal
     call_args, call_kwargs = query_relevant_calls[0]
     query_text = call_args[0] if call_args else call_kwargs.get("query", "")
-    assert query_text == sprint_context.sprint_goal, \
+    assert query_text == sprint_context.sprint_goal, (
         f"Should query for sprint goal. Expected: '{sprint_context.sprint_goal}', Got: '{query_text}'"
+    )
 
     # STEP 5: Verify PM.refine_with_learnings was called
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("VERIFICATION 2: PM.refine_with_learnings called")
-    print("="*80)
+    print("=" * 80)
 
     assert len(refine_calls) > 0, "refine_with_learnings should have been called"
 
@@ -260,15 +266,15 @@ async def test_sprint_planning_retrieves_and_applies_learnings(
 
     assert len(learnings_passed) > 0, "Learnings should have been passed to refine"
 
-    print(f"\n  Learnings passed to refine_with_learnings:")
+    print("\n  Learnings passed to refine_with_learnings:")
     for lr in learnings_passed:
-        content = lr.content if hasattr(lr, 'content') else str(lr)
+        content = lr.content if hasattr(lr, "content") else str(lr)
         print(f"    - {content}")
 
     # STEP 6: Verify refined tasks were returned
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("VERIFICATION 3: Tasks were refined")
-    print("="*80)
+    print("=" * 80)
 
     assert len(tasks) > 0, "Planning should return tasks"
 
@@ -280,15 +286,16 @@ async def test_sprint_planning_retrieves_and_applies_learnings(
 
     # Verify refinement happened by checking acceptance criteria count
     # Initial had 1 criterion, refined should have more
-    assert len(tasks[0].acceptance_criteria) > 1, \
+    assert len(tasks[0].acceptance_criteria) > 1, (
         "Refined tasks should have more acceptance criteria than initial tasks"
+    )
 
     # FINAL SUMMARY
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ ALL VERIFICATIONS PASSED")
-    print("="*80)
+    print("=" * 80)
     print(f"\n1. ✅ Stored {len(learnings)} learnings in VectorMemory")
-    print(f"2. ✅ vector_memory.query_relevant() called during planning")
+    print("2. ✅ vector_memory.query_relevant() called during planning")
     print(f"3. ✅ PM.refine_with_learnings() called with {len(learnings_passed)} learnings")
     print(f"4. ✅ Tasks were refined (criteria count: 1 → {len(tasks[0].acceptance_criteria)})")
-    print(f"\n🎉 Learning retrieval and application in planning VERIFIED!")
+    print("\n🎉 Learning retrieval and application in planning VERIFIED!")

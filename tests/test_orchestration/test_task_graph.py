@@ -4,7 +4,6 @@ import asyncio
 
 import pytest
 
-from foundrai.models.enums import TaskStatus
 from foundrai.models.task import Task
 from foundrai.orchestration.task_graph import TaskGraph
 
@@ -151,9 +150,7 @@ async def test_graph_concurrent_updates():
 
     # Test concurrent reads
     results = await asyncio.gather(
-        graph.get_execution_order(),
-        graph.get_critical_path(),
-        graph.visualize()
+        graph.get_execution_order(), graph.get_critical_path(), graph.visualize()
     )
 
     # Verify results are consistent

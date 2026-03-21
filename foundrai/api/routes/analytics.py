@@ -11,7 +11,7 @@ import yaml
 from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel, Field
 
-from foundrai.api.deps import get_config, get_db, get_event_log, set_config
+from foundrai.api.deps import get_config, get_db, get_event_log
 from foundrai.models.budget import BudgetConfig
 from foundrai.orchestration.budget_manager import BudgetManager
 from foundrai.persistence.token_store import TokenStore
@@ -152,12 +152,15 @@ async def save_budget_config(body: BudgetConfigRequest) -> dict:
         with open(config_path, "w") as f:
             yaml.dump(yaml_data, f, default_flow_style=False, sort_keys=False)
 
-    return {"status": "ok", "config": {
-        "sprint_budget_usd": body.sprint_budget_usd,
-        "warning_threshold": body.warning_threshold,
-        "model_tierdown_map": body.model_tierdown_map,
-        "agent_budgets": body.agent_budgets,
-    }}
+    return {
+        "status": "ok",
+        "config": {
+            "sprint_budget_usd": body.sprint_budget_usd,
+            "warning_threshold": body.warning_threshold,
+            "model_tierdown_map": body.model_tierdown_map,
+            "agent_budgets": body.agent_budgets,
+        },
+    }
 
 
 @router.get("/projects/{project_id}/budget-history")
@@ -183,19 +186,21 @@ async def get_budget_history(project_id: str) -> dict:
         # Get budget status for this sprint
         status = await mgr.check_budget(sprint_id)
 
-        history.append({
-            "sprint_id": sprint_id,
-            "sprint_number": row["sprint_number"],
-            "goal": row["goal"],
-            "created_at": row["created_at"],
-            "completed_at": row["completed_at"],
-            "budget_usd": status.budget_usd,
-            "spent_usd": status.spent_usd,
-            "remaining_usd": status.remaining_usd,
-            "percentage_used": status.percentage_used,
-            "is_warning": status.is_warning,
-            "is_exceeded": status.is_exceeded,
-        })
+        history.append(
+            {
+                "sprint_id": sprint_id,
+                "sprint_number": row["sprint_number"],
+                "goal": row["goal"],
+                "created_at": row["created_at"],
+                "completed_at": row["completed_at"],
+                "budget_usd": status.budget_usd,
+                "spent_usd": status.spent_usd,
+                "remaining_usd": status.remaining_usd,
+                "percentage_used": status.percentage_used,
+                "is_warning": status.is_warning,
+                "is_exceeded": status.is_exceeded,
+            }
+        )
 
     return {"project_id": project_id, "history": history}
 
@@ -275,20 +280,22 @@ async def get_sprint_comparison(project_id: str) -> dict:
         # Velocity is tasks completed per sprint
         velocity = completed
 
-        sprints.append({
-            "sprint_id": row["sprint_id"],
-            "sprint_number": row["sprint_number"],
-            "goal": row["goal"],
-            "task_count": total_tasks,
-            "completed_count": completed,
-            "failed_count": failed,
-            "pass_rate": round(pass_rate, 1),
-            "total_tokens": tc_row["total_tokens"],
-            "total_cost": total_cost,
-            "cost_per_task": round(cost_per_task, 4),
-            "velocity": velocity,
-            "duration_seconds": duration_seconds,
-        })
+        sprints.append(
+            {
+                "sprint_id": row["sprint_id"],
+                "sprint_number": row["sprint_number"],
+                "goal": row["goal"],
+                "task_count": total_tasks,
+                "completed_count": completed,
+                "failed_count": failed,
+                "pass_rate": round(pass_rate, 1),
+                "total_tokens": tc_row["total_tokens"],
+                "total_cost": total_cost,
+                "cost_per_task": round(cost_per_task, 4),
+                "velocity": velocity,
+                "duration_seconds": duration_seconds,
+            }
+        )
     return {"sprints": sprints}
 
 

@@ -24,9 +24,8 @@ Manual E2E Verification Steps:
 
 from __future__ import annotations
 
-import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -50,41 +49,47 @@ from foundrai.persistence.sprint_store import SprintStore
 from foundrai.persistence.token_store import TokenStore
 
 # Test data
-MULTI_TASK_JSON = json.dumps([
-    {
-        "title": "Task 1 - High cost",
-        "description": "First task with high token usage",
-        "acceptance_criteria": ["Done"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    },
-    {
-        "title": "Task 2 - Medium cost",
-        "description": "Second task with medium token usage",
-        "acceptance_criteria": ["Done"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 2,
-    },
-    {
-        "title": "Task 3 - Low cost",
-        "description": "Third task with low token usage",
-        "acceptance_criteria": ["Done"],
-        "dependencies": ["Task 1"],
-        "assigned_to": "developer",
-        "priority": 3,
-    },
-])
+MULTI_TASK_JSON = json.dumps(
+    [
+        {
+            "title": "Task 1 - High cost",
+            "description": "First task with high token usage",
+            "acceptance_criteria": ["Done"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+        {
+            "title": "Task 2 - Medium cost",
+            "description": "Second task with medium token usage",
+            "acceptance_criteria": ["Done"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 2,
+        },
+        {
+            "title": "Task 3 - Low cost",
+            "description": "Third task with low token usage",
+            "acceptance_criteria": ["Done"],
+            "dependencies": ["Task 1"],
+            "assigned_to": "developer",
+            "priority": 3,
+        },
+    ]
+)
 
-QA_PASS_JSON = json.dumps({
-    "passed": True,
-    "issues": [],
-    "suggestions": [],
-})
+QA_PASS_JSON = json.dumps(
+    {
+        "passed": True,
+        "issues": [],
+        "suggestions": [],
+    }
+)
 
 
-def _make_runtime_mock(response_content: str, tokens: int, response_format: str | None = None) -> AsyncMock:
+def _make_runtime_mock(
+    response_content: str, tokens: int, response_format: str | None = None
+) -> AsyncMock:
     """Create a mock runtime that returns a canned response with token count (no recording).
 
     Use this for tests that don't need actual token usage recording.
@@ -97,13 +102,15 @@ def _make_runtime_mock(response_content: str, tokens: int, response_format: str 
             parsed = json.loads(response_content)
         except json.JSONDecodeError:
             pass
-    runtime.run = AsyncMock(return_value=RuntimeResult(
-        output=response_content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=tokens,
-        success=True,
-    ))
+    runtime.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=response_content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=tokens,
+            success=True,
+        )
+    )
     return runtime
 
 
@@ -196,10 +203,15 @@ async def test_e2e_cost_tracking_with_real_time_updates(db, tmp_path, sprint_con
     # Create agents with real runtimes that record token usage
     # Note: sprint_id will be set to "" initially and updated by engine during execution
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
         sprint_context=sprint_context,
         runtime=_make_runtime_with_token_store(
-            MULTI_TASK_JSON, 500, "json",
+            MULTI_TASK_JSON,
+            500,
+            "json",
             token_store=token_store,
             sprint_id="",  # Will be set by engine
             task_id=None,
@@ -209,10 +221,15 @@ async def test_e2e_cost_tracking_with_real_time_updates(db, tmp_path, sprint_con
         ),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
         sprint_context=sprint_context,
         runtime=_make_runtime_with_token_store(
-            QA_PASS_JSON, 100, "json",
+            QA_PASS_JSON,
+            100,
+            "json",
             token_store=token_store,
             sprint_id="",  # Will be set by engine
             task_id=None,
@@ -224,7 +241,9 @@ async def test_e2e_cost_tracking_with_real_time_updates(db, tmp_path, sprint_con
 
     # Create dev agent with varying token usage per task
     dev_runtime = _make_runtime_with_token_store(
-        "Task completed", 1000, None,
+        "Task completed",
+        1000,
+        None,
         token_store=token_store,
         sprint_id="",  # Will be set by engine
         task_id=None,
@@ -255,8 +274,12 @@ async def test_e2e_cost_tracking_with_real_time_updates(db, tmp_path, sprint_con
     dev_runtime.run = dev_with_varying_cost
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=dev_runtime,
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=dev_runtime,
     )
 
     # Register agents
@@ -335,7 +358,7 @@ async def test_e2e_cost_tracking_with_real_time_updates(db, tmp_path, sprint_con
     events = await event_log.query(sprint_id=sprint_id, event_type="cost.updated")
     # Events might not be logged in test mode, but structure should support it
 
-    print(f"✅ E2E Test 1 PASSED: Cost tracking with real-time updates verified")
+    print("✅ E2E Test 1 PASSED: Cost tracking with real-time updates verified")
     print(f"   - Total cost: ${sprint_usage['total_cost']:.4f}")
     print(f"   - Total calls: {sprint_usage['call_count']}")
     print(f"   - Agents tracked: {list(by_agent.keys())}")
@@ -366,16 +389,28 @@ async def test_e2e_budget_warning_and_exceeded(db, tmp_path, sprint_context, com
     budget_manager = BudgetManager(budget_config, token_store, db, event_log)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(MULTI_TASK_JSON, 500, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(MULTI_TASK_JSON, 500, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done", 100),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done", 100),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, 100, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, 100, "json"),
     )
 
     # Register agents
@@ -402,14 +437,16 @@ async def test_e2e_budget_warning_and_exceeded(db, tmp_path, sprint_context, com
     )
 
     # Simulate high token usage to exceed budget
-    await token_store.record_usage(TokenUsage(
-        sprint_id="test-budget-sprint",
-        project_id="test-cost-e2e",
-        agent_role="developer",
-        model="gpt-4",
-        cost_usd=0.009,  # 90% of budget - should trigger warning
-        total_tokens=1000,
-    ))
+    await token_store.record_usage(
+        TokenUsage(
+            sprint_id="test-budget-sprint",
+            project_id="test-cost-e2e",
+            agent_role="developer",
+            model="gpt-4",
+            cost_usd=0.009,  # 90% of budget - should trigger warning
+            total_tokens=1000,
+        )
+    )
 
     # Check budget status
     status = await budget_manager.check_budget("test-budget-sprint")
@@ -417,14 +454,16 @@ async def test_e2e_budget_warning_and_exceeded(db, tmp_path, sprint_context, com
     assert not status.is_exceeded, "Should not be exceeded yet"
 
     # Add more usage to exceed budget
-    await token_store.record_usage(TokenUsage(
-        sprint_id="test-budget-sprint",
-        project_id="test-cost-e2e",
-        agent_role="developer",
-        model="gpt-4",
-        cost_usd=0.005,  # Now at 140% of budget
-        total_tokens=500,
-    ))
+    await token_store.record_usage(
+        TokenUsage(
+            sprint_id="test-budget-sprint",
+            project_id="test-cost-e2e",
+            agent_role="developer",
+            model="gpt-4",
+            cost_usd=0.005,  # Now at 140% of budget
+            total_tokens=500,
+        )
+    )
 
     status = await budget_manager.check_budget("test-budget-sprint")
     assert status.is_exceeded, "Should be exceeded at 140% budget"
@@ -433,7 +472,7 @@ async def test_e2e_budget_warning_and_exceeded(db, tmp_path, sprint_context, com
     events = await event_log.query(event_type="budget.warning")
     # Events might be logged depending on when check_budget was called
 
-    print(f"✅ E2E Test 2 PASSED: Budget warning system verified")
+    print("✅ E2E Test 2 PASSED: Budget warning system verified")
     print(f"   - Budget: ${status.budget_usd:.4f}")
     print(f"   - Spent: ${status.spent_usd:.4f}")
     print(f"   - Warning triggered: {status.is_warning}")
@@ -457,16 +496,28 @@ async def test_e2e_per_task_cost_tracking(db, tmp_path, sprint_context, componen
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(MULTI_TASK_JSON, 500, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(MULTI_TASK_JSON, 500, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done", 1000),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done", 1000),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, 100, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, 100, "json"),
     )
 
     # Register agents
@@ -512,7 +563,7 @@ async def test_e2e_per_task_cost_tracking(db, tmp_path, sprint_context, componen
             # May be empty if task was auto-approved without agent actions
             pass
 
-    print(f"✅ E2E Test 3 PASSED: Per-task cost tracking verified")
+    print("✅ E2E Test 3 PASSED: Per-task cost tracking verified")
     print(f"   - Total tasks: {len(tasks)}")
     print(f"   - Completed tasks: {sum(1 for t in tasks if t.status == TaskStatus.DONE)}")
 
@@ -550,10 +601,15 @@ async def test_e2e_historical_cost_analytics(db, tmp_path, sprint_context, compo
         tokens = 500 * sprint_num  # Increasing cost
 
         pm = ProductManagerAgent(
-            role=pm_role, model="test/model", tools=[], message_bus=message_bus,
+            role=pm_role,
+            model="test/model",
+            tools=[],
+            message_bus=message_bus,
             sprint_context=ctx,
             runtime=_make_runtime_with_token_store(
-                MULTI_TASK_JSON, tokens, "json",
+                MULTI_TASK_JSON,
+                tokens,
+                "json",
                 token_store=token_store,
                 sprint_id="",  # Will be set by engine
                 task_id=None,
@@ -563,10 +619,15 @@ async def test_e2e_historical_cost_analytics(db, tmp_path, sprint_context, compo
             ),
         )
         dev = DeveloperAgent(
-            role=dev_role, model="test/model", tools=[], message_bus=message_bus,
+            role=dev_role,
+            model="test/model",
+            tools=[],
+            message_bus=message_bus,
             sprint_context=ctx,
             runtime=_make_runtime_with_token_store(
-                "Done", tokens, None,
+                "Done",
+                tokens,
+                None,
                 token_store=token_store,
                 sprint_id="",  # Will be set by engine
                 task_id=None,
@@ -576,10 +637,15 @@ async def test_e2e_historical_cost_analytics(db, tmp_path, sprint_context, compo
             ),
         )
         qa = QAEngineerAgent(
-            role=qa_role, model="test/model", tools=[], message_bus=message_bus,
+            role=qa_role,
+            model="test/model",
+            tools=[],
+            message_bus=message_bus,
             sprint_context=ctx,
             runtime=_make_runtime_with_token_store(
-                QA_PASS_JSON, tokens // 5, "json",
+                QA_PASS_JSON,
+                tokens // 5,
+                "json",
                 token_store=token_store,
                 sprint_id="",  # Will be set by engine
                 task_id=None,
@@ -634,7 +700,7 @@ async def test_e2e_historical_cost_analytics(db, tmp_path, sprint_context, compo
     # Verify cost trend
     assert len(sprint_costs) == 3
     # Costs should generally increase (though exact values depend on pricing)
-    print(f"✅ E2E Test 4 PASSED: Historical cost analytics verified")
+    print("✅ E2E Test 4 PASSED: Historical cost analytics verified")
     print(f"   - Sprint costs: {sprint_costs}")
 
     # Query project-level usage
@@ -665,10 +731,15 @@ async def test_e2e_sprint_retrospective_with_cost(db, tmp_path, sprint_context, 
     project_id = "test-retro"
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
         sprint_context=sprint_context,
         runtime=_make_runtime_with_token_store(
-            MULTI_TASK_JSON, 500, "json",
+            MULTI_TASK_JSON,
+            500,
+            "json",
             token_store=token_store,
             sprint_id="",  # Will be set by engine
             task_id=None,
@@ -678,10 +749,15 @@ async def test_e2e_sprint_retrospective_with_cost(db, tmp_path, sprint_context, 
         ),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
         sprint_context=sprint_context,
         runtime=_make_runtime_with_token_store(
-            "Done", 1000, None,
+            "Done",
+            1000,
+            None,
             token_store=token_store,
             sprint_id="",  # Will be set by engine
             task_id=None,
@@ -691,10 +767,15 @@ async def test_e2e_sprint_retrospective_with_cost(db, tmp_path, sprint_context, 
         ),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
         sprint_context=sprint_context,
         runtime=_make_runtime_with_token_store(
-            QA_PASS_JSON, 100, "json",
+            QA_PASS_JSON,
+            100,
+            "json",
             token_store=token_store,
             sprint_id="",  # Will be set by engine
             task_id=None,
@@ -758,7 +839,7 @@ async def test_e2e_sprint_retrospective_with_cost(db, tmp_path, sprint_context, 
     by_agent = sprint_usage["by_agent"]
     assert len(by_agent) > 0
 
-    print(f"✅ E2E Test 5 PASSED: Sprint retrospective with cost verified")
+    print("✅ E2E Test 5 PASSED: Sprint retrospective with cost verified")
     print(f"   - Total cost: ${sprint_usage['total_cost']:.4f}")
     print(f"   - Agent breakdown: {list(by_agent.keys())}")
     for agent, data in by_agent.items():

@@ -26,7 +26,7 @@ export function TeamConfigPage() {
   const [dismissedRecommendations, setDismissedRecommendations] = useState<Set<string>>(new Set());
 
   // Calculate cost savings when agents and recommendations are available
-  const costSavingsEstimate = useMemo(() => {
+  useMemo(() => {
     if (!data?.agents || !recommendations?.recommendations) return null;
 
     const currentConfig: Record<string, string> = {};
@@ -48,7 +48,7 @@ export function TeamConfigPage() {
     }
 
     return null;
-  }, [data?.agents, recommendations?.recommendations]);
+  }, [data?.agents, recommendations?.recommendations, costSavingsMutation]);
 
   if (isLoading) return <PageSkeleton />;
   if (!data?.agents?.length) {

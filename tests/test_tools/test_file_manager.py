@@ -8,9 +8,7 @@ from foundrai.tools.file_manager import FileManager, FileManagerInput
 @pytest.mark.asyncio
 async def test_write_and_read(tmp_path):
     fm = FileManager(tmp_path)
-    result = await fm.execute(
-        FileManagerInput(action="write", path="hello.txt", content="world")
-    )
+    result = await fm.execute(FileManagerInput(action="write", path="hello.txt", content="world"))
     assert result.success
 
     result = await fm.execute(FileManagerInput(action="read", path="hello.txt"))
@@ -21,9 +19,7 @@ async def test_write_and_read(tmp_path):
 @pytest.mark.asyncio
 async def test_path_traversal_blocked(tmp_path):
     fm = FileManager(tmp_path)
-    result = await fm.execute(
-        FileManagerInput(action="read", path="../../../etc/passwd")
-    )
+    result = await fm.execute(FileManagerInput(action="read", path="../../../etc/passwd"))
     assert not result.success
     assert "outside project" in result.error
 

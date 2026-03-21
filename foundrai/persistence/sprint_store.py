@@ -67,9 +67,7 @@ class SprintStore:
             error=row["error"],
         )
 
-    async def update_sprint_status(
-        self, sprint_id: str, status: SprintStatus
-    ) -> None:
+    async def update_sprint_status(self, sprint_id: str, status: SprintStatus) -> None:
         """Update sprint status."""
         async with self._lock:
             status_val = status.value if hasattr(status, "value") else status
@@ -120,7 +118,9 @@ class SprintStore:
                     task.title,
                     task.description,
                     json.dumps(task.acceptance_criteria),
-                    task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
+                    task.assigned_to
+                    if isinstance(task.assigned_to, str)
+                    else task.assigned_to.value,
                     task.priority,
                     task.status if isinstance(task.status, str) else task.status.value,
                     json.dumps(task.dependencies),
@@ -150,16 +150,18 @@ class SprintStore:
         rows = await cursor.fetchall()
         tasks = []
         for row in rows:
-            tasks.append(Task(
-                id=row["task_id"],
-                title=row["title"],
-                description=row["description"],
-                acceptance_criteria=json.loads(row["acceptance_criteria_json"] or "[]"),
-                assigned_to=row["assigned_to"],
-                priority=row["priority"],
-                status=row["status"],
-                dependencies=json.loads(row["dependencies_json"] or "[]"),
-            ))
+            tasks.append(
+                Task(
+                    id=row["task_id"],
+                    title=row["title"],
+                    description=row["description"],
+                    acceptance_criteria=json.loads(row["acceptance_criteria_json"] or "[]"),
+                    assigned_to=row["assigned_to"],
+                    priority=row["priority"],
+                    status=row["status"],
+                    dependencies=json.loads(row["dependencies_json"] or "[]"),
+                )
+            )
         return tasks
 
     async def update_tasks(self, sprint_id: str, tasks: list[Task]) -> None:
@@ -194,7 +196,9 @@ class SprintStore:
                             task.title,
                             task.description,
                             json.dumps(task.acceptance_criteria),
-                            task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
+                            task.assigned_to
+                            if isinstance(task.assigned_to, str)
+                            else task.assigned_to.value,
                             task.priority,
                             task.status if isinstance(task.status, str) else task.status.value,
                             json.dumps(task.dependencies),
@@ -230,32 +234,40 @@ class SprintStore:
         """Save a sprint checkpoint and return the checkpoint ID."""
         async with self._lock:
             checkpoint_id = f"cp_{uuid.uuid4().hex[:12]}"
-            state_json = json.dumps({
-                "sprint_id": state["sprint_id"],
-                "project_id": state["project_id"],
-                "sprint_number": state.get("sprint_number", 1),
-                "goal": state["goal"],
-                "status": state["status"].value if hasattr(state["status"], "value") else state["status"],
-                "tasks": [
-                    {
-                        "id": task.id,
-                        "title": task.title,
-                        "description": task.description,
-                        "acceptance_criteria": task.acceptance_criteria,
-                        "assigned_to": task.assigned_to if isinstance(task.assigned_to, str) else task.assigned_to.value,
-                        "priority": task.priority,
-                        "status": task.status if isinstance(task.status, str) else task.status.value,
-                        "dependencies": task.dependencies,
-                    }
-                    for task in state.get("tasks", [])
-                ],
-                "metrics": (
-                    state["metrics"].model_dump()
-                    if isinstance(state.get("metrics"), SprintMetrics)
-                    else state.get("metrics", {})
-                ),
-                "error": state.get("error"),
-            })
+            state_json = json.dumps(
+                {
+                    "sprint_id": state["sprint_id"],
+                    "project_id": state["project_id"],
+                    "sprint_number": state.get("sprint_number", 1),
+                    "goal": state["goal"],
+                    "status": state["status"].value
+                    if hasattr(state["status"], "value")
+                    else state["status"],
+                    "tasks": [
+                        {
+                            "id": task.id,
+                            "title": task.title,
+                            "description": task.description,
+                            "acceptance_criteria": task.acceptance_criteria,
+                            "assigned_to": task.assigned_to
+                            if isinstance(task.assigned_to, str)
+                            else task.assigned_to.value,
+                            "priority": task.priority,
+                            "status": task.status
+                            if isinstance(task.status, str)
+                            else task.status.value,
+                            "dependencies": task.dependencies,
+                        }
+                        for task in state.get("tasks", [])
+                    ],
+                    "metrics": (
+                        state["metrics"].model_dump()
+                        if isinstance(state.get("metrics"), SprintMetrics)
+                        else state.get("metrics", {})
+                    ),
+                    "error": state.get("error"),
+                }
+            )
             await self.db.conn.execute(
                 "INSERT INTO checkpoints (checkpoint_id, sprint_id, checkpoint_name, state_json)"
                 " VALUES (?, ?, ?, ?)",

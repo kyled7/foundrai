@@ -21,31 +21,37 @@ class IntegrationStore:
 
     async def create_integration(self, integration: IntegrationConfig) -> IntegrationConfig:
         """Create a new integration configuration."""
-        await self.db.conn.execute("""
+        await self.db.conn.execute(
+            """
             INSERT INTO integrations (
                 id, name, project_id, config, enabled,
                 created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            integration.id,
-            integration.name,
-            integration.project_id,
-            json.dumps(integration.config),
-            int(integration.enabled),
-            integration.created_at.isoformat(),
-            integration.updated_at.isoformat()
-        ))
+        """,
+            (
+                integration.id,
+                integration.name,
+                integration.project_id,
+                json.dumps(integration.config),
+                int(integration.enabled),
+                integration.created_at.isoformat(),
+                integration.updated_at.isoformat(),
+            ),
+        )
 
         await self.db.conn.commit()
         return integration
 
     async def get_integration(self, integration_id: str) -> IntegrationConfig | None:
         """Get integration by ID."""
-        cursor = await self.db.conn.execute("""
+        cursor = await self.db.conn.execute(
+            """
             SELECT id, name, project_id, config, enabled,
                    created_at, updated_at
             FROM integrations WHERE id = ?
-        """, (integration_id,))
+        """,
+            (integration_id,),
+        )
 
         row = await cursor.fetchone()
         if not row:
@@ -53,17 +59,16 @@ class IntegrationStore:
 
         return self._row_to_integration(row)
 
-    async def get_integration_by_name(
-        self,
-        name: str,
-        project_id: str
-    ) -> IntegrationConfig | None:
+    async def get_integration_by_name(self, name: str, project_id: str) -> IntegrationConfig | None:
         """Get integration by name and project."""
-        cursor = await self.db.conn.execute("""
+        cursor = await self.db.conn.execute(
+            """
             SELECT id, name, project_id, config, enabled,
                    created_at, updated_at
             FROM integrations WHERE name = ? AND project_id = ?
-        """, (name, project_id))
+        """,
+            (name, project_id),
+        )
 
         row = await cursor.fetchone()
         if not row:
@@ -73,12 +78,15 @@ class IntegrationStore:
 
     async def list_integrations(self, project_id: str) -> list[IntegrationConfig]:
         """List integrations for a project."""
-        cursor = await self.db.conn.execute("""
+        cursor = await self.db.conn.execute(
+            """
             SELECT id, name, project_id, config, enabled,
                    created_at, updated_at
             FROM integrations WHERE project_id = ?
             ORDER BY name
-        """, (project_id,))
+        """,
+            (project_id,),
+        )
 
         rows = await cursor.fetchall()
         return [self._row_to_integration(row) for row in rows]
@@ -87,17 +95,20 @@ class IntegrationStore:
         """Update an existing integration."""
         integration.updated_at = datetime.utcnow()
 
-        await self.db.conn.execute("""
+        await self.db.conn.execute(
+            """
             UPDATE integrations SET
                 name = ?, config = ?, enabled = ?, updated_at = ?
             WHERE id = ?
-        """, (
-            integration.name,
-            json.dumps(integration.config),
-            int(integration.enabled),
-            integration.updated_at.isoformat(),
-            integration.id
-        ))
+        """,
+            (
+                integration.name,
+                json.dumps(integration.config),
+                int(integration.enabled),
+                integration.updated_at.isoformat(),
+                integration.id,
+            ),
+        )
 
         await self.db.conn.commit()
         return integration
@@ -105,12 +116,15 @@ class IntegrationStore:
     async def delete_integration(self, integration_id: str) -> bool:
         """Delete an integration."""
         # Also delete related task mappings
-        await self.db.conn.execute("""
+        await self.db.conn.execute(
+            """
             DELETE FROM external_task_mappings
             WHERE external_system IN (
                 SELECT name FROM integrations WHERE id = ?
             )
-        """, (integration_id,))
+        """,
+            (integration_id,),
+        )
 
         cursor = await self.db.conn.execute(
             "DELETE FROM integrations WHERE id = ?", (integration_id,)
@@ -120,36 +134,40 @@ class IntegrationStore:
 
     async def create_task_mapping(self, mapping: ExternalTaskMapping) -> ExternalTaskMapping:
         """Create an external task mapping."""
-        await self.db.conn.execute("""
+        await self.db.conn.execute(
+            """
             INSERT INTO external_task_mappings (
                 id, task_id, external_system, external_task_id, external_url,
                 last_sync, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            mapping.id,
-            mapping.task_id,
-            mapping.external_system,
-            mapping.external_task_id,
-            mapping.external_url,
-            mapping.last_sync.isoformat() if mapping.last_sync else None,
-            mapping.created_at.isoformat()
-        ))
+        """,
+            (
+                mapping.id,
+                mapping.task_id,
+                mapping.external_system,
+                mapping.external_task_id,
+                mapping.external_url,
+                mapping.last_sync.isoformat() if mapping.last_sync else None,
+                mapping.created_at.isoformat(),
+            ),
+        )
 
         await self.db.conn.commit()
         return mapping
 
     async def get_task_mapping(
-        self,
-        task_id: str,
-        external_system: str
+        self, task_id: str, external_system: str
     ) -> ExternalTaskMapping | None:
         """Get task mapping for a specific task and system."""
-        cursor = await self.db.conn.execute("""
+        cursor = await self.db.conn.execute(
+            """
             SELECT id, task_id, external_system, external_task_id, external_url,
                    last_sync, created_at
             FROM external_task_mappings
             WHERE task_id = ? AND external_system = ?
-        """, (task_id, external_system))
+        """,
+            (task_id, external_system),
+        )
 
         row = await cursor.fetchone()
         if not row:
@@ -158,18 +176,20 @@ class IntegrationStore:
         return self._row_to_task_mapping(row)
 
     async def list_task_mappings(
-        self,
-        external_system: str | None = None
+        self, external_system: str | None = None
     ) -> list[ExternalTaskMapping]:
         """List task mappings with optional system filtering."""
         if external_system:
-            cursor = await self.db.conn.execute("""
+            cursor = await self.db.conn.execute(
+                """
                 SELECT id, task_id, external_system, external_task_id, external_url,
                        last_sync, created_at
                 FROM external_task_mappings
                 WHERE external_system = ?
                 ORDER BY created_at DESC
-            """, (external_system,))
+            """,
+                (external_system,),
+            )
         else:
             cursor = await self.db.conn.execute("""
                 SELECT id, task_id, external_system, external_task_id, external_url,
@@ -181,15 +201,14 @@ class IntegrationStore:
         rows = await cursor.fetchall()
         return [self._row_to_task_mapping(row) for row in rows]
 
-    async def update_task_mapping_sync(
-        self,
-        mapping_id: str,
-        last_sync: datetime
-    ) -> bool:
+    async def update_task_mapping_sync(self, mapping_id: str, last_sync: datetime) -> bool:
         """Update the last sync time for a task mapping."""
-        cursor = await self.db.conn.execute("""
+        cursor = await self.db.conn.execute(
+            """
             UPDATE external_task_mappings SET last_sync = ? WHERE id = ?
-        """, (last_sync.isoformat(), mapping_id))
+        """,
+            (last_sync.isoformat(), mapping_id),
+        )
 
         await self.db.conn.commit()
         return cursor.rowcount > 0
@@ -214,7 +233,7 @@ class IntegrationStore:
             config=json.loads(row[3]) if row[3] else {},
             enabled=bool(row[4]),
             created_at=datetime.fromisoformat(row[5]) if isinstance(row[5], str) else row[5],
-            updated_at=datetime.fromisoformat(row[6]) if isinstance(row[6], str) else row[6]
+            updated_at=datetime.fromisoformat(row[6]) if isinstance(row[6], str) else row[6],
         )
 
     def _row_to_task_mapping(self, row: Any) -> ExternalTaskMapping:
@@ -226,9 +245,7 @@ class IntegrationStore:
             external_task_id=row[3],
             external_url=row[4],
             last_sync=(
-                datetime.fromisoformat(row[5])
-                if row[5] and isinstance(row[5], str)
-                else row[5]
+                datetime.fromisoformat(row[5]) if row[5] and isinstance(row[5], str) else row[5]
             ),
-            created_at=datetime.fromisoformat(row[6]) if isinstance(row[6], str) else row[6]
+            created_at=datetime.fromisoformat(row[6]) if isinstance(row[6], str) else row[6],
         )

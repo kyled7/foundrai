@@ -5,6 +5,7 @@ import sys
 import traceback
 from pathlib import Path
 
+
 def verify_backend_files():
     """Verify all backend files exist."""
     print("🔍 Verifying backend files...")
@@ -26,6 +27,7 @@ def verify_backend_files():
             all_ok = False
 
     return all_ok
+
 
 def verify_frontend_files():
     """Verify all frontend files exist."""
@@ -49,26 +51,17 @@ def verify_frontend_files():
 
     return all_ok
 
+
 def verify_imports():
     """Verify all backend imports work."""
     print("\n🔍 Verifying backend imports...")
     try:
-        from foundrai.models.recommendation import (
-            ModelRecommendation,
-            PerformanceMetrics,
-            CostSavingsEstimate,
-            RecommendationConfidence,
-            TaskComplexity
-        )
         print("  ✅ Recommendation models imported")
 
-        from foundrai.persistence.recommendation_store import RecommendationStore
         print("  ✅ RecommendationStore imported")
 
-        from foundrai.orchestration.recommendation_engine import RecommendationEngine
         print("  ✅ RecommendationEngine imported")
 
-        from foundrai.api.routes.recommendations import router
         print("  ✅ Recommendations router imported")
 
         return True
@@ -76,6 +69,7 @@ def verify_imports():
         print(f"  ❌ Import failed: {e}")
         traceback.print_exc()
         return False
+
 
 def verify_api_registration():
     """Verify API router is registered."""
@@ -85,7 +79,7 @@ def verify_api_registration():
 
         # Check if recommendations route is registered
         routes = [route.path for route in app.routes]
-        recommendation_routes = [r for r in routes if 'recommendation' in r.lower()]
+        recommendation_routes = [r for r in routes if "recommendation" in r.lower()]
 
         if recommendation_routes:
             print(f"  ✅ Found {len(recommendation_routes)} recommendation route(s):")
@@ -100,16 +94,17 @@ def verify_api_registration():
         traceback.print_exc()
         return False
 
+
 def verify_models():
     """Verify model structure."""
     print("\n🔍 Verifying data models...")
     try:
         from foundrai.models.recommendation import (
+            CostSavingsEstimate,
             ModelRecommendation,
             PerformanceMetrics,
-            CostSavingsEstimate,
             RecommendationConfidence,
-            TaskComplexity
+            TaskComplexity,
         )
 
         # Create a sample performance metrics object
@@ -118,7 +113,7 @@ def verify_models():
             avg_cost_per_task=0.025,
             success_rate=0.95,
             avg_execution_time=120.5,
-            total_tasks=100
+            total_tasks=100,
         )
         print("  ✅ PerformanceMetrics model works")
 
@@ -132,7 +127,7 @@ def verify_models():
             expected_metrics=metrics,
             alternative_models=["gpt-4o-mini", "claude-3-opus-20240229"],
             task_complexity=TaskComplexity.MEDIUM,
-            data_points=100
+            data_points=100,
         )
         print("  ✅ ModelRecommendation model works")
         print(f"     - Agent role: {recommendation.agent_role}")
@@ -149,16 +144,19 @@ def verify_models():
                 "Developer": {"current": 50.00, "recommended": 30.00, "savings": 20.00}
             },
             quality_impact="improved",
-            confidence=RecommendationConfidence.HIGH
+            confidence=RecommendationConfidence.HIGH,
         )
         print("  ✅ CostSavingsEstimate model works")
-        print(f"     - Total savings: ${savings.total_savings:.2f} ({savings.savings_percentage:.1f}%)")
+        print(
+            f"     - Total savings: ${savings.total_savings:.2f} ({savings.savings_percentage:.1f}%)"
+        )
 
         return True
     except Exception as e:
         print(f"  ❌ Model verification failed: {e}")
         traceback.print_exc()
         return False
+
 
 def verify_typescript_integration():
     """Check TypeScript integration in team config page."""
@@ -191,6 +189,7 @@ def verify_typescript_integration():
             all_ok = False
 
     return all_ok
+
 
 def main():
     """Run all verification checks."""
@@ -289,6 +288,7 @@ Expected API responses:
     else:
         print("\n❌ Some verifications failed. Please review the errors above.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

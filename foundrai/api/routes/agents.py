@@ -45,17 +45,19 @@ async def list_agent_configs(project_id: str) -> dict:
         config = load_config()
         for role, agent_cfg in config.team:
             if role not in db_roles:
-                agents_list.append({
-                    "project_id": project_id,
-                    "agent_role": role,
-                    "autonomy_level": (
-                        agent_cfg.autonomy.value
-                        if hasattr(agent_cfg.autonomy, 'value')
-                        else str(agent_cfg.autonomy)
-                    ),
-                    "model": agent_cfg.model,
-                    "enabled": agent_cfg.enabled,
-                })
+                agents_list.append(
+                    {
+                        "project_id": project_id,
+                        "agent_role": role,
+                        "autonomy_level": (
+                            agent_cfg.autonomy.value
+                            if hasattr(agent_cfg.autonomy, "value")
+                            else str(agent_cfg.autonomy)
+                        ),
+                        "model": agent_cfg.model,
+                        "enabled": agent_cfg.enabled,
+                    }
+                )
     except Exception:
         logger.debug("Could not load config for team merge", exc_info=True)
 
@@ -63,9 +65,7 @@ async def list_agent_configs(project_id: str) -> dict:
 
 
 @router.put("/projects/{project_id}/agents/{agent_role}")
-async def update_agent_config(
-    project_id: str, agent_role: str, body: AgentConfigUpdate
-) -> dict:
+async def update_agent_config(project_id: str, agent_role: str, body: AgentConfigUpdate) -> dict:
     """Update agent configuration."""
     db = await get_db()
     # Upsert

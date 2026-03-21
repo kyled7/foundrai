@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 class DependencyStatus(str, Enum):
     """Cross-team dependency status."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     BLOCKED = "blocked"
@@ -20,6 +21,7 @@ class DependencyStatus(str, Enum):
 
 class Team(BaseModel):
     """Team model for multi-team coordination."""
+
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     name: str
     description: str = ""
@@ -44,6 +46,7 @@ class Team(BaseModel):
 
 class CrossTeamDependency(BaseModel):
     """Cross-team dependency model."""
+
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     dependent_team_id: str
     provider_team_id: str
@@ -70,6 +73,7 @@ class CrossTeamDependency(BaseModel):
 
 class CreateTeamRequest(BaseModel):
     """Request model for creating a team."""
+
     name: str
     description: str = ""
     template_id: str | None = None
@@ -79,6 +83,7 @@ class CreateTeamRequest(BaseModel):
 
 class CreateDependencyRequest(BaseModel):
     """Request model for creating cross-team dependency."""
+
     provider_team_id: str
     dependency_type: str
     title: str
@@ -89,6 +94,7 @@ class CreateDependencyRequest(BaseModel):
 
 class MultiTeamSprintPlan(BaseModel):
     """Coordinated sprint plan across multiple teams."""
+
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     project_id: str
     teams: list[str]  # Team IDs

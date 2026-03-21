@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class ApplyTemplateRequest(BaseModel):
     """Request to apply a template."""
+
     project_id: str
 
 
@@ -25,6 +26,7 @@ def get_template_store() -> TemplateStore:
     """Get template store dependency."""
     # In a real implementation, this would come from dependency injection
     from foundrai.persistence.database import Database
+
     db = Database("temp.db")  # This should be injected
     return TemplateStore(db)
 
@@ -40,7 +42,7 @@ async def list_templates(
     source: str = "all",
     author: str | None = None,
     public_only: bool = False,
-    manager: TemplateManager = Depends(get_template_manager)
+    manager: TemplateManager = Depends(get_template_manager),
 ) -> list[TeamTemplate]:
     """List available templates (local, marketplace, or both)."""
     try:
@@ -65,7 +67,7 @@ async def list_templates(
 async def create_template(
     request: CreateTemplateRequest,
     # In a real implementation, current project config would come from context
-    manager: TemplateManager = Depends(get_template_manager)
+    manager: TemplateManager = Depends(get_template_manager),
 ) -> TeamTemplate:
     """Create template from current project configuration."""
     try:
@@ -74,9 +76,7 @@ async def create_template(
         from foundrai.config import ProjectConfig, SprintConfig, TeamConfig
 
         config = FoundrAIConfig(
-            project=ProjectConfig(name="template-project"),
-            team=TeamConfig(),
-            sprint=SprintConfig()
+            project=ProjectConfig(name="template-project"), team=TeamConfig(), sprint=SprintConfig()
         )
 
         template = await manager.save_template(
@@ -85,23 +85,19 @@ async def create_template(
             description=request.description,
             author="api-user",  # Should come from authentication
             tags=request.tags,
-            is_public=request.is_public
+            is_public=request.is_public,
         )
 
         return template
 
     except Exception as e:
         logger.error(f"Failed to create template: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create template: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to create template: {str(e)}") from e
 
 
 @router.get("/templates/{template_id}", response_model=TeamTemplate)
 async def get_template(
-    template_id: str,
-    manager: TemplateManager = Depends(get_template_manager)
+    template_id: str, manager: TemplateManager = Depends(get_template_manager)
 ) -> TeamTemplate:
     """Get template details."""
     try:
@@ -115,17 +111,14 @@ async def get_template(
         raise
     except Exception as e:
         logger.error(f"Failed to get template {template_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get template: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to get template: {str(e)}") from e
 
 
 @router.post("/templates/{template_id}/apply")
 async def apply_template(
     template_id: str,
     request: ApplyTemplateRequest,
-    manager: TemplateManager = Depends(get_template_manager)
+    manager: TemplateManager = Depends(get_template_manager),
 ) -> dict[str, str]:
     """Apply template to project."""
     try:
@@ -140,23 +133,19 @@ async def apply_template(
         return {
             "message": f"Template '{template.name}' applied successfully",
             "project_id": request.project_id,
-            "template_id": template_id
+            "template_id": template_id,
         }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to apply template {template_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to apply template: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to apply template: {str(e)}") from e
 
 
 @router.delete("/templates/{template_id}")
 async def delete_template(
-    template_id: str,
-    manager: TemplateManager = Depends(get_template_manager)
+    template_id: str, manager: TemplateManager = Depends(get_template_manager)
 ) -> dict[str, str]:
     """Delete a template."""
     try:
@@ -170,41 +159,30 @@ async def delete_template(
         raise
     except Exception as e:
         logger.error(f"Failed to delete template {template_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to delete template: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to delete template: {str(e)}") from e
 
 
 @router.post("/templates/{template_id}/publish")
 async def publish_template(
     template_id: str,
     marketplace_config: PublishConfig,
-    manager: TemplateManager = Depends(get_template_manager)
+    manager: TemplateManager = Depends(get_template_manager),
 ) -> dict[str, str]:
     """Publish template to marketplace."""
     try:
         # TODO: Implement marketplace publishing
         logger.warning("Marketplace publishing not yet implemented")
 
-        return {
-            "message": "Marketplace publishing not yet implemented",
-            "template_id": template_id
-        }
+        return {"message": "Marketplace publishing not yet implemented", "template_id": template_id}
 
     except Exception as e:
         logger.error(f"Failed to publish template {template_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to publish template: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to publish template: {str(e)}") from e
 
 
 @router.get("/templates/search")
 async def search_templates(
-    q: str,
-    tags: list[str] | None = None,
-    manager: TemplateManager = Depends(get_template_manager)
+    q: str, tags: list[str] | None = None, manager: TemplateManager = Depends(get_template_manager)
 ) -> list[TeamTemplate]:
     """Search templates by query and tags."""
     try:

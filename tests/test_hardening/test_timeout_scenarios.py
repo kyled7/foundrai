@@ -24,41 +24,47 @@ from foundrai.persistence.event_log import EventLog
 from foundrai.persistence.sprint_store import SprintStore
 
 # Test data
-SINGLE_TASK_JSON = json.dumps([
-    {
-        "title": "Build feature",
-        "description": "Implement a new feature",
-        "acceptance_criteria": ["Feature works", "Tests pass"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    },
-])
+SINGLE_TASK_JSON = json.dumps(
+    [
+        {
+            "title": "Build feature",
+            "description": "Implement a new feature",
+            "acceptance_criteria": ["Feature works", "Tests pass"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+    ]
+)
 
-MULTI_TASK_JSON = json.dumps([
-    {
-        "title": "Task 1",
-        "description": "First task",
-        "acceptance_criteria": ["Works"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    },
-    {
-        "title": "Task 2",
-        "description": "Second task",
-        "acceptance_criteria": ["Works"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 2,
-    },
-])
+MULTI_TASK_JSON = json.dumps(
+    [
+        {
+            "title": "Task 1",
+            "description": "First task",
+            "acceptance_criteria": ["Works"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        },
+        {
+            "title": "Task 2",
+            "description": "Second task",
+            "acceptance_criteria": ["Works"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 2,
+        },
+    ]
+)
 
-QA_PASS_JSON = json.dumps({
-    "passed": True,
-    "issues": [],
-    "suggestions": [],
-})
+QA_PASS_JSON = json.dumps(
+    {
+        "passed": True,
+        "issues": [],
+        "suggestions": [],
+    }
+)
 
 
 def _make_runtime_mock(response_content: str, response_format: str | None = None) -> AsyncMock:
@@ -71,13 +77,15 @@ def _make_runtime_mock(response_content: str, response_format: str | None = None
             parsed = json.loads(response_content)
         except json.JSONDecodeError:
             pass
-    runtime.run = AsyncMock(return_value=RuntimeResult(
-        output=response_content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=100,
-        success=True,
-    ))
+    runtime.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=response_content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=100,
+            success=True,
+        )
+    )
     return runtime
 
 
@@ -112,8 +120,12 @@ async def test_task_execution_timeout(db, tmp_path, sprint_context, components):
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # Create dev agent that hangs indefinitely
@@ -128,8 +140,12 @@ async def test_task_execution_timeout(db, tmp_path, sprint_context, components):
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=hang_forever)
 
@@ -182,8 +198,12 @@ async def test_planning_phase_error_handling(db, tmp_path, sprint_context, compo
         raise RuntimeError("Planning service unavailable")
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
     pm.decompose_goal = AsyncMock(side_effect=fail_planning)
 
@@ -227,12 +247,20 @@ async def test_qa_review_error_handling(db, tmp_path, sprint_context, components
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Feature implemented"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Feature implemented"),
     )
 
     # Create QA agent that raises error during review
@@ -240,8 +268,12 @@ async def test_qa_review_error_handling(db, tmp_path, sprint_context, components
         raise RuntimeError("QA service temporarily unavailable")
 
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
     qa.review_task = AsyncMock(side_effect=fail_qa_review)
 
@@ -288,12 +320,20 @@ async def test_multiple_tasks_with_timeout(db, tmp_path, sprint_context, compone
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(MULTI_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(MULTI_TASK_JSON, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Track which task is being executed
@@ -336,8 +376,12 @@ async def test_multiple_tasks_with_timeout(db, tmp_path, sprint_context, compone
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.execute_task = AsyncMock(side_effect=mixed_timeout_behavior)
 
@@ -388,8 +432,12 @@ async def test_timeout_during_retry(db, tmp_path, sprint_context, components):
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # First attempt fails with retryable error, second attempt times out
@@ -412,8 +460,12 @@ async def test_timeout_during_retry(db, tmp_path, sprint_context, components):
             )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=fail_then_timeout)
 
@@ -464,8 +516,12 @@ async def test_timeout_no_recovery(db, tmp_path, sprint_context, components):
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # Task that always times out
@@ -485,8 +541,12 @@ async def test_timeout_no_recovery(db, tmp_path, sprint_context, components):
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=always_timeout)
 
@@ -532,8 +592,12 @@ async def test_timeout_event_logging(db, tmp_path, sprint_context, components):
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # Create dev agent that times out
@@ -548,8 +612,12 @@ async def test_timeout_event_logging(db, tmp_path, sprint_context, components):
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=timeout_task)
 
@@ -607,8 +675,12 @@ async def test_short_timeout_configuration(db, tmp_path, sprint_context, compone
     dev_role = get_role(AgentRoleName.DEVELOPER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
 
     # Sleep for 3 seconds
@@ -623,8 +695,12 @@ async def test_short_timeout_configuration(db, tmp_path, sprint_context, compone
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=sleep_three_seconds)
 
@@ -670,12 +746,20 @@ async def test_no_timeout_with_zero_config(db, tmp_path, sprint_context, compone
     qa_role = get_role(AgentRoleName.QA_ENGINEER)
 
     pm = ProductManagerAgent(
-        role=pm_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
+        role=pm_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(SINGLE_TASK_JSON, "json"),
     )
     qa = QAEngineerAgent(
-        role=qa_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
+        role=qa_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock(QA_PASS_JSON, "json"),
     )
 
     # Sleep briefly (but would timeout with short timeout configured)
@@ -690,8 +774,12 @@ async def test_no_timeout_with_zero_config(db, tmp_path, sprint_context, compone
         )
 
     dev = DeveloperAgent(
-        role=dev_role, model="test/model", tools=[], message_bus=message_bus,
-        sprint_context=sprint_context, runtime=_make_runtime_mock("Done"),
+        role=dev_role,
+        model="test/model",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=sprint_context,
+        runtime=_make_runtime_mock("Done"),
     )
     dev.runtime.run = AsyncMock(side_effect=brief_sleep)
 

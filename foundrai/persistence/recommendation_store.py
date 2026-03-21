@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from foundrai.models.enums import AgentRoleName
-from foundrai.models.recommendation import PerformanceMetrics, TaskComplexity
+from foundrai.models.recommendation import PerformanceMetrics
 from foundrai.persistence.database import Database
 
 
@@ -58,15 +58,9 @@ class RecommendationStore:
             failed_tasks = total_tasks - successful_tasks
 
             # Calculate averages
-            avg_tokens = (
-                float(row["total_tokens"]) / total_tasks if total_tasks > 0 else 0.0
-            )
-            avg_cost = (
-                float(row["total_cost"]) / total_tasks if total_tasks > 0 else 0.0
-            )
-            success_rate = (
-                (successful_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
-            )
+            avg_tokens = float(row["total_tokens"]) / total_tasks if total_tasks > 0 else 0.0
+            avg_cost = float(row["total_cost"]) / total_tasks if total_tasks > 0 else 0.0
+            success_rate = (successful_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
 
             metrics = PerformanceMetrics(
                 model=row["model"],
@@ -132,15 +126,9 @@ class RecommendationStore:
             failed_tasks = total_tasks - successful_tasks
 
             # Calculate averages
-            avg_tokens = (
-                float(row["total_tokens"]) / total_tasks if total_tasks > 0 else 0.0
-            )
-            avg_cost = (
-                float(row["total_cost"]) / total_tasks if total_tasks > 0 else 0.0
-            )
-            success_rate = (
-                (successful_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
-            )
+            avg_tokens = float(row["total_tokens"]) / total_tasks if total_tasks > 0 else 0.0
+            avg_cost = float(row["total_cost"]) / total_tasks if total_tasks > 0 else 0.0
+            success_rate = (successful_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
 
             metrics = PerformanceMetrics(
                 model=model,
@@ -159,9 +147,7 @@ class RecommendationStore:
 
         return metrics_by_role
 
-    async def get_sprint_performance(
-        self, sprint_id: str
-    ) -> dict[str, list[PerformanceMetrics]]:
+    async def get_sprint_performance(self, sprint_id: str) -> dict[str, list[PerformanceMetrics]]:
         """Get performance metrics for all agents in a sprint, grouped by agent role.
 
         Returns a dict mapping agent_role to list of PerformanceMetrics (one per model).
@@ -202,15 +188,9 @@ class RecommendationStore:
             failed_tasks = total_tasks - successful_tasks
 
             # Calculate averages
-            avg_tokens = (
-                float(row["total_tokens"]) / total_tasks if total_tasks > 0 else 0.0
-            )
-            avg_cost = (
-                float(row["total_cost"]) / total_tasks if total_tasks > 0 else 0.0
-            )
-            success_rate = (
-                (successful_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
-            )
+            avg_tokens = float(row["total_tokens"]) / total_tasks if total_tasks > 0 else 0.0
+            avg_cost = float(row["total_cost"]) / total_tasks if total_tasks > 0 else 0.0
+            success_rate = (successful_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
 
             metrics = PerformanceMetrics(
                 model=row["model"],
@@ -321,9 +301,7 @@ class RecommendationStore:
             return None
 
         # Filter for models with reasonable success rate (>70%) and sufficient data
-        viable_metrics = [
-            m for m in metrics_list if m.success_rate >= 70.0 and m.total_tasks >= 3
-        ]
+        viable_metrics = [m for m in metrics_list if m.success_rate >= 70.0 and m.total_tasks >= 3]
 
         if not viable_metrics:
             # Fall back to best success rate if no models meet threshold

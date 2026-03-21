@@ -17,8 +17,7 @@ import { PageSkeleton } from '@/components/shared/PageSkeleton';
 import type { WSMessage, TaskResponse, ApprovalRequest as ApprovalRequestType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const tabs = ['board', 'feed', 'tree', 'approvals', 'team', 'retro'] as const;
-type Tab = typeof tabs[number];
+type Tab = 'board' | 'feed' | 'tree' | 'approvals' | 'team' | 'retro';
 
 export function SprintDetailPage() {
   const { sprintId, projectId } = useParams({ strict: false }) as { sprintId: string; projectId: string };

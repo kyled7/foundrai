@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class EnableIntegrationRequest(BaseModel):
     """Request to enable an integration."""
+
     config: dict[str, Any]
 
 
@@ -28,14 +29,14 @@ def get_integration_store() -> IntegrationStore:
     """Get integration store dependency."""
     # In a real implementation, this would come from dependency injection
     from foundrai.persistence.database import Database
+
     db = Database("temp.db")  # This should be injected
     return IntegrationStore(db)
 
 
 @router.get("/projects/{project_id}/integrations", response_model=list[IntegrationConfig])
 async def list_integrations(
-    project_id: str,
-    store: IntegrationStore = Depends(get_integration_store)
+    project_id: str, store: IntegrationStore = Depends(get_integration_store)
 ) -> list[IntegrationConfig]:
     """List configured integrations."""
     try:
@@ -49,13 +50,13 @@ async def list_integrations(
 
 @router.post(
     "/projects/{project_id}/integrations/{integration_name}/enable",
-    response_model=IntegrationConfig
+    response_model=IntegrationConfig,
 )
 async def enable_integration(
     project_id: str,
     integration_name: str,
     request: EnableIntegrationRequest,
-    store: IntegrationStore = Depends(get_integration_store)
+    store: IntegrationStore = Depends(get_integration_store),
 ) -> IntegrationConfig:
     """Enable and configure integration."""
     try:
@@ -80,7 +81,7 @@ async def enable_integration(
                 integration_type=_get_integration_type(integration_name),
                 config=request.config,
                 enabled=True,
-                status=IntegrationStatus.ENABLED
+                status=IntegrationStatus.ENABLED,
             )
 
             created_integration = await store.create_integration(integration)
@@ -89,16 +90,13 @@ async def enable_integration(
     except Exception as e:
         logger.error(f"Failed to enable integration {integration_name}: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to enable integration: {str(e)}"
+            status_code=500, detail=f"Failed to enable integration: {str(e)}"
         ) from e
 
 
 @router.post("/projects/{project_id}/integrations/{integration_name}/disable")
 async def disable_integration(
-    project_id: str,
-    integration_name: str,
-    store: IntegrationStore = Depends(get_integration_store)
+    project_id: str, integration_name: str, store: IntegrationStore = Depends(get_integration_store)
 ) -> dict[str, str]:
     """Disable integration."""
     try:
@@ -116,8 +114,7 @@ async def disable_integration(
     except Exception as e:
         logger.error(f"Failed to disable integration {integration_name}: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to disable integration: {str(e)}"
+            status_code=500, detail=f"Failed to disable integration: {str(e)}"
         ) from e
 
 
@@ -130,10 +127,7 @@ async def get_integration_config_schema(integration_name: str) -> dict[str, Any]
 
     except Exception as e:
         logger.error(f"Failed to get config schema for {integration_name}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get config schema: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to get config schema: {str(e)}") from e
 
 
 @router.post("/integrations/github/webhook")
@@ -155,10 +149,7 @@ async def github_webhook(
 
     except Exception as e:
         logger.error(f"Failed to process GitHub webhook: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process webhook: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to process webhook: {str(e)}") from e
 
 
 @router.post("/integrations/slack/events")
@@ -182,10 +173,7 @@ async def slack_events(
 
     except Exception as e:
         logger.error(f"Failed to process Slack event: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process event: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to process event: {str(e)}") from e
 
 
 def _get_integration_type(integration_name: str) -> str | None:
@@ -212,9 +200,9 @@ def _get_config_schema(integration_name: str) -> dict[str, Any]:
                 "organization": {"type": "string", "description": "GitHub organization (optional)"},
                 "auto_create_repos": {"type": "boolean", "default": True},
                 "auto_create_prs": {"type": "boolean", "default": True},
-                "pr_template": {"type": "string", "description": "PR description template"}
+                "pr_template": {"type": "string", "description": "PR description template"},
             },
-            "required": ["token"]
+            "required": ["token"],
         },
         "slack": {
             "type": "object",
@@ -225,11 +213,11 @@ def _get_config_schema(integration_name: str) -> dict[str, Any]:
                     "type": "object",
                     "properties": {
                         "sprint_updates": {"type": "string", "default": "#foundrai-sprints"},
-                        "approvals": {"type": "string", "default": "#foundrai-approvals"}
-                    }
-                }
+                        "approvals": {"type": "string", "default": "#foundrai-approvals"},
+                    },
+                },
             },
-            "required": ["bot_token", "signing_secret"]
+            "required": ["bot_token", "signing_secret"],
         },
         "jira": {
             "type": "object",
@@ -237,10 +225,10 @@ def _get_config_schema(integration_name: str) -> dict[str, Any]:
                 "server": {"type": "string", "description": "Jira server URL"},
                 "email": {"type": "string", "description": "User email"},
                 "token": {"type": "string", "description": "API token"},
-                "project_key": {"type": "string", "description": "Jira project key"}
+                "project_key": {"type": "string", "description": "Jira project key"},
             },
-            "required": ["server", "email", "token", "project_key"]
-        }
+            "required": ["server", "email", "token", "project_key"],
+        },
     }
 
     return schemas.get(integration_name, {})

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 class TeamTemplate(BaseModel):
     """Team template model."""
+
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     name: str
     description: str = ""
@@ -44,6 +45,7 @@ class TeamTemplate(BaseModel):
 
 class CreateTemplateRequest(BaseModel):
     """Request model for creating a team template."""
+
     name: str
     description: str = ""
     tags: list[str] = Field(default_factory=list)
@@ -52,6 +54,7 @@ class CreateTemplateRequest(BaseModel):
 
 class TemplateListing(BaseModel):
     """Template listing from marketplace."""
+
     id: str
     name: str
     description: str
@@ -77,6 +80,7 @@ class TemplateListing(BaseModel):
 
 class PublishConfig(BaseModel):
     """Configuration for publishing template to marketplace."""
+
     is_public: bool = True
     tags: list[str] = Field(default_factory=list)
     description_override: str | None = None

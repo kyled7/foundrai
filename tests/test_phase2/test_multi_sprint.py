@@ -32,24 +32,39 @@ def _mock_runtime(content, fmt=None):
         except json.JSONDecodeError:
             pass
     rt = AsyncMock()
-    rt.run = AsyncMock(return_value=RuntimeResult(
-        output=content, parsed=parsed, artifacts=[], tokens_used=50, success=True,
-    ))
+    rt.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=50,
+            success=True,
+        )
+    )
     return rt
 
 
-SINGLE_TASK = json.dumps([{
-    "title": "Task A", "description": "Do A",
-    "acceptance_criteria": ["A works"], "dependencies": [],
-    "assigned_to": "developer", "priority": 1,
-}])
+SINGLE_TASK = json.dumps(
+    [
+        {
+            "title": "Task A",
+            "description": "Do A",
+            "acceptance_criteria": ["A works"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        }
+    ]
+)
 
 
 @pytest.fixture
 def ctx(tmp_path):
     return SprintContext(
-        project_name="test", project_path=str(tmp_path),
-        sprint_goal="test goal", sprint_number=1,
+        project_name="test",
+        project_path=str(tmp_path),
+        sprint_goal="test goal",
+        sprint_number=1,
     )
 
 
@@ -68,18 +83,27 @@ async def infra(db):
 def _make_agents(mb, ctx, pm_resp):
     qa_pass = json.dumps({"passed": True, "issues": [], "suggestions": []})
     pm = ProductManagerAgent(
-        role=get_role(AgentRoleName.PRODUCT_MANAGER), model="t", tools=[],
-        message_bus=mb, sprint_context=ctx,
+        role=get_role(AgentRoleName.PRODUCT_MANAGER),
+        model="t",
+        tools=[],
+        message_bus=mb,
+        sprint_context=ctx,
         runtime=_mock_runtime(pm_resp, "json"),
     )
     dev = DeveloperAgent(
-        role=get_role(AgentRoleName.DEVELOPER), model="t", tools=[],
-        message_bus=mb, sprint_context=ctx,
+        role=get_role(AgentRoleName.DEVELOPER),
+        model="t",
+        tools=[],
+        message_bus=mb,
+        sprint_context=ctx,
         runtime=_mock_runtime("Done"),
     )
     qa = QAEngineerAgent(
-        role=get_role(AgentRoleName.QA_ENGINEER), model="t", tools=[],
-        message_bus=mb, sprint_context=ctx,
+        role=get_role(AgentRoleName.QA_ENGINEER),
+        model="t",
+        tools=[],
+        message_bus=mb,
+        sprint_context=ctx,
         runtime=_mock_runtime(qa_pass, "json"),
     )
     return {
@@ -96,8 +120,13 @@ async def test_two_sprints_same_project(db, ctx, infra):
     agents = _make_agents(mb, ctx, SINGLE_TASK)
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
     )
 
     result1 = await engine.run_sprint("Sprint 1 goal", "proj1")
@@ -120,8 +149,13 @@ async def test_sprint_with_vector_memory(db, ctx, infra, tmp_path):
     vm = VectorMemory(MemoryConfig(chromadb_path=str(tmp_path / "vectors")))
 
     engine = SprintEngine(
-        config=FoundrAIConfig(), agents=agents, task_graph=tg,
-        message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+        config=FoundrAIConfig(),
+        agents=agents,
+        task_graph=tg,
+        message_bus=mb,
+        sprint_store=ss,
+        event_log=el,
+        artifact_store=art,
         vector_memory=vm,
     )
 
@@ -141,8 +175,13 @@ async def test_sprint_numbers_increment(db, ctx, infra):
 
     for i in range(3):
         engine = SprintEngine(
-            config=FoundrAIConfig(), agents=agents, task_graph=TaskGraph(),
-            message_bus=mb, sprint_store=ss, event_log=el, artifact_store=art,
+            config=FoundrAIConfig(),
+            agents=agents,
+            task_graph=TaskGraph(),
+            message_bus=mb,
+            sprint_store=ss,
+            event_log=el,
+            artifact_store=art,
         )
         result = await engine.run_sprint(f"Goal {i}", "proj1")
         assert result["sprint_number"] == i + 1

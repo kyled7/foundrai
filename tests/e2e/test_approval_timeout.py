@@ -7,14 +7,12 @@ This test verifies that:
 4. Events are logged correctly
 """
 
-import asyncio
 from datetime import datetime
 
 import pytest
 from httpx import AsyncClient
 
 from foundrai.api.deps import get_db
-from foundrai.models.enums import AutonomyLevel
 
 
 @pytest.mark.asyncio
@@ -110,9 +108,7 @@ async def test_approval_timeout_configuration():
 
 
 @pytest.mark.asyncio
-async def test_multiple_approvals_timeout_independently(
-    client: AsyncClient, project_id: str
-):
+async def test_multiple_approvals_timeout_independently(client: AsyncClient, project_id: str):
     """Test that multiple approvals can timeout independently."""
     # Create sprint
     create_resp = await client.post(
@@ -130,7 +126,14 @@ async def test_multiple_approvals_timeout_independently(
             """INSERT INTO approvals
                (approval_id, sprint_id, agent_id, action_type, title, status)
                VALUES (?, ?, ?, ?, ?, ?)""",
-            (approval_id, sprint_id, "developer", "task_execution", f"Task {approval_id}", "pending"),
+            (
+                approval_id,
+                sprint_id,
+                "developer",
+                "task_execution",
+                f"Task {approval_id}",
+                "pending",
+            ),
         )
     await db.conn.commit()
 
@@ -139,7 +142,7 @@ async def test_multiple_approvals_timeout_independently(
     assert list_resp.json()["pending_count"] == 3
 
     # Approve first one
-    await client.post(f"/api/approvals/timeout-1/approve", json={})
+    await client.post("/api/approvals/timeout-1/approve", json={})
 
     # Expire second one
     await db.conn.execute(
@@ -157,20 +160,18 @@ async def test_multiple_approvals_timeout_independently(
     assert data["total"] == 3
 
     # Verify individual statuses
-    resp1 = await client.get(f"/api/approvals/timeout-1")
+    resp1 = await client.get("/api/approvals/timeout-1")
     assert resp1.json()["status"] == "approved"
 
-    resp2 = await client.get(f"/api/approvals/timeout-2")
+    resp2 = await client.get("/api/approvals/timeout-2")
     assert resp2.json()["status"] == "expired"
 
-    resp3 = await client.get(f"/api/approvals/timeout-3")
+    resp3 = await client.get("/api/approvals/timeout-3")
     assert resp3.json()["status"] == "pending"
 
 
 @pytest.mark.asyncio
-async def test_expired_approval_cannot_be_modified(
-    client: AsyncClient, project_id: str
-):
+async def test_expired_approval_cannot_be_modified(client: AsyncClient, project_id: str):
     """Test that expired approvals cannot be approved or rejected."""
     # Create sprint and approval
     create_resp = await client.post(

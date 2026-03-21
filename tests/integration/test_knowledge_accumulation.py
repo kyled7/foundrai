@@ -13,7 +13,7 @@ This test verifies the complete knowledge accumulation flow:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -26,7 +26,6 @@ from foundrai.agents.roles import get_role
 from foundrai.agents.runtime import RuntimeResult
 from foundrai.config import FoundrAIConfig, MemoryConfig
 from foundrai.models.enums import AgentRoleName, SprintStatus
-from foundrai.models.learning import Learning
 from foundrai.orchestration.engine import SprintEngine
 from foundrai.orchestration.message_bus import MessageBus
 from foundrai.orchestration.task_graph import TaskGraph
@@ -45,81 +44,95 @@ def _mock_runtime(content: str, fmt: str | None = None):
         except json.JSONDecodeError:
             pass
     rt = AsyncMock()
-    rt.run = AsyncMock(return_value=RuntimeResult(
-        output=content,
-        parsed=parsed,
-        artifacts=[],
-        tokens_used=100,
-        success=True,
-    ))
+    rt.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=100,
+            success=True,
+        )
+    )
     return rt
 
 
 # Mock responses for Sprint 1
-SPRINT1_TASKS = json.dumps([
-    {
-        "title": "Build authentication system",
-        "description": "Create basic user authentication",
-        "acceptance_criteria": ["Users can login", "Passwords are stored"],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    }
-])
+SPRINT1_TASKS = json.dumps(
+    [
+        {
+            "title": "Build authentication system",
+            "description": "Create basic user authentication",
+            "acceptance_criteria": ["Users can login", "Passwords are stored"],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        }
+    ]
+)
 
 SPRINT1_DEV_RESPONSE = "Authentication implemented"
 
-SPRINT1_QA_RESPONSE = json.dumps({
-    "passed": False,
-    "issues": ["Passwords are stored in plaintext - security vulnerability"],
-    "suggestions": ["Hash passwords before storing", "Add input validation"],
-})
+SPRINT1_QA_RESPONSE = json.dumps(
+    {
+        "passed": False,
+        "issues": ["Passwords are stored in plaintext - security vulnerability"],
+        "suggestions": ["Hash passwords before storing", "Add input validation"],
+    }
+)
 
-SPRINT1_RETRO_RESPONSE = json.dumps({
-    "went_well": ["Feature was implemented on time"],
-    "went_wrong": ["Security best practices were not followed"],
-    "action_items": ["Review security guidelines", "Add security checklist"],
-    "learnings": [
-        "Always hash passwords before storing in database",
-        "Add input validation for all user inputs",
-        "Security review should be part of acceptance criteria"
-    ],
-})
+SPRINT1_RETRO_RESPONSE = json.dumps(
+    {
+        "went_well": ["Feature was implemented on time"],
+        "went_wrong": ["Security best practices were not followed"],
+        "action_items": ["Review security guidelines", "Add security checklist"],
+        "learnings": [
+            "Always hash passwords before storing in database",
+            "Add input validation for all user inputs",
+            "Security review should be part of acceptance criteria",
+        ],
+    }
+)
 
 # Mock responses for Sprint 2 (should be improved based on learnings)
-SPRINT2_TASKS = json.dumps([
-    {
-        "title": "Build secure password reset",
-        "description": "Create password reset with security best practices",
-        "acceptance_criteria": [
-            "Users can reset password",
-            "Passwords are hashed before storage",
-            "Input validation is in place",
-            "Security review completed"
-        ],
-        "dependencies": [],
-        "assigned_to": "developer",
-        "priority": 1,
-    }
-])
+SPRINT2_TASKS = json.dumps(
+    [
+        {
+            "title": "Build secure password reset",
+            "description": "Create password reset with security best practices",
+            "acceptance_criteria": [
+                "Users can reset password",
+                "Passwords are hashed before storage",
+                "Input validation is in place",
+                "Security review completed",
+            ],
+            "dependencies": [],
+            "assigned_to": "developer",
+            "priority": 1,
+        }
+    ]
+)
 
 SPRINT2_DEV_RESPONSE = "Password reset implemented with security best practices"
 
-SPRINT2_QA_RESPONSE = json.dumps({
-    "passed": True,
-    "issues": [],
-    "suggestions": [],
-})
+SPRINT2_QA_RESPONSE = json.dumps(
+    {
+        "passed": True,
+        "issues": [],
+        "suggestions": [],
+    }
+)
 
-SPRINT2_RETRO_RESPONSE = json.dumps({
-    "went_well": ["Security best practices followed", "No security issues found"],
-    "went_wrong": [],
-    "action_items": [],
-    "learnings": [
-        "Following learnings from previous sprints improved quality",
-        "Security checklist helped catch issues early"
-    ],
-})
+SPRINT2_RETRO_RESPONSE = json.dumps(
+    {
+        "went_well": ["Security best practices followed", "No security issues found"],
+        "went_wrong": [],
+        "action_items": [],
+        "learnings": [
+            "Following learnings from previous sprints improved quality",
+            "Security checklist helped catch issues early",
+        ],
+    }
+)
 
 
 @pytest.fixture
@@ -167,7 +180,9 @@ def _create_sprint_context(project_id: str, tmp_path, sprint_number: int, goal: 
     return ctx
 
 
-def _create_agents(message_bus, sprint_context, pm_response, dev_response, qa_response, retro_response):
+def _create_agents(
+    message_bus, sprint_context, pm_response, dev_response, qa_response, retro_response
+):
     """Create mock agents for a sprint."""
     pm = ProductManagerAgent(
         role=get_role(AgentRoleName.PRODUCT_MANAGER),
@@ -179,10 +194,24 @@ def _create_agents(message_bus, sprint_context, pm_response, dev_response, qa_re
     )
 
     # PM runtime needs to return both planning and retro responses
-    pm.runtime.run = AsyncMock(side_effect=[
-        RuntimeResult(output=pm_response, parsed=json.loads(pm_response), artifacts=[], tokens_used=100, success=True),
-        RuntimeResult(output=retro_response, parsed=json.loads(retro_response), artifacts=[], tokens_used=100, success=True),
-    ])
+    pm.runtime.run = AsyncMock(
+        side_effect=[
+            RuntimeResult(
+                output=pm_response,
+                parsed=json.loads(pm_response),
+                artifacts=[],
+                tokens_used=100,
+                success=True,
+            ),
+            RuntimeResult(
+                output=retro_response,
+                parsed=json.loads(retro_response),
+                artifacts=[],
+                tokens_used=100,
+                success=True,
+            ),
+        ]
+    )
 
     dev = DeveloperAgent(
         role=get_role(AgentRoleName.DEVELOPER),
@@ -225,9 +254,9 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     9. Verify all changes persist in both ChromaDB and SQLite
     """
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 1: Create and run Sprint 1")
-    print("="*80)
+    print("=" * 80)
 
     # Create Sprint 1
     sprint1_context = _create_sprint_context(project_id, tmp_path, 1, "Build authentication system")
@@ -259,19 +288,17 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     print(f"  Sprint number: {result1['sprint_number']}")
 
     # STEP 2: Verify learnings were stored in both ChromaDB and SQLite
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 2: Verify learnings stored in ChromaDB and SQLite")
-    print("="*80)
+    print("=" * 80)
 
     # Query SQLite
     cursor = await db.conn.execute(
-        "SELECT learning_id, content, category FROM learnings WHERE project_id = ?",
-        (project_id,)
+        "SELECT learning_id, content, category FROM learnings WHERE project_id = ?", (project_id,)
     )
     sqlite_rows = await cursor.fetchall()
     sqlite_learnings = [
-        {"id": row[0], "content": row[1], "category": row[2]}
-        for row in sqlite_rows
+        {"id": row[0], "content": row[1], "category": row[2]} for row in sqlite_rows
     ]
 
     print(f"\n✓ SQLite learnings count: {len(sqlite_learnings)}")
@@ -279,7 +306,9 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
         print(f"  - [{learning['category']}] {learning['content']}")
 
     # Query ChromaDB
-    vector_learnings = await infrastructure["vector_memory"].get_all_learnings(project_id=project_id)
+    vector_learnings = await infrastructure["vector_memory"].get_all_learnings(
+        project_id=project_id
+    )
 
     print(f"\n✓ ChromaDB learnings count: {len(vector_learnings)}")
     for learning in vector_learnings:
@@ -288,8 +317,9 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     # Verify both stores have learnings
     assert len(sqlite_learnings) > 0, "SQLite should contain learnings from Sprint 1"
     assert len(vector_learnings) > 0, "ChromaDB should contain learnings from Sprint 1"
-    assert len(sqlite_learnings) == len(vector_learnings), \
+    assert len(sqlite_learnings) == len(vector_learnings), (
         "Both stores should have same number of learnings"
+    )
 
     # Verify content matches
     sqlite_contents = {lr["content"] for lr in sqlite_learnings}
@@ -299,9 +329,9 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     print("\n✅ Learnings verified in both ChromaDB and SQLite")
 
     # STEP 3: Create and run Sprint 2 with similar goal
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 3: Create and run Sprint 2 (similar security goal)")
-    print("="*80)
+    print("=" * 80)
 
     # Track vector_memory.query_relevant calls during Sprint 2 planning
     query_calls = []
@@ -346,9 +376,9 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     print(f"  Sprint number: {result2['sprint_number']}")
 
     # STEP 4: Verify Sprint 2 planning queried learnings from Sprint 1
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 4: Verify Sprint 2 queried learnings from Sprint 1")
-    print("="*80)
+    print("=" * 80)
 
     assert len(query_calls) > 0, "Sprint 2 planning should have queried vector memory"
 
@@ -357,26 +387,26 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
         query = args[0] if args else kwargs.get("query", "N/A")
         k = kwargs.get("k", "N/A")
         proj_id = kwargs.get("project_id", "N/A")
-        print(f"  Call {i+1}: query='{query}', k={k}, project_id={proj_id}")
+        print(f"  Call {i + 1}: query='{query}', k={k}, project_id={proj_id}")
 
     print("\n✅ Sprint 2 successfully queried learnings from Sprint 1")
 
     # STEP 5: Test natural language search
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 5: Test natural language search for learnings")
-    print("="*80)
+    print("=" * 80)
 
     # Restore original method
     infrastructure["vector_memory"].query_relevant = original_query_relevant
 
     # Search for security-related learnings
     search_results = await infrastructure["vector_memory"].query_relevant(
-        query="password security best practices",
-        k=5,
-        project_id=project_id
+        query="password security best practices", k=5, project_id=project_id
     )
 
-    print(f"\n✓ Search returned {len(search_results)} results for 'password security best practices'")
+    print(
+        f"\n✓ Search returned {len(search_results)} results for 'password security best practices'"
+    )
     for learning in search_results:
         print(f"  - [{learning.category}] {learning.content}")
 
@@ -385,9 +415,9 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     print("\n✅ Natural language search working correctly")
 
     # STEP 6: Test editing a learning
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 6: Test editing a learning")
-    print("="*80)
+    print("=" * 80)
 
     # Get first learning to edit
     first_learning = sqlite_learnings[0]
@@ -396,24 +426,23 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     updated_content = f"{original_content} - UPDATED"
 
     # Update in SQLite (simulating API endpoint)
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     await db.conn.execute(
         "UPDATE learnings SET content = ?, updated_at = ? WHERE learning_id = ?",
-        (updated_content, now, learning_id)
+        (updated_content, now, learning_id),
     )
     await db.conn.commit()
 
     # Verify update in SQLite
     cursor = await db.conn.execute(
-        "SELECT content, updated_at FROM learnings WHERE learning_id = ?",
-        (learning_id,)
+        "SELECT content, updated_at FROM learnings WHERE learning_id = ?", (learning_id,)
     )
     row = await cursor.fetchone()
     assert row is not None
     assert row[0] == updated_content
     assert row[1] is not None
 
-    print(f"\n✓ Learning updated in SQLite")
+    print("\n✓ Learning updated in SQLite")
     print(f"  Original: {original_content}")
     print(f"  Updated: {updated_content}")
 
@@ -423,21 +452,20 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     print("\n✅ Learning edit persisted in SQLite")
 
     # STEP 7: Test pinning a learning
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 7: Test pinning a learning")
-    print("="*80)
+    print("=" * 80)
 
     # Pin a learning (simulating API endpoint)
     await db.conn.execute(
         "UPDATE learnings SET pinned = ?, updated_at = ? WHERE learning_id = ?",
-        (1, now, learning_id)
+        (1, now, learning_id),
     )
     await db.conn.commit()
 
     # Verify pin in SQLite
     cursor = await db.conn.execute(
-        "SELECT pinned FROM learnings WHERE learning_id = ?",
-        (learning_id,)
+        "SELECT pinned FROM learnings WHERE learning_id = ?", (learning_id,)
     )
     row = await cursor.fetchone()
     assert row is not None
@@ -448,73 +476,65 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     # Unpin the learning
     await db.conn.execute(
         "UPDATE learnings SET pinned = ?, updated_at = ? WHERE learning_id = ?",
-        (0, now, learning_id)
+        (0, now, learning_id),
     )
     await db.conn.commit()
 
     # Verify unpin
     cursor = await db.conn.execute(
-        "SELECT pinned FROM learnings WHERE learning_id = ?",
-        (learning_id,)
+        "SELECT pinned FROM learnings WHERE learning_id = ?", (learning_id,)
     )
     row = await cursor.fetchone()
     assert row is not None
     assert row[0] == 0
 
-    print(f"✓ Learning unpinned in SQLite")
+    print("✓ Learning unpinned in SQLite")
 
     print("\n✅ Pin/unpin functionality working correctly")
 
     # STEP 8: Test deleting a learning
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 8: Test deleting a learning")
-    print("="*80)
+    print("=" * 80)
 
     # Get count before delete
     cursor = await db.conn.execute(
-        "SELECT COUNT(*) FROM learnings WHERE project_id = ?",
-        (project_id,)
+        "SELECT COUNT(*) FROM learnings WHERE project_id = ?", (project_id,)
     )
     count_before = (await cursor.fetchone())[0]
 
     # Delete a learning (simulating API endpoint)
-    await db.conn.execute(
-        "DELETE FROM learnings WHERE learning_id = ?",
-        (learning_id,)
-    )
+    await db.conn.execute("DELETE FROM learnings WHERE learning_id = ?", (learning_id,))
     await db.conn.commit()
 
     # Verify deletion in SQLite
     cursor = await db.conn.execute(
-        "SELECT COUNT(*) FROM learnings WHERE learning_id = ?",
-        (learning_id,)
+        "SELECT COUNT(*) FROM learnings WHERE learning_id = ?", (learning_id,)
     )
     deleted_count = (await cursor.fetchone())[0]
     assert deleted_count == 0
 
     # Verify total count decreased
     cursor = await db.conn.execute(
-        "SELECT COUNT(*) FROM learnings WHERE project_id = ?",
-        (project_id,)
+        "SELECT COUNT(*) FROM learnings WHERE project_id = ?", (project_id,)
     )
     count_after = (await cursor.fetchone())[0]
     assert count_after == count_before - 1
 
-    print(f"\n✓ Learning deleted from SQLite")
+    print("\n✓ Learning deleted from SQLite")
     print(f"  Count before: {count_before}")
     print(f"  Count after: {count_after}")
 
     print("\n✅ Delete functionality working correctly")
 
     # STEP 9: Final verification of dual storage consistency
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 9: Final verification of dual storage consistency")
-    print("="*80)
+    print("=" * 80)
 
     # Get final counts
     cursor = await db.conn.execute(
-        "SELECT COUNT(*) FROM learnings WHERE project_id = ?",
-        (project_id,)
+        "SELECT COUNT(*) FROM learnings WHERE project_id = ?", (project_id,)
     )
     final_sqlite_count = (await cursor.fetchone())[0]
 
@@ -522,12 +542,12 @@ async def test_end_to_end_knowledge_accumulation(db, tmp_path, project_id, infra
     # For this test, we verify SQLite operations work correctly
 
     print(f"\n✓ Final SQLite learnings count: {final_sqlite_count}")
-    print(f"✓ All CRUD operations completed successfully")
+    print("✓ All CRUD operations completed successfully")
 
     # FINAL SUMMARY
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ END-TO-END KNOWLEDGE ACCUMULATION TEST PASSED")
-    print("="*80)
+    print("=" * 80)
     print("\nVerified:")
     print("1. ✅ Sprint 1 completed and learnings stored in both ChromaDB and SQLite")
     print("2. ✅ Sprint 2 queried learnings from Sprint 1 during planning")

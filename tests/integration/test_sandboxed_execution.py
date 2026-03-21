@@ -48,7 +48,9 @@ def code_executor():
 
 
 @pytest.mark.asyncio
-async def test_developer_agent_executes_code(db, tmp_path, sprint_context, message_bus, code_executor):
+async def test_developer_agent_executes_code(
+    db, tmp_path, sprint_context, message_bus, code_executor
+):
     """Test that Developer agent can execute code in a sandboxed environment."""
     # Create a simple task that requires code execution
     task = Task(
@@ -127,7 +129,10 @@ async def test_developer_agent_executes_code(db, tmp_path, sprint_context, messa
 
     # Verify execution succeeded
     assert task_result.success
-    assert "Hello, FoundrAI!" in task_result.output or "Code executed successfully" in task_result.output
+    assert (
+        "Hello, FoundrAI!" in task_result.output
+        or "Code executed successfully" in task_result.output
+    )
     assert task_result.task_id == task.id
     assert task_result.agent_id == AgentRoleName.DEVELOPER.value
 
@@ -204,7 +209,11 @@ print('All tests passed!')
 
                 # Return review result based on test execution
                 if result.success and "All tests passed" in result.output:
-                    review_data = {"passed": True, "issues": [], "suggestions": ["Consider adding edge case tests"]}
+                    review_data = {
+                        "passed": True,
+                        "issues": [],
+                        "suggestions": ["Consider adding edge case tests"],
+                    }
                 else:
                     review_data = {"passed": False, "issues": ["Tests failed"], "suggestions": []}
 
@@ -282,7 +291,7 @@ async def test_timeout_and_limits():
     executor = get_code_executor(provider="docker", timeout=2)
 
     # Verify we got a real CodeExecutor, not a noop
-    from foundrai.tools.code_executor import CodeExecutor, NoopCodeExecutor
+    from foundrai.tools.code_executor import CodeExecutor
 
     assert isinstance(executor, CodeExecutor), "Expected CodeExecutor but got NoopCodeExecutor"
 
@@ -345,11 +354,10 @@ print("This should not be reached")
 @pytest.mark.asyncio
 async def test_e2b_fallback_when_docker_unavailable(monkeypatch):
     """Test that E2B is used as fallback when Docker is unavailable but E2B_API_KEY is set."""
-    import os
     import subprocess
     from unittest.mock import MagicMock, Mock
 
-    from foundrai.tools.code_executor import E2BCodeExecutor, NoopCodeExecutor
+    from foundrai.tools.code_executor import E2BCodeExecutor
 
     # Mock Docker as unavailable
     original_run = subprocess.run

@@ -32,6 +32,7 @@ async def client(test_config):
 
     # Manually trigger lifespan
     from foundrai.api.app import lifespan
+
     async with lifespan(app):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:

@@ -24,7 +24,7 @@ def test_classify_error_timeout() -> None:
     """Test classification of timeout errors."""
     assert classify_error(TimeoutError("timed out")) == "timeout"
     assert classify_error(Exception("request timeout")) == "timeout"
-    assert classify_error(asyncio.TimeoutError("async timeout")) == "timeout"
+    assert classify_error(TimeoutError("async timeout")) == "timeout"
 
 
 def test_classify_error_context_overflow() -> None:

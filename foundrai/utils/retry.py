@@ -20,11 +20,17 @@ def classify_error(exception: Exception) -> str:
 
     if "rate" in msg or "rate_limit" in msg or "429" in msg:
         return "rate_limit"
-    if ("context" in msg or "token" in msg and
-        ("limit" in msg or "overflow" in msg or "exceed" in msg)):
+    if (
+        "context" in msg
+        or "token" in msg
+        and ("limit" in msg or "overflow" in msg or "exceed" in msg)
+    ):
         return "context_overflow"
-    if ("timeout" in msg or "timed out" in msg or
-        exc_type in ("timeouterror", "asynciotimeouterror")):
+    if (
+        "timeout" in msg
+        or "timed out" in msg
+        or exc_type in ("timeouterror", "asynciotimeouterror")
+    ):
         return "timeout"
     if "tool" in msg or "function" in msg and "call" in msg:
         return "tool_error"
@@ -86,6 +92,6 @@ async def retry_async(
                     raise
             # Retry if we have attempts left
             if attempt < max_retries:
-                wait = backoff_base * (2 ** attempt)
+                wait = backoff_base * (2**attempt)
                 await asyncio.sleep(wait)
     raise last_error  # type: ignore[misc]

@@ -12,6 +12,7 @@ from foundrai.models.enums import AgentRoleName
 
 class RecommendationConfidence(str, Enum):
     """Confidence level for model recommendations."""
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
@@ -20,6 +21,7 @@ class RecommendationConfidence(str, Enum):
 
 class TaskComplexity(str, Enum):
     """Task complexity categories for model selection."""
+
     SIMPLE = "simple"  # Simple formatting, basic QA
     MODERATE = "moderate"  # Standard development tasks
     COMPLEX = "complex"  # Architecture, complex planning

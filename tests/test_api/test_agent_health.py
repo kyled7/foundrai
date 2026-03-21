@@ -97,9 +97,7 @@ async def test_get_agent_health_with_data(client: AsyncClient, project_id: str):
 @pytest.mark.asyncio
 async def test_calculate_agent_health(client: AsyncClient, project_id: str):
     """Test POST /api/projects/{id}/agents/{role}/health/calculate."""
-    response = await client.post(
-        f"/api/projects/{project_id}/agents/developer/health/calculate"
-    )
+    response = await client.post(f"/api/projects/{project_id}/agents/developer/health/calculate")
     assert response.status_code == 200
 
     data = response.json()
@@ -195,9 +193,7 @@ async def test_get_sprint_agent_health_with_data(client: AsyncClient, project_id
 @pytest.mark.asyncio
 async def test_health_metrics_structure(client: AsyncClient, project_id: str):
     """Test that health metrics have correct structure and types."""
-    response = await client.post(
-        f"/api/projects/{project_id}/agents/developer/health/calculate"
-    )
+    response = await client.post(f"/api/projects/{project_id}/agents/developer/health/calculate")
     assert response.status_code == 200
 
     data = response.json()
@@ -232,9 +228,7 @@ async def test_health_metrics_structure(client: AsyncClient, project_id: str):
 @pytest.mark.asyncio
 async def test_health_status_values(client: AsyncClient, project_id: str):
     """Test that health status is one of expected values."""
-    response = await client.post(
-        f"/api/projects/{project_id}/agents/developer/health/calculate"
-    )
+    response = await client.post(f"/api/projects/{project_id}/agents/developer/health/calculate")
     assert response.status_code == 200
 
     data = response.json()
@@ -244,9 +238,7 @@ async def test_health_status_values(client: AsyncClient, project_id: str):
 @pytest.mark.asyncio
 async def test_recommendations_not_empty(client: AsyncClient, project_id: str):
     """Test that recommendations are always provided."""
-    response = await client.post(
-        f"/api/projects/{project_id}/agents/developer/health/calculate"
-    )
+    response = await client.post(f"/api/projects/{project_id}/agents/developer/health/calculate")
     assert response.status_code == 200
 
     data = response.json()
@@ -259,15 +251,14 @@ async def test_recommendations_not_empty(client: AsyncClient, project_id: str):
 @pytest.mark.asyncio
 async def test_timestamp_format(client: AsyncClient, project_id: str):
     """Test that timestamp is in ISO format."""
-    response = await client.post(
-        f"/api/projects/{project_id}/agents/developer/health/calculate"
-    )
+    response = await client.post(f"/api/projects/{project_id}/agents/developer/health/calculate")
     assert response.status_code == 200
 
     data = response.json()
     assert "timestamp" in data
     # Verify it's a valid ISO timestamp string
     from datetime import datetime
+
     timestamp = datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
     assert isinstance(timestamp, datetime)
 
@@ -276,26 +267,21 @@ async def test_timestamp_format(client: AsyncClient, project_id: str):
 async def test_multiple_health_calculations_keep_latest(client: AsyncClient, project_id: str):
     """Test that multiple calculations keep the latest record."""
     # Calculate health twice
-    response1 = await client.post(
-        f"/api/projects/{project_id}/agents/developer/health/calculate"
-    )
+    response1 = await client.post(f"/api/projects/{project_id}/agents/developer/health/calculate")
     assert response1.status_code == 200
     timestamp1 = response1.json()["timestamp"]
 
     # Small delay to ensure different timestamp
     import asyncio
+
     await asyncio.sleep(0.01)
 
-    response2 = await client.post(
-        f"/api/projects/{project_id}/agents/developer/health/calculate"
-    )
+    response2 = await client.post(f"/api/projects/{project_id}/agents/developer/health/calculate")
     assert response2.status_code == 200
     timestamp2 = response2.json()["timestamp"]
 
     # Get agent health should return the latest
-    get_response = await client.get(
-        f"/api/projects/{project_id}/agents/developer/health"
-    )
+    get_response = await client.get(f"/api/projects/{project_id}/agents/developer/health")
     assert get_response.status_code == 200
 
     data = get_response.json()

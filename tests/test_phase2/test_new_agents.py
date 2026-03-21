@@ -24,17 +24,25 @@ def _mock_runtime(content, fmt=None):
         except json.JSONDecodeError:
             pass
     rt = AsyncMock()
-    rt.run = AsyncMock(return_value=RuntimeResult(
-        output=content, parsed=parsed, artifacts=[], tokens_used=50, success=True,
-    ))
+    rt.run = AsyncMock(
+        return_value=RuntimeResult(
+            output=content,
+            parsed=parsed,
+            artifacts=[],
+            tokens_used=50,
+            success=True,
+        )
+    )
     return rt
 
 
 @pytest.fixture
 def ctx(tmp_path):
     return SprintContext(
-        project_name="test", project_path=str(tmp_path),
-        sprint_goal="test goal", sprint_number=1,
+        project_name="test",
+        project_path=str(tmp_path),
+        sprint_goal="test goal",
+        sprint_number=1,
     )
 
 
@@ -42,6 +50,7 @@ def ctx(tmp_path):
 async def message_bus(db):
     from foundrai.orchestration.message_bus import MessageBus
     from foundrai.persistence.event_log import EventLog
+
     el = EventLog(db)
     mb = MessageBus(el)
     mb.register_agent("architect")
@@ -63,20 +72,30 @@ def test_designer_role_registered():
 
 @pytest.mark.asyncio
 async def test_architect_review_plan(ctx, message_bus):
-    review_resp = json.dumps([{
-        "title": "Build API",
-        "technical_notes": "Use FastAPI",
-        "additional_criteria": ["Must have OpenAPI docs"],
-    }])
+    review_resp = json.dumps(
+        [
+            {
+                "title": "Build API",
+                "technical_notes": "Use FastAPI",
+                "additional_criteria": ["Must have OpenAPI docs"],
+            }
+        ]
+    )
     arch = ArchitectAgent(
-        role=get_role(AgentRoleName.ARCHITECT), model="t", tools=[],
-        message_bus=message_bus, sprint_context=ctx,
+        role=get_role(AgentRoleName.ARCHITECT),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=ctx,
         runtime=_mock_runtime(review_resp, "json"),
     )
-    tasks = [Task(
-        title="Build API", description="Build REST API",
-        acceptance_criteria=["Responds 200"],
-    )]
+    tasks = [
+        Task(
+            title="Build API",
+            description="Build REST API",
+            acceptance_criteria=["Responds 200"],
+        )
+    ]
     result = await arch.review_plan(tasks, ctx)
     assert len(result) == 1
     assert "Must have OpenAPI docs" in result[0].acceptance_criteria
@@ -85,8 +104,11 @@ async def test_architect_review_plan(ctx, message_bus):
 @pytest.mark.asyncio
 async def test_architect_execute_task(ctx, message_bus):
     arch = ArchitectAgent(
-        role=get_role(AgentRoleName.ARCHITECT), model="t", tools=[],
-        message_bus=message_bus, sprint_context=ctx,
+        role=get_role(AgentRoleName.ARCHITECT),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=ctx,
         runtime=_mock_runtime("Designed the architecture"),
     )
     task = Task(title="Design system", description="Create system design")
@@ -98,8 +120,11 @@ async def test_architect_execute_task(ctx, message_bus):
 @pytest.mark.asyncio
 async def test_designer_execute_task(ctx, message_bus):
     des = DesignerAgent(
-        role=get_role(AgentRoleName.DESIGNER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=ctx,
+        role=get_role(AgentRoleName.DESIGNER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=ctx,
         runtime=_mock_runtime("Created design spec"),
     )
     task = Task(title="Design UI", description="Create UI mockup")
@@ -109,19 +134,27 @@ async def test_designer_execute_task(ctx, message_bus):
 
 def test_architect_decompose_raises(ctx, message_bus):
     arch = ArchitectAgent(
-        role=get_role(AgentRoleName.ARCHITECT), model="t", tools=[],
-        message_bus=message_bus, sprint_context=ctx,
+        role=get_role(AgentRoleName.ARCHITECT),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=ctx,
     )
     with pytest.raises(NotImplementedError):
         import asyncio
+
         asyncio.get_event_loop().run_until_complete(arch.decompose_goal("x"))
 
 
 def test_designer_decompose_raises(ctx, message_bus):
     des = DesignerAgent(
-        role=get_role(AgentRoleName.DESIGNER), model="t", tools=[],
-        message_bus=message_bus, sprint_context=ctx,
+        role=get_role(AgentRoleName.DESIGNER),
+        model="t",
+        tools=[],
+        message_bus=message_bus,
+        sprint_context=ctx,
     )
     with pytest.raises(NotImplementedError):
         import asyncio
+
         asyncio.get_event_loop().run_until_complete(des.decompose_goal("x"))

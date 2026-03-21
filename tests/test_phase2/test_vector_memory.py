@@ -39,12 +39,14 @@ async def test_empty_query(memory):
 @pytest.mark.asyncio
 async def test_store_multiple(memory):
     for i in range(3):
-        await memory.store_learning(Learning(
-            content=f"Learning {i}: some content about topic {i}",
-            category="process",
-            sprint_id=f"s{i}",
-            project_id="p1",
-        ))
+        await memory.store_learning(
+            Learning(
+                content=f"Learning {i}: some content about topic {i}",
+                category="process",
+                sprint_id=f"s{i}",
+                project_id="p1",
+            )
+        )
 
     results = await memory.query_relevant("topic", k=10)
     assert len(results) == 3
@@ -52,18 +54,22 @@ async def test_store_multiple(memory):
 
 @pytest.mark.asyncio
 async def test_project_filter(memory):
-    await memory.store_learning(Learning(
-        content="Project A learning",
-        category="process",
-        sprint_id="s1",
-        project_id="pA",
-    ))
-    await memory.store_learning(Learning(
-        content="Project B learning",
-        category="process",
-        sprint_id="s2",
-        project_id="pB",
-    ))
+    await memory.store_learning(
+        Learning(
+            content="Project A learning",
+            category="process",
+            sprint_id="s1",
+            project_id="pA",
+        )
+    )
+    await memory.store_learning(
+        Learning(
+            content="Project B learning",
+            category="process",
+            sprint_id="s2",
+            project_id="pB",
+        )
+    )
 
     results = await memory.query_relevant("learning", k=10, project_id="pA")
     assert len(results) == 1
@@ -73,12 +79,14 @@ async def test_project_filter(memory):
 @pytest.mark.asyncio
 async def test_get_all_learnings(memory):
     for i in range(3):
-        await memory.store_learning(Learning(
-            content=f"Learning {i}",
-            category="general",
-            sprint_id="s1",
-            project_id="p1",
-        ))
+        await memory.store_learning(
+            Learning(
+                content=f"Learning {i}",
+                category="general",
+                sprint_id="s1",
+                project_id="p1",
+            )
+        )
 
     all_learnings = await memory.get_all_learnings()
     assert len(all_learnings) == 3
@@ -86,14 +94,22 @@ async def test_get_all_learnings(memory):
 
 @pytest.mark.asyncio
 async def test_get_all_with_project_filter(memory):
-    await memory.store_learning(Learning(
-        content="A learning", category="general",
-        sprint_id="s1", project_id="p1",
-    ))
-    await memory.store_learning(Learning(
-        content="B learning", category="general",
-        sprint_id="s2", project_id="p2",
-    ))
+    await memory.store_learning(
+        Learning(
+            content="A learning",
+            category="general",
+            sprint_id="s1",
+            project_id="p1",
+        )
+    )
+    await memory.store_learning(
+        Learning(
+            content="B learning",
+            category="general",
+            sprint_id="s2",
+            project_id="p2",
+        )
+    )
 
     result = await memory.get_all_learnings(project_id="p1")
     assert len(result) == 1

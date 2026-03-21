@@ -1,14 +1,12 @@
 """Tests for CodeExecutor tool."""
 
 import os
-from unittest.mock import MagicMock, Mock
 
 import pytest
 
 from foundrai.config import FoundrAIConfig
 from foundrai.models.enums import AgentRoleName
 from foundrai.tools.code_executor import (
-    CodeExecutor,
     CodeExecutorInput,
     E2BCodeExecutor,
     NoopCodeExecutor,
@@ -20,9 +18,7 @@ from foundrai.tools.registry import ToolRegistry, create_tool_registry
 @pytest.mark.asyncio
 async def test_noop_executor():
     executor = NoopCodeExecutor()
-    result = await executor.execute(
-        CodeExecutorInput(code="print('hello')", language="python")
-    )
+    result = await executor.execute(CodeExecutorInput(code="print('hello')", language="python"))
     assert result.success
     assert "unavailable" in result.output.lower()
 
@@ -63,9 +59,7 @@ async def test_e2b_executor_unsupported_language(monkeypatch):
     monkeypatch.setenv("E2B_API_KEY", "test-key")
 
     executor = E2BCodeExecutor(timeout=30)
-    result = await executor.execute(
-        CodeExecutorInput(code="print('test')", language="ruby")
-    )
+    result = await executor.execute(CodeExecutorInput(code="print('test')", language="ruby"))
 
     assert not result.success
     assert "Unsupported language" in result.error

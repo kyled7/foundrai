@@ -60,11 +60,17 @@ class ErrorStore:
 
         if "rate" in msg or "rate_limit" in msg or "429" in msg:
             return "rate_limit"
-        if ("context" in msg or "token" in msg and
-            ("limit" in msg or "overflow" in msg or "exceed" in msg)):
+        if (
+            "context" in msg
+            or "token" in msg
+            and ("limit" in msg or "overflow" in msg or "exceed" in msg)
+        ):
             return "context_overflow"
-        if ("timeout" in msg or "timed out" in msg or
-            exc_type in ("timeouterror", "asynciotimeouterror")):
+        if (
+            "timeout" in msg
+            or "timed out" in msg
+            or exc_type in ("timeouterror", "asynciotimeouterror")
+        ):
             return "timeout"
         if "tool" in msg or "function" in msg and "call" in msg:
             return "tool_error"

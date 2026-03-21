@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Integration verification for approval flow components."""
 
-import json
 import sys
 from pathlib import Path
+
 
 def check_file_exists(filepath: str, description: str) -> bool:
     """Check if a file exists."""
@@ -16,6 +16,7 @@ def check_file_exists(filepath: str, description: str) -> bool:
         print(f"✗ {description}: {filepath} (NOT FOUND)")
         return False
 
+
 def check_backend_integration() -> bool:
     """Verify backend integration."""
     print("=== Backend Integration ===\n")
@@ -23,24 +24,16 @@ def check_backend_integration() -> bool:
     all_ok = True
 
     # Check approval routes
-    all_ok &= check_file_exists(
-        "foundrai/api/routes/approvals.py",
-        "Approval routes"
-    )
+    all_ok &= check_file_exists("foundrai/api/routes/approvals.py", "Approval routes")
 
     # Check config with timeout
-    all_ok &= check_file_exists(
-        "foundrai/config.py",
-        "Configuration"
-    )
+    all_ok &= check_file_exists("foundrai/config.py", "Configuration")
 
     # Check engine with timeout support
-    all_ok &= check_file_exists(
-        "foundrai/orchestration/engine.py",
-        "Sprint engine"
-    )
+    all_ok &= check_file_exists("foundrai/orchestration/engine.py", "Sprint engine")
 
     return all_ok
+
 
 def check_frontend_integration() -> bool:
     """Verify frontend integration."""
@@ -50,55 +43,38 @@ def check_frontend_integration() -> bool:
 
     # Core approval components
     all_ok &= check_file_exists(
-        "frontend/src/components/approvals/ApprovalBanner.tsx",
-        "Approval banner"
+        "frontend/src/components/approvals/ApprovalBanner.tsx", "Approval banner"
     )
     all_ok &= check_file_exists(
-        "frontend/src/components/approvals/ApprovalQueue.tsx",
-        "Approval queue"
+        "frontend/src/components/approvals/ApprovalQueue.tsx", "Approval queue"
     )
     all_ok &= check_file_exists(
-        "frontend/src/components/approvals/ApprovalCard.tsx",
-        "Approval card (enhanced)"
+        "frontend/src/components/approvals/ApprovalCard.tsx", "Approval card (enhanced)"
     )
 
     # New components
     all_ok &= check_file_exists(
-        "frontend/src/components/approvals/ApprovalTimer.tsx",
-        "Countdown timer"
+        "frontend/src/components/approvals/ApprovalTimer.tsx", "Countdown timer"
     )
     all_ok &= check_file_exists(
-        "frontend/src/components/approvals/ContextRenderer.tsx",
-        "Context renderer"
+        "frontend/src/components/approvals/ContextRenderer.tsx", "Context renderer"
     )
 
     # Store and utilities
     all_ok &= check_file_exists(
-        "frontend/src/stores/approvalStore.ts",
-        "Approval store (with notifications)"
+        "frontend/src/stores/approvalStore.ts", "Approval store (with notifications)"
     )
-    all_ok &= check_file_exists(
-        "frontend/src/utils/notifications.ts",
-        "Notification utility"
-    )
-    all_ok &= check_file_exists(
-        "frontend/src/utils/sound.ts",
-        "Sound utility"
-    )
+    all_ok &= check_file_exists("frontend/src/utils/notifications.ts", "Notification utility")
+    all_ok &= check_file_exists("frontend/src/utils/sound.ts", "Sound utility")
 
     # Assets
-    all_ok &= check_file_exists(
-        "frontend/src/assets/notification.mp3",
-        "Notification sound"
-    )
+    all_ok &= check_file_exists("frontend/src/assets/notification.mp3", "Notification sound")
 
     # API client
-    all_ok &= check_file_exists(
-        "frontend/src/api/approvals.ts",
-        "Approval API client"
-    )
+    all_ok &= check_file_exists("frontend/src/api/approvals.ts", "Approval API client")
 
     return all_ok
+
 
 def check_documentation() -> bool:
     """Verify documentation exists."""
@@ -106,20 +82,12 @@ def check_documentation() -> bool:
 
     all_ok = True
 
-    all_ok &= check_file_exists(
-        "E2E_VERIFICATION_GUIDE.md",
-        "E2E testing guide"
-    )
-    all_ok &= check_file_exists(
-        "VERIFICATION_SUMMARY.md",
-        "Verification summary"
-    )
-    all_ok &= check_file_exists(
-        "verify_backend.py",
-        "Backend verification script"
-    )
+    all_ok &= check_file_exists("E2E_VERIFICATION_GUIDE.md", "E2E testing guide")
+    all_ok &= check_file_exists("VERIFICATION_SUMMARY.md", "Verification summary")
+    all_ok &= check_file_exists("verify_backend.py", "Backend verification script")
 
     return all_ok
+
 
 def check_typescript_imports() -> bool:
     """Check TypeScript imports are correct."""
@@ -175,6 +143,7 @@ def check_typescript_imports() -> bool:
 
     return True
 
+
 def main():
     """Run all integration checks."""
     print("╔═══════════════════════════════════════════════╗")
@@ -186,9 +155,9 @@ def main():
     docs_ok = check_documentation()
     imports_ok = check_typescript_imports()
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("SUMMARY")
-    print("="*50)
+    print("=" * 50)
 
     results = {
         "Backend Integration": backend_ok,
@@ -215,6 +184,7 @@ def main():
         print("\n❌ Some integration checks failed!")
         print("Review errors above and fix issues before proceeding.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

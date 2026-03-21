@@ -77,10 +77,12 @@ class AgentRuntime:
                     self._run_internal(messages, tools, response_format),
                     timeout=self.timeout,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     "Agent %s execution timed out after %s seconds for task %s",
-                    self.agent_role, self.timeout, self.task_id,
+                    self.agent_role,
+                    self.timeout,
+                    self.task_id,
                 )
                 return RuntimeResult(
                     output=f"Task execution timed out after {self.timeout} seconds.",
@@ -137,20 +139,25 @@ class AgentRuntime:
                     if fallback_model and fallback_model != current_model:
                         logger.info(
                             "Switching agent %s from model %s to %s due to budget threshold",
-                            self.agent_role, current_model, fallback_model,
+                            self.agent_role,
+                            current_model,
+                            fallback_model,
                         )
                         # Update both config.model and model attribute
                         self.llm_client.config.model = fallback_model
                         self.llm_client.model = fallback_model
                         # Emit model switch event
-                        await self.event_log.append("agent.model_switched", {
-                            "agent_role": self.agent_role,
-                            "task_id": self.task_id,
-                            "sprint_id": self.sprint_id,
-                            "from_model": current_model,
-                            "to_model": fallback_model,
-                            "reason": "budget_threshold",
-                        })
+                        await self.event_log.append(
+                            "agent.model_switched",
+                            {
+                                "agent_role": self.agent_role,
+                                "task_id": self.task_id,
+                                "sprint_id": self.sprint_id,
+                                "from_model": current_model,
+                                "to_model": fallback_model,
+                                "reason": "budget_threshold",
+                            },
+                        )
 
             _start_time = time.monotonic()
             # Wrap LLM call with retry logic for transient failures
@@ -179,11 +186,13 @@ class AgentRuntime:
 
             # Process tool calls
             # Append assistant message with tool calls
-            working_messages.append({
-                "role": "assistant",
-                "content": response.content or "",
-                "tool_calls": response_tool_calls,
-            })
+            working_messages.append(
+                {
+                    "role": "assistant",
+                    "content": response.content or "",
+                    "tool_calls": response_tool_calls,
+                }
+            )
 
             for tc in response_tool_calls:
                 is_dict = isinstance(tc, dict)
@@ -213,11 +222,13 @@ class AgentRuntime:
                     result_text = f"Unknown tool: {tool_name}"
 
                 # Append tool result
-                working_messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_id,
-                    "content": result_text,
-                })
+                working_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_id,
+                        "content": result_text,
+                    }
+                )
 
                 # Log tool usage event
                 await self._emit_tool_event(tool_name, tool_args, result_text)
@@ -226,7 +237,9 @@ class AgentRuntime:
             final_content = response.content if response else "Max tool iterations reached."
             logger.warning(
                 "Agent %s hit max iterations (%d) for task %s",
-                self.agent_role, self.max_iterations, self.task_id,
+                self.agent_role,
+                self.max_iterations,
+                self.task_id,
             )
 
         parsed = None
@@ -256,6 +269,7 @@ class AgentRuntime:
             cost_usd = 0.0
             try:
                 from foundrai.orchestration.cost_calculator import calculate_cost
+
                 cost_usd = calculate_cost(model, prompt_tokens, completion_tokens)
             except ImportError:
                 cost_usd = getattr(response, "cost_usd", 0.0)
@@ -296,6 +310,7 @@ class AgentRuntime:
             cost_usd = 0.0
             try:
                 from foundrai.orchestration.cost_calculator import calculate_cost
+
                 cost_usd = calculate_cost(model, prompt_tokens, completion_tokens)
             except ImportError:
                 cost_usd = getattr(response, "cost_usd", 0.0)
@@ -321,14 +336,17 @@ class AgentRuntime:
     async def _emit_tool_event(self, tool_name: str, args: dict, result: str) -> None:
         """Emit an event when a tool is used."""
         try:
-            await self.event_log.append("agent.tool_used", {
-                "agent_role": self.agent_role,
-                "task_id": self.task_id,
-                "sprint_id": self.sprint_id,
-                "tool": tool_name,
-                "arguments": {k: str(v)[:200] for k, v in args.items()},
-                "result_preview": result[:500],
-            })
+            await self.event_log.append(
+                "agent.tool_used",
+                {
+                    "agent_role": self.agent_role,
+                    "task_id": self.task_id,
+                    "sprint_id": self.sprint_id,
+                    "tool": tool_name,
+                    "arguments": {k: str(v)[:200] for k, v in args.items()},
+                    "result_preview": result[:500],
+                },
+            )
         except Exception:
             pass
 
@@ -360,11 +378,13 @@ class AgentRuntime:
         """Extract artifacts from tool results (e.g., files written)."""
         artifacts = []
         if tool_name == "file_manager" and args.get("action") == "write" and result.success:
-            artifacts.append({
-                "type": "file",
-                "path": args.get("path", ""),
-                "tool": tool_name,
-            })
+            artifacts.append(
+                {
+                    "type": "file",
+                    "path": args.get("path", ""),
+                    "tool": tool_name,
+                }
+            )
         return artifacts
 
     def _to_langchain_messages(self, messages: list[dict]) -> list:  # noqa: ANN201

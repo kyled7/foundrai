@@ -26,7 +26,7 @@ app.add_typer(sprint_app, name="sprint")
 
 console = Console()
 
-DEFAULT_YAML_TEMPLATE = '''# FoundrAI Project Configuration
+DEFAULT_YAML_TEMPLATE = """# FoundrAI Project Configuration
 project:
   name: "{name}"
   description: ""
@@ -53,7 +53,7 @@ persistence:
 sandbox:
   provider: docker
   timeout_seconds: 30
-'''
+"""
 
 ENV_EXAMPLE = """# FoundrAI Environment Variables
 OPENAI_API_KEY=sk-...
@@ -79,6 +79,7 @@ def init(
     # Check Docker availability (warn but don't block)
     try:
         import subprocess
+
         subprocess.run(["docker", "--version"], capture_output=True, check=True, timeout=5)  # noqa: S607
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
         console.print(
@@ -158,6 +159,7 @@ def sprint_start(
 
     # Check for API keys before starting
     from os import getenv
+
     has_openai = getenv("OPENAI_API_KEY")
     has_anthropic = getenv("ANTHROPIC_API_KEY")
 
@@ -180,7 +182,9 @@ def sprint_start(
 
 @sprint_app.command("resume")
 def sprint_resume(
-    checkpoint_id: str | None = typer.Argument(None, help="Checkpoint ID to resume from (auto-detects latest if not provided)"),
+    checkpoint_id: str | None = typer.Argument(
+        None, help="Checkpoint ID to resume from (auto-detects latest if not provided)"
+    ),
     project: str = typer.Option(".", "--project", "-p", help="Project directory"),
 ) -> None:
     """Resume a failed or interrupted sprint from a checkpoint."""
@@ -191,6 +195,7 @@ def sprint_resume(
 
     # Check for API keys before starting
     from os import getenv
+
     has_openai = getenv("OPENAI_API_KEY")
     has_anthropic = getenv("ANTHROPIC_API_KEY")
 
@@ -281,6 +286,7 @@ def doctor() -> None:
     # Dependencies
     try:
         import fastapi
+
         console.print(f"[green]✓[/green] FastAPI: {fastapi.__version__}")
     except ImportError:
         console.print("[red]✗[/red] FastAPI: Not installed")
@@ -288,6 +294,7 @@ def doctor() -> None:
 
     try:
         import langgraph
+
         # Try to get version, fall back to just "installed" if no version attr
         try:
             version = langgraph.__version__
@@ -337,10 +344,7 @@ async def _show_status(project_dir: Path) -> None:
     db = Database(db_path)
     await db.connect()
     try:
-
-        cursor = await db.conn.execute(
-            "SELECT * FROM sprints ORDER BY sprint_number DESC LIMIT 1"
-        )
+        cursor = await db.conn.execute("SELECT * FROM sprints ORDER BY sprint_number DESC LIMIT 1")
         row = await cursor.fetchone()
         if not row:
             console.print("[yellow]No sprints found[/yellow]")
@@ -511,7 +515,9 @@ async def _resume_sprint(project_dir: Path, checkpoint_id: str | None) -> None:
                 console.print("[yellow]No checkpoints found to resume from[/yellow]")
                 raise typer.Exit(code=1)
             checkpoint_id = row["checkpoint_id"]
-            console.print(f"[blue]Auto-detected checkpoint: {row['checkpoint_name']} (sprint {row['sprint_id']})[/blue]")
+            console.print(
+                f"[blue]Auto-detected checkpoint: {row['checkpoint_name']} (sprint {row['sprint_id']})[/blue]"
+            )
 
         # Get sprint info from checkpoint
         cursor = await db.conn.execute(
@@ -530,7 +536,6 @@ async def _resume_sprint(project_dir: Path, checkpoint_id: str | None) -> None:
 
         goal = row["goal"]
         sprint_number = row["sprint_number"]
-        project_id = row["project_id"]
         checkpoint_name = row["checkpoint_name"]
 
         # Create sprint context (needed for agents)
@@ -645,10 +650,10 @@ def _print_summary(state: dict) -> None:
 
     console.print()
     if status_str in ("completed", "COMPLETED"):
-        num = state.get('sprint_number', '?')
+        num = state.get("sprint_number", "?")
         console.print(f"[bold green]✅ Sprint #{num} COMPLETED[/bold green]")
     else:
-        num = state.get('sprint_number', '?')
+        num = state.get("sprint_number", "?")
         console.print(f"[bold red]❌ Sprint #{num} FAILED[/bold red]")
 
     console.print(f"  Tasks: {total} total, {completed} passed, {failed} failed")

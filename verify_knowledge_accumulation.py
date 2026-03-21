@@ -11,8 +11,8 @@ without requiring a full test environment setup. It verifies:
 
 import asyncio
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -25,9 +25,9 @@ from foundrai.persistence.vector_memory import VectorMemory
 
 async def main():
     """Run manual verification of knowledge accumulation."""
-    print("="*80)
+    print("=" * 80)
     print("MANUAL VERIFICATION: Knowledge Accumulation Feature")
-    print("="*80)
+    print("=" * 80)
 
     # Create temporary database and vector memory
     tmp_dir = Path("./tmp_verification")
@@ -81,7 +81,7 @@ async def main():
         # Query SQLite
         cursor = await db.conn.execute(
             "SELECT learning_id, content, category FROM learnings WHERE project_id = ?",
-            (project_id,)
+            (project_id,),
         )
         sqlite_rows = await cursor.fetchall()
         sqlite_count = len(sqlite_rows)
@@ -93,8 +93,12 @@ async def main():
         print(f"  SQLite learnings: {sqlite_count}")
         print(f"  ChromaDB learnings: {vector_count}")
 
-        assert sqlite_count == len(learnings), f"Expected {len(learnings)} in SQLite, got {sqlite_count}"
-        assert vector_count == len(learnings), f"Expected {len(learnings)} in ChromaDB, got {vector_count}"
+        assert sqlite_count == len(learnings), (
+            f"Expected {len(learnings)} in SQLite, got {sqlite_count}"
+        )
+        assert vector_count == len(learnings), (
+            f"Expected {len(learnings)} in ChromaDB, got {vector_count}"
+        )
         print("✓ Dual storage verified - both stores have same count")
 
         # Verify content matches
@@ -106,12 +110,10 @@ async def main():
         # Test natural language search
         print("\n[4] Testing natural language search...")
         search_results = await vm.query_relevant(
-            query="password security best practices",
-            k=5,
-            project_id=project_id
+            query="password security best practices", k=5, project_id=project_id
         )
 
-        print(f"  Search query: 'password security best practices'")
+        print("  Search query: 'password security best practices'")
         print(f"  Results found: {len(search_results)}")
         for i, learning in enumerate(search_results, 1):
             print(f"    {i}. [{learning.category}] {learning.content}")
@@ -125,17 +127,16 @@ async def main():
         original_content = sqlite_rows[0][1]
         updated_content = f"{original_content} - UPDATED"
 
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         await db.conn.execute(
             "UPDATE learnings SET content = ?, updated_at = ? WHERE learning_id = ?",
-            (updated_content, now, first_learning_id)
+            (updated_content, now, first_learning_id),
         )
         await db.conn.commit()
 
         # Verify update
         cursor = await db.conn.execute(
-            "SELECT content, updated_at FROM learnings WHERE learning_id = ?",
-            (first_learning_id,)
+            "SELECT content, updated_at FROM learnings WHERE learning_id = ?", (first_learning_id,)
         )
         row = await cursor.fetchone()
         assert row[0] == updated_content, "Content should be updated"
@@ -151,13 +152,12 @@ async def main():
         # Pin
         await db.conn.execute(
             "UPDATE learnings SET pinned = ?, updated_at = ? WHERE learning_id = ?",
-            (1, now, first_learning_id)
+            (1, now, first_learning_id),
         )
         await db.conn.commit()
 
         cursor = await db.conn.execute(
-            "SELECT pinned FROM learnings WHERE learning_id = ?",
-            (first_learning_id,)
+            "SELECT pinned FROM learnings WHERE learning_id = ?", (first_learning_id,)
         )
         row = await cursor.fetchone()
         assert row[0] == 1, "Learning should be pinned"
@@ -166,13 +166,12 @@ async def main():
         # Unpin
         await db.conn.execute(
             "UPDATE learnings SET pinned = ?, updated_at = ? WHERE learning_id = ?",
-            (0, now, first_learning_id)
+            (0, now, first_learning_id),
         )
         await db.conn.commit()
 
         cursor = await db.conn.execute(
-            "SELECT pinned FROM learnings WHERE learning_id = ?",
-            (first_learning_id,)
+            "SELECT pinned FROM learnings WHERE learning_id = ?", (first_learning_id,)
         )
         row = await cursor.fetchone()
         assert row[0] == 0, "Learning should be unpinned"
@@ -183,20 +182,15 @@ async def main():
         print("\n[7] Testing delete...")
 
         cursor = await db.conn.execute(
-            "SELECT COUNT(*) FROM learnings WHERE project_id = ?",
-            (project_id,)
+            "SELECT COUNT(*) FROM learnings WHERE project_id = ?", (project_id,)
         )
         count_before = (await cursor.fetchone())[0]
 
-        await db.conn.execute(
-            "DELETE FROM learnings WHERE learning_id = ?",
-            (first_learning_id,)
-        )
+        await db.conn.execute("DELETE FROM learnings WHERE learning_id = ?", (first_learning_id,))
         await db.conn.commit()
 
         cursor = await db.conn.execute(
-            "SELECT COUNT(*) FROM learnings WHERE project_id = ?",
-            (project_id,)
+            "SELECT COUNT(*) FROM learnings WHERE project_id = ?", (project_id,)
         )
         count_after = (await cursor.fetchone())[0]
 
@@ -207,9 +201,9 @@ async def main():
         print("✓ Delete functionality working")
 
         # Final summary
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("✅ ALL VERIFICATIONS PASSED")
-        print("="*80)
+        print("=" * 80)
         print("\nVerified:")
         print("  1. ✅ Learnings stored in both ChromaDB and SQLite")
         print("  2. ✅ Dual storage consistency maintained")
@@ -222,6 +216,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

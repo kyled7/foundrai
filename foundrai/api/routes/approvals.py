@@ -48,9 +48,7 @@ async def list_approvals(sprint_id: str) -> dict:
 async def get_approval(approval_id: str) -> dict:
     """Get approval details."""
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT * FROM approvals WHERE approval_id = ?", (approval_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM approvals WHERE approval_id = ?", (approval_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Approval not found")
@@ -74,9 +72,7 @@ async def get_approval(approval_id: str) -> dict:
 async def approve(approval_id: str, body: ApprovalDecision) -> dict:
     """Approve a pending approval."""
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT * FROM approvals WHERE approval_id = ?", (approval_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM approvals WHERE approval_id = ?", (approval_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Approval not found")
@@ -126,9 +122,7 @@ async def approve(approval_id: str, body: ApprovalDecision) -> dict:
 async def reject(approval_id: str, body: ApprovalDecision) -> dict:
     """Reject a pending approval."""
     db = await get_db()
-    cursor = await db.conn.execute(
-        "SELECT * FROM approvals WHERE approval_id = ?", (approval_id,)
-    )
+    cursor = await db.conn.execute("SELECT * FROM approvals WHERE approval_id = ?", (approval_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Approval not found")

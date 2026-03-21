@@ -45,9 +45,7 @@ class AutonomyMatrix(BaseModel):
     """
 
     project_id: str
-    matrix: dict[AgentRoleName, dict[ActionType, AutonomyLevel]] = Field(
-        default_factory=dict
-    )
+    matrix: dict[AgentRoleName, dict[ActionType, AutonomyLevel]] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -58,9 +56,7 @@ class AutonomyMatrix(BaseModel):
 
         Returns REQUIRE_APPROVAL if not explicitly configured.
         """
-        return self.matrix.get(agent_role, {}).get(
-            action_type, AutonomyLevel.REQUIRE_APPROVAL
-        )
+        return self.matrix.get(agent_role, {}).get(action_type, AutonomyLevel.REQUIRE_APPROVAL)
 
     def set_autonomy_level(
         self,
@@ -84,9 +80,7 @@ class AutonomyProfile(BaseModel):
     profile_id: str
     name: str
     description: str
-    matrix: dict[AgentRoleName, dict[ActionType, AutonomyLevel]] = Field(
-        default_factory=dict
-    )
+    matrix: dict[AgentRoleName, dict[ActionType, AutonomyLevel]] = Field(default_factory=dict)
     is_builtin: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -95,9 +89,7 @@ class AutonomyProfile(BaseModel):
         """Create Full Autonomy profile - all actions auto-approved."""
         matrix: dict[AgentRoleName, dict[ActionType, AutonomyLevel]] = {}
         for role in AgentRoleName:
-            matrix[role] = {
-                action: AutonomyLevel.AUTO_APPROVE for action in ActionType
-            }
+            matrix[role] = {action: AutonomyLevel.AUTO_APPROVE for action in ActionType}
         return AutonomyProfile(
             profile_id="full-autonomy",
             name="Full Autonomy",
