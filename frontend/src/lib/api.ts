@@ -158,6 +158,23 @@ export const api = {
     agentPerformance: (projectId: string) =>
       request<AgentMetrics[]>(`/projects/${projectId}/analytics/agent-performance`),
     global: () => request<GlobalAnalytics>('/analytics/global'),
+    exportSprintComparison: async (projectId: string, format: 'csv' | 'pdf') => {
+      const res = await fetch(`${BASE_URL}/projects/${projectId}/sprint-comparison/export?format=${format}`);
+      if (!res.ok) {
+        const body = await res.text();
+        throw new ApiError(res.status, body || res.statusText);
+      }
+      // Trigger browser download
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sprint-comparison-${projectId}.${format === 'pdf' ? 'pdf' : 'csv'}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    },
   },
 
   // Templates
