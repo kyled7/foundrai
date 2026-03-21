@@ -266,6 +266,13 @@ async def get_sprint_comparison(project_id: str) -> dict:
         # Duration
         duration_seconds = metrics.get("duration_seconds", 0)
 
+        # Calculate cost-per-task (handle division by zero)
+        total_cost = tc_row["total_cost"]
+        cost_per_task = (total_cost / completed) if completed > 0 else 0.0
+
+        # Velocity is tasks completed per sprint
+        velocity = completed
+
         sprints.append({
             "sprint_id": row["sprint_id"],
             "sprint_number": row["sprint_number"],
@@ -275,7 +282,9 @@ async def get_sprint_comparison(project_id: str) -> dict:
             "failed_count": failed,
             "pass_rate": round(pass_rate, 1),
             "total_tokens": tc_row["total_tokens"],
-            "total_cost": tc_row["total_cost"],
+            "total_cost": total_cost,
+            "cost_per_task": round(cost_per_task, 4),
+            "velocity": velocity,
             "duration_seconds": duration_seconds,
         })
     return {"sprints": sprints}
