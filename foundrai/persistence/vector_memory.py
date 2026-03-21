@@ -50,7 +50,8 @@ class VectorMemory:
             if self.db:
                 await self.db.conn.execute(
                     """INSERT INTO learnings
-                    (learning_id, project_id, sprint_id, content, category, pinned, status, updated_at)
+                    (learning_id, project_id, sprint_id, content, category, pinned, status,
+                     updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         learning.id,

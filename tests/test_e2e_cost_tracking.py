@@ -350,12 +350,12 @@ async def test_e2e_cost_tracking_with_real_time_updates(db, tmp_path, sprint_con
     # Verify task-level cost tracking
     tasks = result["tasks"]
     for task in tasks:
-        task_usage = await token_store.get_task_usage(task.id)
+        _task_usage = await token_store.get_task_usage(task.id)
         # Tasks should have associated token usage
         # (Not all tasks may have usage if they were skipped/failed)
 
     # Verify cost_updated events were logged
-    events = await event_log.query(sprint_id=sprint_id, event_type="cost.updated")
+    _events = await event_log.query(sprint_id=sprint_id, event_type="cost.updated")
     # Events might not be logged in test mode, but structure should support it
 
     print("✅ E2E Test 1 PASSED: Cost tracking with real-time updates verified")
@@ -426,7 +426,7 @@ async def test_e2e_budget_warning_and_exceeded(db, tmp_path, sprint_context, com
 
     config = FoundrAIConfig()
 
-    engine = SprintEngine(
+    _engine = SprintEngine(
         config=config,
         agents=agent_map,
         task_graph=task_graph,
@@ -469,7 +469,7 @@ async def test_e2e_budget_warning_and_exceeded(db, tmp_path, sprint_context, com
     assert status.is_exceeded, "Should be exceeded at 140% budget"
 
     # Verify budget_warning events were logged
-    events = await event_log.query(event_type="budget.warning")
+    _events = await event_log.query(event_type="budget.warning")
     # Events might be logged depending on when check_budget was called
 
     print("✅ E2E Test 2 PASSED: Budget warning system verified")
@@ -551,12 +551,12 @@ async def test_e2e_per_task_cost_tracking(db, tmp_path, sprint_context, componen
 
     # Verify sprint completed
     assert result["status"] == SprintStatus.COMPLETED
-    sprint_id = result["sprint_id"]
+    _sprint_id = result["sprint_id"]
     tasks = result["tasks"]
 
     # Verify each task has cost tracking
     for task in tasks:
-        task_usage = await token_store.get_task_usage(task.id)
+        _task_usage = await token_store.get_task_usage(task.id)
         # Each completed task should have some token usage
         if task.status == TaskStatus.DONE:
             # Task usage is a list of TokenUsage records

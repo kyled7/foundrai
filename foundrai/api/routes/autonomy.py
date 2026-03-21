@@ -70,7 +70,9 @@ async def update_autonomy_config(project_id: str, body: AutonomyConfigUpdate) ->
             try:
                 ActionType(action_type)
             except ValueError:
-                raise HTTPException(status_code=400, detail=f"Invalid action type: {action_type}") from None
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid action type: {action_type}"
+                ) from None
 
             # Validate autonomy level
             try:

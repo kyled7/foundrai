@@ -27,7 +27,7 @@ from foundrai.models.enums import ActionType, AgentRoleName, AutonomyLevel
 class ProgressiveTrustE2ETest:
     """End-to-end test for progressive trust scoring."""
 
-    def __init__(self, db_path: str = ".foundrai/test_trust.db"):
+    def __init__(self, db_path: str = ".foundrai/test_trust.db") -> None:
         self.db_path = db_path
         self.project_id = f"test-project-{uuid.uuid4().hex[:8]}"
         self.sprint_id = f"sprint-{uuid.uuid4().hex[:8]}"

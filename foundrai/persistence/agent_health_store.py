@@ -161,7 +161,8 @@ class AgentHealthStore:
         cursor = await self.db.conn.execute(
             f"""SELECT
                 COUNT(*) as total_reviews,
-                SUM(CASE WHEN json_extract(review_json, '$.passed') = 1 THEN 1 ELSE 0 END) as passed_reviews
+                SUM(CASE WHEN json_extract(review_json, '$.passed') = 1
+                    THEN 1 ELSE 0 END) as passed_reviews
             FROM tasks
             WHERE {task_filter} AND review_json IS NOT NULL""",
             task_params,

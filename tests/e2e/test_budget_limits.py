@@ -281,7 +281,7 @@ async def test_e2e_automatic_model_switching(db, tmp_path, sprint_context, compo
     )
 
     # Run the agent (this should trigger model switch internally)
-    result = await runtime.run(
+    _result = await runtime.run(
         messages=[{"role": "user", "content": "Complete the task"}],
         tools=None,
         response_format=None,
@@ -803,7 +803,7 @@ async def test_e2e_per_agent_model_switching(db, tmp_path, sprint_context, compo
     assert not dev_should_switch, "Dev should NOT switch at 50% of budget"
 
     # Run PM agent (should trigger switch)
-    pm_result = await pm_runtime.run(
+    _pm_result = await pm_runtime.run(
         messages=[{"role": "user", "content": "Complete planning"}],
         tools=None,
         response_format=None,
@@ -815,7 +815,7 @@ async def test_e2e_per_agent_model_switching(db, tmp_path, sprint_context, compo
     )
 
     # Run Dev agent (should NOT trigger switch)
-    dev_result = await dev_runtime.run(
+    _dev_result = await dev_runtime.run(
         messages=[{"role": "user", "content": "Complete development"}],
         tools=None,
         response_format=None,

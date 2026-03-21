@@ -383,7 +383,8 @@ class Database:
         # Migration: Add updated_at column to learnings table if it doesn't exist
         try:
             await self._connection.execute(
-                "ALTER TABLE learnings ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))"
+                "ALTER TABLE learnings ADD COLUMN updated_at TEXT NOT NULL "
+                "DEFAULT (datetime('now'))"
             )
         except Exception:
             # Column already exists, ignore

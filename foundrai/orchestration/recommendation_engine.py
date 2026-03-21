@@ -159,7 +159,8 @@ class RecommendationEngine:
         Args:
             project_id: The project ID
             current_config: Dict mapping agent_role to current model
-            recommended_config: Dict mapping agent_role to recommended model (optional, will be generated)
+            recommended_config: Dict mapping agent_role to recommended model
+                (optional, will be generated)
 
         Returns:
             CostSavingsEstimate with savings analysis
@@ -382,7 +383,8 @@ class RecommendationEngine:
             best = max(performance_data, key=lambda m: m.success_rate)
             return (
                 best.model,
-                f"Limited data available. {best.model} has highest success rate ({best.success_rate:.1f}%).",
+                f"Limited data available. {best.model} has highest success rate "
+                f"({best.success_rate:.1f}%).",
                 best,
             )
 
@@ -396,17 +398,29 @@ class RecommendationEngine:
         if quality_requirements == "high":
             # Prefer high success rate
             best = max(viable_models, key=lambda m: (m.success_rate, -m.avg_cost_per_task))
-            reasoning = f"{best.model} recommended for high quality requirements (success rate: {best.success_rate:.1f}%, avg cost: ${best.avg_cost_per_task:.4f})."
+            reasoning = (
+                f"{best.model} recommended for high quality requirements "
+                f"(success rate: {best.success_rate:.1f}%, "
+                f"avg cost: ${best.avg_cost_per_task:.4f})."
+            )
         elif quality_requirements == "low":
             # Prefer low cost
             best = min(viable_models, key=lambda m: (m.avg_cost_per_task, -m.success_rate))
-            reasoning = f"{best.model} recommended for cost optimization (avg cost: ${best.avg_cost_per_task:.4f}, success rate: {best.success_rate:.1f}%)."
+            reasoning = (
+                f"{best.model} recommended for cost optimization "
+                f"(avg cost: ${best.avg_cost_per_task:.4f}, "
+                f"success rate: {best.success_rate:.1f}%)."
+            )
         else:
             # Balance quality and cost
             best = self._determine_best_overall(viable_models)
             metrics = next((m for m in viable_models if m.model == best), None)
             if metrics:
-                reasoning = f"{best} recommended based on balanced performance (success rate: {metrics.success_rate:.1f}%, avg cost: ${metrics.avg_cost_per_task:.4f})."
+                reasoning = (
+                    f"{best} recommended based on balanced performance "
+                    f"(success rate: {metrics.success_rate:.1f}%, "
+                    f"avg cost: ${metrics.avg_cost_per_task:.4f})."
+                )
             else:
                 reasoning = f"{best} recommended based on historical performance."
 

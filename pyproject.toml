@@ -73,7 +73,11 @@ select = ["E", "F", "I", "N", "W", "UP", "ANN", "S", "B"]
 ignore = ["S101", "B008", "ANN401", "UP042", "S104", "S108", "S110", "S608", "B023"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ANN"]
+"tests/**/*.py" = ["ANN", "S603", "S607", "E501"]
+"test_*.py" = ["ANN", "E501"]
+"verify_*.py" = ["ANN", "E501"]
+"desktop/**/*.py" = ["S603", "S607"]
+"foundrai/tools/**/*.py" = ["S607"]
 
 [tool.mypy]
 python_version = "3.11"

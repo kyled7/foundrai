@@ -516,7 +516,8 @@ async def _resume_sprint(project_dir: Path, checkpoint_id: str | None) -> None:
                 raise typer.Exit(code=1)
             checkpoint_id = row["checkpoint_id"]
             console.print(
-                f"[blue]Auto-detected checkpoint: {row['checkpoint_name']} (sprint {row['sprint_id']})[/blue]"
+                f"[blue]Auto-detected checkpoint: {row['checkpoint_name']} "
+                f"(sprint {row['sprint_id']})[/blue]"
             )
 
         # Get sprint info from checkpoint

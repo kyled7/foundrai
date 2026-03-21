@@ -154,8 +154,8 @@ async def get_sprint(sprint_id: str) -> dict:
         "tasks": tasks,
         "metrics": metrics,
         "created_at": row["created_at"],
-        "completed_at": row.get("completed_at"),
-        "error": row.get("error"),
+        "completed_at": row["completed_at"] if "completed_at" in row.keys() else None,
+        "error": row["error"] if "error" in row.keys() else None,
     }
 
 

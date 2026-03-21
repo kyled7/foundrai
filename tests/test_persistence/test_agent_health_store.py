@@ -20,7 +20,7 @@ async def health_store(db: Database) -> AgentHealthStore:
 @pytest_asyncio.fixture
 async def test_project(db: Database) -> str:
     """Create a test project and return its ID."""
-    cursor = await db.conn.execute(
+    _cursor = await db.conn.execute(
         "INSERT INTO projects (project_id, name, created_at) VALUES (?, ?, datetime('now'))",
         ("test-project", "Test Project"),
     )
@@ -31,7 +31,7 @@ async def test_project(db: Database) -> str:
 @pytest_asyncio.fixture
 async def test_sprint(db: Database, test_project: str) -> str:
     """Create a test sprint and return its ID."""
-    cursor = await db.conn.execute(
+    _cursor = await db.conn.execute(
         """INSERT INTO sprints (sprint_id, project_id, sprint_number, goal, status, created_at)
            VALUES (?, ?, ?, ?, ?, datetime('now'))""",
         ("test-sprint", test_project, 1, "Test Sprint", "in_progress"),

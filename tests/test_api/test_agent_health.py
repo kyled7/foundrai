@@ -278,7 +278,7 @@ async def test_multiple_health_calculations_keep_latest(client: AsyncClient, pro
 
     response2 = await client.post(f"/api/projects/{project_id}/agents/developer/health/calculate")
     assert response2.status_code == 200
-    timestamp2 = response2.json()["timestamp"]
+    _timestamp2 = response2.json()["timestamp"]
 
     # Get agent health should return the latest
     get_response = await client.get(f"/api/projects/{project_id}/agents/developer/health")

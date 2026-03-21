@@ -206,7 +206,7 @@ async def test_e2e_sprint_with_agent_failures_and_retries(db, tmp_path, sprint_c
 
     # Verify sprint completed successfully
     assert result["status"] == SprintStatus.COMPLETED
-    sprint_id = result["sprint_id"]
+    _sprint_id = result["sprint_id"]
 
     # Verify dev agent was called multiple times (initial + retries)
     assert call_count >= 3  # At least 2 failures + 1 success
@@ -806,7 +806,7 @@ async def test_e2e_combined_stress_test(db, tmp_path, sprint_context, components
 
     # Verify retry events
     all_events = await event_log.query(sprint_id=sprint_id, limit=500)
-    retry_events = [
+    _retry_events = [
         e
         for e in all_events
         if "retry" in e["event_type"] or "retrying" in e["data"].get("message", "").lower()

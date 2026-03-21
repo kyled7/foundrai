@@ -22,8 +22,8 @@ async def test_retrospective_api_data_structure():
     """Verify retrospective API returns data in format required by UI"""
 
     # Setup
-    db = Database.create(":memory:")
-    await db.init_schema()
+    db = Database(":memory:")
+    await db.connect()
 
     memory_config = MemoryConfig(
         provider="chromadb", persist_directory="./test_chroma_retro_ui_pytest"
@@ -66,14 +66,15 @@ async def test_retrospective_api_data_structure():
     # This matches what foundrai/api/routes/sprints.py:get_retrospective() returns
 
     # 1. Fetch learnings from database (SQLite)
-    db_learnings = await db.fetch_all(
+    cursor = await db.conn.execute(
         "SELECT learning_id, content, category, project_id, sprint_id, created_at FROM learnings WHERE sprint_id = ?",
         (sprint_id,),
     )
+    db_learnings = await cursor.fetchall()
 
     # 2. Fetch learnings from VectorMemory (ChromaDB)
     vector_learnings = await vector_memory.query_relevant(
-        query="sprint learnings", project_id=project_id, limit=10
+        query="sprint learnings", project_id=project_id, k=10
     )
 
     # 3. Build response structure (matching API endpoint)
@@ -98,12 +99,12 @@ async def test_retrospective_api_data_structure():
         ],
         "learnings_vector": [
             {
-                "learning_id": learning.learning_id,
+                "learning_id": learning.id,
                 "content": learning.content,
                 "category": learning.category,
                 "project_id": learning.project_id,
                 "sprint_id": learning.sprint_id,
-                "created_at": learning.created_at.isoformat(),
+                "created_at": learning.timestamp,
             }
             for learning in vector_learnings
         ],
@@ -178,12 +179,12 @@ async def test_retrospective_api_data_structure():
     assert len(cost_summary["by_task"]) > 0
 
     # Verify agent breakdown structure
-    for agent_name, agent_data in cost_summary["by_agent"].items():
+    for _agent_name, agent_data in cost_summary["by_agent"].items():
         assert "cost_usd" in agent_data
         assert "tokens" in agent_data
 
     # Verify task breakdown structure
-    for task_id, task_data in cost_summary["by_task"].items():
+    for _task_id, task_data in cost_summary["by_task"].items():
         assert "cost_usd" in task_data
         assert "tokens" in task_data
 
@@ -208,8 +209,8 @@ async def test_retrospective_api_data_structure():
 async def test_retrospective_ui_category_badges():
     """Verify learnings have categories for badge display in UI"""
 
-    db = Database.create(":memory:")
-    await db.init_schema()
+    db = Database(":memory:")
+    await db.connect()
 
     memory_config = MemoryConfig(provider="chromadb", persist_directory="./test_chroma_categories")
     vector_memory = VectorMemory(config=memory_config, db=db)
@@ -229,7 +230,8 @@ async def test_retrospective_ui_category_badges():
         await vector_memory.store_learning(learning)
 
     # Fetch from database
-    rows = await db.fetch_all("SELECT category FROM learnings WHERE sprint_id = ?", (sprint_id,))
+    cursor = await db.conn.execute("SELECT category FROM learnings WHERE sprint_id = ?", (sprint_id,))
+    rows = await cursor.fetchall()
 
     # Verify all categories are stored
     stored_categories = {row[0] for row in rows}
@@ -251,8 +253,8 @@ async def test_retrospective_ui_category_badges():
 async def test_retrospective_ui_empty_state():
     """Verify retrospective handles empty state gracefully for UI"""
 
-    db = Database.create(":memory:")
-    await db.init_schema()
+    db = Database(":memory:")
+    await db.connect()
 
     # Simulate empty retrospective response
     retrospective_response = {
