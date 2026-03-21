@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { WizardStep1Data, WizardStep2Data, WizardStep3Data, AgentFormData } from '@/lib/schemas';
 import type { TeamTemplate } from '@/lib/types';
+import { SAMPLE_WIZARD_STEP1 } from '@/lib/sample-goals';
 
 export const DEFAULT_AGENTS: AgentFormData[] = [
   { role: 'ProductManager', model: 'claude-sonnet-4', autonomy: 'medium', enabled: true },
@@ -21,6 +22,7 @@ interface WizardState {
   setStep1: (data: WizardStep1Data) => void;
   setStep2: (data: WizardStep2Data) => void;
   setStep3: (data: WizardStep3Data) => void;
+  applySampleGoal: () => void;
   applyTemplate: (template: TeamTemplate) => void;
   reset: () => void;
 }
@@ -40,6 +42,11 @@ export const useWizard = create<WizardState>((set) => ({
   setStep1: (step1Data) => set({ step1Data }),
   setStep2: (step2Data) => set({ step2Data }),
   setStep3: (step3Data) => set({ step3Data }),
+
+  applySampleGoal: () =>
+    set({
+      step1Data: { ...SAMPLE_WIZARD_STEP1 },
+    }),
 
   applyTemplate: (template) =>
     set({

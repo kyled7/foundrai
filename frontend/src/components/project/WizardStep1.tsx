@@ -1,17 +1,28 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { wizardStep1Schema, type WizardStep1Data } from '@/lib/schemas';
 import { useWizard } from '@/stores/wizard';
+import { useOnboarding } from '@/stores/onboarding';
 import { useTemplates } from '@/hooks/use-analytics';
+import { SAMPLE_WIZARD_STEP1 } from '@/lib/sample-goals';
 
 export function WizardStep1() {
-  const { step1Data, setStep1, setStep, applyTemplate } = useWizard();
+  const { step1Data, setStep1, setStep, applyTemplate, applySampleGoal } = useWizard();
+  const { tutorialActive } = useOnboarding();
   const { data: templates } = useTemplates();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<WizardStep1Data>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<WizardStep1Data>({
     resolver: zodResolver(wizardStep1Schema),
     defaultValues: step1Data,
   });
+
+  useEffect(() => {
+    if (tutorialActive && !step1Data.name) {
+      applySampleGoal();
+      reset(SAMPLE_WIZARD_STEP1);
+    }
+  }, [tutorialActive, step1Data.name, applySampleGoal, reset]);
 
   const onSubmit = (data: WizardStep1Data) => {
     setStep1(data);
@@ -20,6 +31,14 @@ export function WizardStep1() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {tutorialActive && (
+        <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 text-sm text-foreground">
+          <p className="font-medium">Sample project pre-filled!</p>
+          <p className="text-muted mt-1">
+            We&apos;ve set up a &quot;Hello World API&quot; project for you. Feel free to customize it or continue with the defaults.
+          </p>
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">Project Name *</label>
         <input
