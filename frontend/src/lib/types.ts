@@ -292,7 +292,10 @@ export interface Learning {
   sprint_id: string;
   content: string;
   category: string;
+  pinned: boolean;
+  status: string;
   created_at: string;
+  updated_at: string;
 }
 
 // === WebSocket Events ===
