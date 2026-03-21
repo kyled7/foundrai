@@ -9,6 +9,7 @@ import { BudgetConfigPanel } from '@/components/settings/BudgetConfigPanel';
 import { AutonomyMatrixPanel } from '@/components/settings/AutonomyMatrixPanel';
 import { NotificationsPanel } from '@/components/settings/NotificationsPanel';
 import { AppearancePanel } from '@/components/settings/AppearancePanel';
+import { useOnboarding } from '@/stores/onboarding';
 import type { GlobalSettings, NotificationSettings } from '@/lib/types';
 
 const DEFAULT_SETTINGS: GlobalSettings = {
@@ -32,6 +33,7 @@ export function SettingsPage() {
   const search = useSearch({ strict: false }) as Record<string, string>;
   const activeTab = (search.tab as SettingsTab) || 'general';
   const { theme, setTheme, setBreadcrumbs } = useUI();
+  const { resetOnboarding, startTutorial } = useOnboarding();
 
   const { data: settings } = useSettings();
   const { data: keys } = useApiKeys();
@@ -50,6 +52,12 @@ export function SettingsPage() {
   const handleTabChange = useCallback((tab: SettingsTab) => {
     navigate({ to: '/settings', search: { tab } });
   }, [navigate]);
+
+  function handleReplayTutorial() {
+    resetOnboarding();
+    startTutorial();
+    navigate({ to: '/' });
+  }
 
   function handleSaveGeneral(updates: Partial<GlobalSettings>) {
     updateSettings.mutate(updates);
@@ -79,7 +87,21 @@ export function SettingsPage() {
 
       <div className="mt-6">
         {activeTab === 'general' && (
-          <GeneralSettingsPanel settings={s} onSave={handleSaveGeneral} isSaving={updateSettings.isPending} />
+          <>
+            <GeneralSettingsPanel settings={s} onSave={handleSaveGeneral} isSaving={updateSettings.isPending} />
+            <div className="mt-8 rounded-lg border border-border bg-card p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Onboarding Tutorial</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Replay the guided tutorial to learn about FoundrAI's features and workflow.
+              </p>
+              <button
+                onClick={handleReplayTutorial}
+                className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
+              >
+                Replay Tutorial
+              </button>
+            </div>
+          </>
         )}
         {activeTab === 'api-keys' && (
           <ApiKeysPanel
