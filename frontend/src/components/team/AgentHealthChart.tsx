@@ -57,15 +57,16 @@ export function AgentHealthChart({ data, loading, className }: AgentHealthChartP
               borderRadius: 8,
               color: '#f1f5f9',
             }}
-            formatter={(value: number, name: string) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            formatter={((value: number, name: string) => {
               const labels: Record<string, string> = {
                 healthScore: 'Health Score',
                 completionRate: 'Completion Rate',
                 qualityScore: 'Quality Score',
                 failureRate: 'Failure Rate',
               };
-              return [`${value.toFixed(1)}${name !== 'healthScore' ? '%' : ''}`, labels[name] || name] as [string, string];
-            }}
+              return [`${value.toFixed(1)}${name !== 'healthScore' ? '%' : ''}`, labels[name] || name];
+            }) as any}
           />
           <Legend
             wrapperStyle={{ fontSize: 12, color: '#94a3b8' }}

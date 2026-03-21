@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { SprintBoard } from '../SprintBoard';
 import { useSprintStore } from '../../../stores/sprintStore';
-import type { TaskStatus } from '../../../types';
+import type { TaskResponse, TaskStatus } from '../../../types';
 
 // Mock the sprint store
 vi.mock('../../../stores/sprintStore', () => ({

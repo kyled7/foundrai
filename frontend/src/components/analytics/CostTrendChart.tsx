@@ -45,7 +45,8 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
               borderRadius: 8,
               color: '#f1f5f9',
             }}
-            formatter={(value: number) => [`$${value.toFixed(4)}`, 'Cost'] as [string, string]}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            formatter={((value: number) => [`$${value.toFixed(4)}`, 'Cost']) as any}
             labelFormatter={l => `Sprint ${l.substring(1)}`}
           />
           <Line

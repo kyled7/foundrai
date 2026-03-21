@@ -46,7 +46,8 @@ export function QualityTrendChart({ data }: QualityTrendChartProps) {
               borderRadius: 8,
               color: '#f1f5f9',
             }}
-            formatter={(value: number) => [`${value}%`, 'Pass Rate'] as [string, string]}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            formatter={((value: number) => [`${value}%`, 'Pass Rate']) as any}
             labelFormatter={l => `Sprint ${l.substring(1)}`}
           />
           <Line

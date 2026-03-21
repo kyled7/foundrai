@@ -51,10 +51,11 @@ export function BudgetHistoryChart({ data }: BudgetHistoryChartProps) {
               borderRadius: 8,
               color: '#f1f5f9',
             }}
-            formatter={(value: number, name: string) => [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            formatter={((value: number, name: string) => [
               `$${value.toFixed(2)}`,
               name === 'budget' ? 'Budget' : 'Spent'
-            ]}
+            ]) as any}
             labelFormatter={l => `Sprint ${l.substring(1)}`}
           />
           <Legend
