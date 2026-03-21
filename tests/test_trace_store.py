@@ -89,3 +89,38 @@ async def test_compression_roundtrip(trace_store: TraceStore) -> None:
     assert fetched is not None
     assert fetched.prompt == long_prompt
     assert fetched.response == long_response
+
+
+@pytest.mark.asyncio
+async def test_sprint_traces_with_filters(trace_store: TraceStore) -> None:
+    """Test filtering sprint traces by agent_role and since."""
+    # Create traces with different agent roles and timestamps
+    await trace_store.record_trace(DecisionTrace(
+        task_id="task-1", sprint_id="sprint-1", agent_role="developer",
+        prompt="dev prompt 1", response="dev response 1",
+    ))
+    await trace_store.record_trace(DecisionTrace(
+        task_id="task-2", sprint_id="sprint-1", agent_role="qa",
+        prompt="qa prompt 1", response="qa response 1",
+    ))
+    await trace_store.record_trace(DecisionTrace(
+        task_id="task-3", sprint_id="sprint-1", agent_role="developer",
+        prompt="dev prompt 2", response="dev response 2",
+    ))
+
+    # Filter by agent_role
+    dev_traces = await trace_store.get_sprint_traces(
+        "sprint-1", agent_role="developer"
+    )
+    assert len(dev_traces) == 2
+    assert all(t.agent_role == "developer" for t in dev_traces)
+
+    qa_traces = await trace_store.get_sprint_traces(
+        "sprint-1", agent_role="qa"
+    )
+    assert len(qa_traces) == 1
+    assert qa_traces[0].agent_role == "qa"
+
+    # Get all traces (no filter)
+    all_traces = await trace_store.get_sprint_traces("sprint-1")
+    assert len(all_traces) == 3

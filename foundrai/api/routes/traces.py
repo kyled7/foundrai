@@ -29,10 +29,17 @@ async def get_task_traces(task_id: str) -> dict:
 
 
 @router.get("/sprints/{sprint_id}/traces")
-async def get_sprint_traces(sprint_id: str, limit: int = 50) -> dict:
-    """Get decision traces for a sprint."""
+async def get_sprint_traces(
+    sprint_id: str,
+    limit: int = 50,
+    agent_role: str | None = None,
+    since: str | None = None,
+) -> dict:
+    """Get decision traces for a sprint with optional filters."""
     store = await _get_trace_store()
-    traces = await store.get_sprint_traces(sprint_id, limit=limit)
+    traces = await store.get_sprint_traces(
+        sprint_id, limit=limit, agent_role=agent_role, since=since
+    )
     return {
         "traces": [_trace_summary(t) for t in traces],
         "total": len(traces),
