@@ -2,13 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useState } from 'react';
 import { useSprintStore } from '@/stores/sprintStore';
+import { useTraceStore } from '@/stores/traceStore';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { KanbanColumn } from './KanbanColumn';
 import { BudgetWarning } from './BudgetWarning';
+import { DecisionTracePanel } from '../traces/DecisionTracePanel';
 import { api } from '@/lib/api';
-import type { TaskStatus } from '@/lib/types';
-import { TaskCard } from './TaskCard';
 import type { TaskStatus, Task } from '@/lib/types';
+import { TaskCard } from './TaskCard';
+import { getTaskTraces } from '@/api/traces';
+import { X } from 'lucide-react';
 
 const COLUMNS: { key: string; title: string; statuses: TaskStatus[]; color: string }[] = [
   { key: 'backlog',     title: 'Backlog',     statuses: ['pending', 'blocked'], color: 'gray' },
@@ -21,7 +24,6 @@ interface SprintBoardProps {
   sprintId?: string;
 }
 
-export function SprintBoard({ sprintId }: SprintBoardProps = {}) {
 function BoardSkeleton() {
   return (
     <div className="flex gap-2 md:gap-3 xl:gap-4 overflow-x-auto p-2 md:p-3 xl:p-4 h-full" role="region" aria-label="Loading sprint board">
@@ -45,13 +47,18 @@ function BoardSkeleton() {
   );
 }
 
-function SprintBoardContent() {
+function SprintBoardContent({ sprintId }: SprintBoardProps) {
   const tasks = useSprintStore((s) => s.tasks);
   const loading = useSprintStore((s) => s.loading);
   const error = useSprintStore((s) => s.error);
   const updateTaskStatus = useSprintStore((s) => s.updateTaskStatus);
   const clear = useSprintStore((s) => s.clear);
+  const setTraces = useTraceStore((s) => s.setTraces);
+  const clearTraces = useTraceStore((s) => s.clearTraces);
+
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [tracePanelOpen, setTracePanelOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -60,6 +67,26 @@ function SprintBoardContent() {
       },
     })
   );
+
+  async function handleTaskClick(taskId: string) {
+    setSelectedTaskId(taskId);
+    setTracePanelOpen(true);
+
+    try {
+      // Fetch traces for the selected task
+      const response = await getTaskTraces(taskId);
+      setTraces(response.traces);
+    } catch (error) {
+      // Error fetching traces - user can still see the panel, just no traces
+      setTraces([]);
+    }
+  }
+
+  function handleCloseTracePanel() {
+    setTracePanelOpen(false);
+    setSelectedTaskId(null);
+    clearTraces();
+  }
 
   function handleDragStart(event: { active: { id: string } }) {
     const task = tasks.find((t) => t.task_id === event.active.id);
@@ -134,44 +161,76 @@ function SprintBoardContent() {
       )}
 
       {/* Kanban columns */}
-      <div className="flex gap-4 overflow-x-auto p-4 flex-1">
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div className="flex gap-2 md:gap-3 xl:gap-4 overflow-x-auto p-2 md:p-3 xl:p-4 h-full" role="region" aria-label="Sprint task board">
-        {COLUMNS.map((col) => {
-          const filtered = tasks.filter((t) => col.statuses.includes(t.status));
-          return (
-            <KanbanColumn
-              key={col.key}
-              columnId={col.key}
-              title={col.title}
-              color={col.color}
-              tasks={filtered}
-              count={filtered.length}
-            />
-          );
-        })}
-      </div>
-    </div>
-      <DragOverlay>
-        {activeTask ? (
-          <div className="opacity-80 rotate-2">
-            <TaskCard task={activeTask} isDragging />
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="flex gap-2 md:gap-3 xl:gap-4 overflow-x-auto p-2 md:p-3 xl:p-4 flex-1">
+          {COLUMNS.map((col) => {
+            const filtered = tasks.filter((t) => col.statuses.includes(t.status));
+            return (
+              <KanbanColumn
+                key={col.key}
+                columnId={col.key}
+                title={col.title}
+                color={col.color}
+                tasks={filtered}
+                count={filtered.length}
+                onTaskClick={handleTaskClick}
+              />
+            );
+          })}
+        </div>
+        <DragOverlay>
+          {activeTask ? (
+            <div className="opacity-80 rotate-2">
+              <TaskCard task={activeTask} isDragging />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Decision Trace Panel Overlay */}
+      {tracePanelOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={handleCloseTracePanel}
+        >
+          <div
+            className="bg-background rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header with close button */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h2 className="text-lg font-semibold">
+                Decision Traces {selectedTaskId && `- Task ${selectedTaskId}`}
+              </h2>
+              <button
+                onClick={handleCloseTracePanel}
+                className="p-1 hover:bg-accent rounded-md transition-colors"
+                aria-label="Close trace panel"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Trace Panel Content */}
+            <div className="flex-1 overflow-hidden">
+              <DecisionTracePanel />
+            </div>
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        </div>
+      )}
+    </div>
   );
 }
 
-export function SprintBoard() {
+export function SprintBoard({ sprintId }: SprintBoardProps = {}) {
   return (
     <ErrorBoundary>
-      <SprintBoardContent />
+      <SprintBoardContent sprintId={sprintId} />
     </ErrorBoundary>
   );
 }
