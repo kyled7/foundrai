@@ -278,3 +278,21 @@ export interface TracesResponse {
   traces: DecisionTraceSummary[];
   total: number;
 }
+
+// === Communication Graph Types ===
+
+export interface CommunicationNode {
+  id: string;
+  label: string;
+}
+
+export interface CommunicationEdge {
+  source: string;
+  target: string;
+  count: number;
+}
+
+export interface CommunicationGraphResponse {
+  nodes: CommunicationNode[];
+  edges: CommunicationEdge[];
+}
