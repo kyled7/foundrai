@@ -234,3 +234,47 @@ export interface ModelPerformanceComparison {
   best_overall: string | null;
   created_at: string;
 }
+
+// === Decision Trace Types ===
+
+export interface ToolCall {
+  name: string;
+  args: Record<string, unknown>;
+  result?: unknown;
+}
+
+export interface DecisionTraceSummary {
+  trace_id: number;
+  event_id: number | null;
+  task_id: string | null;
+  sprint_id: string | null;
+  agent_role: string;
+  model: string;
+  tokens_used: number;
+  cost_usd: number;
+  duration_ms: number;
+  thinking: string | null;
+  timestamp: string;
+}
+
+export interface DecisionTrace {
+  trace_id: number;
+  event_id: number | null;
+  task_id: string | null;
+  sprint_id: string | null;
+  agent_role: string;
+  model: string;
+  prompt: string;
+  response: string;
+  thinking: string | null;
+  tool_calls: ToolCall[];
+  tokens_used: number;
+  cost_usd: number;
+  duration_ms: number;
+  timestamp: string;
+}
+
+export interface TracesResponse {
+  traces: DecisionTraceSummary[];
+  total: number;
+}
