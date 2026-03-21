@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from pathlib import Path
 
 import yaml
-from fastapi import APIRouter
+from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel, Field
 
 from foundrai.api.deps import get_config, get_db, get_event_log, set_config
@@ -266,6 +268,13 @@ async def get_sprint_comparison(project_id: str) -> dict:
         # Duration
         duration_seconds = metrics.get("duration_seconds", 0)
 
+        # Calculate cost-per-task (handle division by zero)
+        total_cost = tc_row["total_cost"]
+        cost_per_task = (total_cost / completed) if completed > 0 else 0.0
+
+        # Velocity is tasks completed per sprint
+        velocity = completed
+
         sprints.append({
             "sprint_id": row["sprint_id"],
             "sprint_number": row["sprint_number"],
@@ -275,7 +284,86 @@ async def get_sprint_comparison(project_id: str) -> dict:
             "failed_count": failed,
             "pass_rate": round(pass_rate, 1),
             "total_tokens": tc_row["total_tokens"],
-            "total_cost": tc_row["total_cost"],
+            "total_cost": total_cost,
+            "cost_per_task": round(cost_per_task, 4),
+            "velocity": velocity,
             "duration_seconds": duration_seconds,
         })
     return {"sprints": sprints}
+
+
+@router.get("/projects/{project_id}/sprint-comparison/export")
+async def export_sprint_comparison(
+    project_id: str,
+    format: str = Query(default="csv", pattern="^(csv|pdf)$"),
+) -> Response:
+    """Export sprint comparison data as CSV or PDF."""
+    # Get the sprint comparison data
+    comparison_data = await get_sprint_comparison(project_id)
+    sprints = comparison_data["sprints"]
+
+    if format == "csv":
+        # Create CSV content
+        output = io.StringIO()
+        if sprints:
+            fieldnames = [
+                "sprint_number",
+                "goal",
+                "task_count",
+                "completed_count",
+                "failed_count",
+                "pass_rate",
+                "total_tokens",
+                "total_cost",
+                "cost_per_task",
+                "velocity",
+                "duration_seconds",
+            ]
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            for sprint in sprints:
+                # Write only the fields we want in the CSV, excluding sprint_id
+                row = {k: v for k, v in sprint.items() if k in fieldnames}
+                writer.writerow(row)
+
+        csv_content = output.getvalue()
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=sprint-comparison-{project_id}.csv"
+            },
+        )
+    elif format == "pdf":
+        # For MVP, return CSV format with a note
+        # Future: integrate reportlab or similar library for PDF generation
+        output = io.StringIO()
+        if sprints:
+            fieldnames = [
+                "sprint_number",
+                "goal",
+                "task_count",
+                "completed_count",
+                "failed_count",
+                "pass_rate",
+                "total_tokens",
+                "total_cost",
+                "cost_per_task",
+                "velocity",
+                "duration_seconds",
+            ]
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            for sprint in sprints:
+                row = {k: v for k, v in sprint.items() if k in fieldnames}
+                writer.writerow(row)
+
+        csv_content = output.getvalue()
+        # Return as CSV for now (PDF generation can be added later with reportlab)
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=sprint-comparison-{project_id}.csv"
+            },
+        )
