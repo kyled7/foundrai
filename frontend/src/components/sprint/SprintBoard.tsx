@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 import { useState } from 'react';
 import { useSprintStore } from '@/stores/sprintStore';
 import { useTraceStore } from '@/stores/traceStore';
@@ -64,6 +65,14 @@ function SprintBoardContent({ sprintId }: SprintBoardProps) {
   const clear = useSprintStore((s) => s.clear);
   const setTraces = useTraceStore((s) => s.setTraces);
   const clearTraces = useTraceStore((s) => s.clearTraces);
+
+  // Fetch budget status for warning banner (must be before any conditional returns)
+  const { data: budgetStatus } = useQuery({
+    queryKey: ['sprint', sprintId, 'budget'],
+    queryFn: () => api.analytics.budget(sprintId!),
+    enabled: !!sprintId,
+    refetchInterval: 10000,
+  });
 
   const [activeTab, setActiveTab] = useState<ViewTab>('board');
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -152,14 +161,6 @@ function SprintBoardContent({ sprintId }: SprintBoardProps) {
       </div>
     );
   }
-
-  // Fetch budget status for warning banner
-  const { data: budgetStatus } = useQuery({
-    queryKey: ['sprint', sprintId, 'budget'],
-    queryFn: () => api.analytics.budget(sprintId!),
-    enabled: !!sprintId,
-    refetchInterval: 10000, // Refetch every 10 seconds
-  });
 
   function handleKeyDown(e: React.KeyboardEvent) {
     const currentIndex = tabs.findIndex((t) => t.id === activeTab);
