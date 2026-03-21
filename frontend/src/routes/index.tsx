@@ -18,6 +18,7 @@ export function DashboardPage() {
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <Link
           to="/projects/new"
+          data-tutorial="create-project"
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90"
         >
           <Plus size={16} />
