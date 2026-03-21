@@ -51,8 +51,8 @@ export function ImprovementInsights({ data }: ImprovementInsightsProps) {
     },
     {
       label: 'Quality (Pass Rate)',
-      currentValue: latestSprint.pass_rate,
-      previousValue: firstSprint.pass_rate,
+      currentValue: latestSprint.pass_rate / 100,
+      previousValue: firstSprint.pass_rate / 100,
       format: 'percent',
       icon: <Target size={18} />,
       higherIsBetter: true

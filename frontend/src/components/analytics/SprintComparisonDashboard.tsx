@@ -35,7 +35,7 @@ export function SprintComparisonDashboard({ projectId }: SprintComparisonDashboa
   // Calculate summary statistics
   const totalSprints = filteredSprints.length;
   const avgCompletion = totalSprints > 0
-    ? filteredSprints.reduce((a, s) => a + s.pass_rate, 0) / totalSprints
+    ? filteredSprints.reduce((a, s) => a + s.pass_rate / 100, 0) / totalSprints
     : 0;
   const avgCost = totalSprints > 0
     ? filteredSprints.reduce((a, s) => a + s.total_cost, 0) / totalSprints
