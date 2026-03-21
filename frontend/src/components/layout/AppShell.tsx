@@ -5,6 +5,8 @@ import { Header } from './Header';
 import { SkipToContent } from '@/components/shared/SkipToContent';
 import { RouteErrorBoundary } from '@/components/shared/RouteErrorBoundary';
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
+import { TutorialOverlay } from '@/components/onboarding/TutorialOverlay';
+import { ProgressIndicator } from '@/components/onboarding/ProgressIndicator';
 import { useUI } from '@/stores/ui';
 import { useOnboarding } from '@/stores/onboarding';
 
@@ -43,6 +45,10 @@ export function AppShell() {
         onClose={handleCloseWelcome}
         onStartTutorial={handleStartTutorial}
       />
+      <TutorialOverlay />
+      <div className="fixed bottom-4 left-4 z-40 w-64">
+        <ProgressIndicator />
+      </div>
     </div>
   );
 }

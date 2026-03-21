@@ -187,7 +187,9 @@
               "Tutorial shows sprint status"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added data-tutorial attributes to Dashboard (create-project on New Project button), New Project page (configure-team wrapper around ProjectWizard), and Sprint view (start-sprint on SprintLauncher, view-results on CommandCenter).",
+          "updated_at": "2026-03-21T08:10:11.516379+00:00"
         }
       ]
     },
@@ -220,7 +222,9 @@
               "Sample goal pre-fills wizard step 1"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created SampleGoalDialog component offering sample \"Hello World API\" project or custom start. Follows AddApiKeyModal patterns: focus trap, Escape key, backdrop click, aria attributes. Uses SAMPLE_WIZARD_STEP1 data to pre-fill wizard step 1 via onUseSampleGoal callback.",
+          "updated_at": "2026-03-21T08:11:24.786221+00:00"
         },
         {
           "id": "subtask-4-2",
@@ -241,7 +245,9 @@
               "Sample goal has valid name and description"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Integrated sample goal auto-fill into WizardStep1 when tutorial is active. Added applySampleGoal action to wizard store. Shows info banner during tutorial mode.",
+          "updated_at": "2026-03-21T08:13:32.245538+00:00"
         }
       ]
     },
@@ -275,7 +281,9 @@
               "Progress persists across page refreshes"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created ProgressIndicator component showing onboarding checklist with step completion checkmarks, progress bar, current step indicator. Uses onboarding store for state persistence via localStorage. Hidden when no steps completed and tutorial inactive, or when onboarding is fully complete.",
+          "updated_at": "2026-03-21T09:00:00.000000+00:00"
         },
         {
           "id": "subtask-5-2",
@@ -295,7 +303,9 @@
               "Tutorial starts when clicked"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added Replay Tutorial button to settings page general tab. Button resets onboarding state, starts tutorial, and navigates to home.",
+          "updated_at": "2026-03-21T08:15:48.073275+00:00"
         }
       ]
     },
@@ -330,7 +340,9 @@
               "Verify entire flow takes < 5 minutes"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Integrated TutorialOverlay and ProgressIndicator into AppShell (were missing). ProgressIndicator positioned fixed bottom-left. Created comprehensive E2E test suite (OnboardingFlow.test.tsx) covering: first-run detection, tutorial start, step progression through all 5 steps, skip via button and Escape key, progress indicator updates, tutorial replay, localStorage persistence, sample goal data, and complete lifecycle flow. All onboarding components now properly wired together.",
+          "updated_at": "2026-03-21T09:30:00.000000+00:00"
         }
       ]
     }
@@ -452,8 +464,8 @@
   "planStatus": "in_progress",
   "xstateState": "planning",
   "executionPhase": "coding",
-  "updated_at": "2026-03-21T08:06:41.502Z",
-  "last_updated": "2026-03-21T08:06:17.124429+00:00",
+  "updated_at": "2026-03-21T08:16:07.515Z",
+  "last_updated": "2026-03-21T08:15:48.073284+00:00",
   "recoveryNote": "Task recovered from stuck state at 2026-03-21T08:04:13.444Z",
   "description": "# Guided Non-Technical Onboarding Experience\n\nCreate an interactive first-run experience that guides new users from installation through their first successful sprint completion. Include an interactive tutorial, contextual tooltips, a sample goal that demonstrates the full workflow, and progressive disclosure of advanced features. Target zero-terminal-required for the entire flow.\n\n## Rationale\nCrewAI requires significant Python expertise (pain-1-7), and no multi-agent framework has a non-technical-friendly onboarding (gap-7). FoundrAI's web dashboard and project wizard already lower the bar — a guided onboarding experience completes the vision of making AI agent orchestration accessible to non-developers.\n\n## User Stories\n- As a non-technical founder, I want a guided walkthrough so that I can use FoundrAI without learning command-line tools\n- As a new user, I want to see FoundrAI working with a sample project before configuring my own so that I understand the workflow\n\n## Acceptance Criteria\n- [ ] First-time users see an interactive welcome flow on first launch\n- [ ] Tutorial walks through: create project → configure team → start sprint → view results\n- [ ] Sample goal ('Build a Hello World API') pre-populated for first sprint\n- [ ] Contextual tooltips explain UI elements on first encounter\n- [ ] Progress indicator shows onboarding completion status\n- [ ] Tutorial can be replayed from settings\n- [ ] No terminal commands required for the entire onboarding flow\n- [ ] Time to first sprint < 5 minutes from application launch"
 }
