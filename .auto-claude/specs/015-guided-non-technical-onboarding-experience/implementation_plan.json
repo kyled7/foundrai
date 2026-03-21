@@ -1,0 +1,459 @@
+{
+  "feature": "Guided Non-Technical Onboarding Experience",
+  "workflow_type": "feature",
+  "workflow_rationale": "This is a multi-component feature adding a new onboarding system. Can be built incrementally: (1) state management and detection, (2) welcome modal, (3) tutorial system, (4) sample goals, (5) integration. Each phase can be tested independently.",
+  "phases": [
+    {
+      "id": "phase-1-setup",
+      "name": "Setup & State Management",
+      "type": "setup",
+      "description": "Create onboarding store, types, and localStorage persistence for tracking first-run and tutorial progress",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create onboarding Zustand store with first-run detection and tutorial step tracking",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/stores/onboarding.ts"
+          ],
+          "patterns_from": [
+            "src/stores/wizard.ts",
+            "src/stores/ui.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npm run build",
+            "expected": "Build succeeds with no TypeScript errors"
+          },
+          "status": "completed",
+          "notes": "Created onboarding.ts Zustand store following patterns from wizard.ts and ui.ts. Implemented first-run detection with localStorage persistence, tutorial step tracking (welcome → create-project → configure-team → start-sprint → view-results → complete), tooltip management, and all required methods (startTutorial, exitTutorial, setStep, completeStep, markFirstRunComplete, dismissTooltip, enableTooltips, disableTooltips, resetOnboarding). Code follows TypeScript conventions and Zustand patterns. Note: npm build verification could not be run in current environment (npm not available), but code structure and syntax verified manually against pattern files.",
+          "updated_at": "2026-03-21T06:08:02.319141+00:00"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Create sample goal data structure for 'Hello World API' demo",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/lib/sample-goals.ts"
+          ],
+          "patterns_from": [
+            "src/stores/wizard.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "npm run build",
+            "expected": "Build succeeds, sample goal exports valid data"
+          },
+          "status": "completed",
+          "notes": "Created frontend/src/lib/sample-goals.ts with comprehensive sample data for 'Hello World API' demo. Includes: SAMPLE_PROJECT (ProjectCreate), SAMPLE_WIZARD_STEP1 (WizardStep1Data), SAMPLE_SPRINT (SprintCreate), SAMPLE_GOAL_TREE (task hierarchy with 4 main tasks and 2 subtasks), SAMPLE_TASKS (full task details with acceptance criteria, results, and reviews), and helper functions isSampleGoal() and getSampleTask(). All TypeScript types correctly imported from types.ts and schemas.ts. Verified with tsc --noEmit - no errors in sample-goals.ts. Code follows patterns from wizard.ts and api.ts. Note: Full build has pre-existing errors in SprintBoard.tsx, TaskCard.tsx, and vite.config.ts (unrelated to this subtask), but sample-goals.ts is verified error-free.",
+          "updated_at": "2026-03-21T06:11:10.680817+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-welcome",
+      "name": "Welcome Modal & First-Run Detection",
+      "type": "implementation",
+      "description": "Build welcome modal that appears on first launch, explains FoundrAI, and offers guided tour",
+      "depends_on": [
+        "phase-1-setup"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Create WelcomeModal component with FoundrAI introduction and 'Start Tutorial' CTA",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/components/onboarding/WelcomeModal.tsx"
+          ],
+          "patterns_from": [
+            "src/components/settings/AddApiKeyModal.tsx",
+            "src/components/shared/EmptyState.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/",
+            "checks": [
+              "WelcomeModal renders on first launch",
+              "Modal has close and start tutorial buttons"
+            ]
+          },
+          "status": "completed",
+          "notes": "Created WelcomeModal component in frontend/src/components/onboarding/WelcomeModal.tsx following patterns from AddApiKeyModal.tsx. Implemented: modal backdrop with click-to-close, close button (X icon), 'Skip for now' button, 'Start Tutorial' CTA button with Rocket icon, FoundrAI introduction and tagline, 'What you'll learn' section with bullet points, proper accessibility attributes (role, aria-label, aria-modal), focus trap using useFocusTrap hook, and Escape key handling. Also created comprehensive test suite in __tests__/WelcomeModal.test.tsx with 14 test cases covering rendering, user interactions, accessibility, and all button behaviors. Component follows TypeScript conventions and styling patterns (bg-card, border-border, text-foreground, etc.) from existing codebase.",
+          "updated_at": "2026-03-21T06:25:00.000000+00:00"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Integrate WelcomeModal into AppShell to show on first run",
+          "service": "frontend",
+          "files_to_modify": [
+            "frontend/src/components/layout/AppShell.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/",
+            "checks": [
+              "Modal shows on fresh localStorage",
+              "Modal doesn't show on subsequent visits"
+            ]
+          },
+          "status": "completed",
+          "notes": "Integrated WelcomeModal into AppShell. Shows when isFirstRun is true (fresh localStorage), calls markFirstRunComplete on close, and startTutorial when user clicks Start Tutorial.",
+          "updated_at": "2026-03-21T08:05:09.346330+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-tutorial",
+      "name": "Interactive Tutorial System",
+      "type": "implementation",
+      "description": "Build tutorial overlay with contextual tooltips that guide users through: create project → configure team → start sprint → view results",
+      "depends_on": [
+        "phase-2-welcome"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Create reusable Tooltip component for contextual help",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/components/onboarding/Tooltip.tsx"
+          ],
+          "patterns_from": [
+            "src/components/settings/AddApiKeyModal.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/",
+            "checks": [
+              "Tooltip renders with arrow",
+              "Tooltip positions correctly (top/bottom/left/right)"
+            ]
+          },
+          "status": "completed",
+          "notes": "Created reusable Tooltip component with top/bottom/left/right positioning, arrow indicator, hover/focus triggers, configurable delay, and dark mode support.",
+          "updated_at": "2026-03-21T08:06:17.124415+00:00"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Create TutorialOverlay component that highlights UI elements and shows step-by-step guidance",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/components/onboarding/TutorialOverlay.tsx"
+          ],
+          "patterns_from": [
+            "src/components/project/ProjectWizard.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/",
+            "checks": [
+              "Tutorial overlay highlights elements",
+              "Next/Previous navigation works",
+              "Tutorial can be skipped"
+            ]
+          },
+          "status": "completed",
+          "notes": "Created TutorialOverlay component with highlight cutout via data-tutorial selectors, step-by-step navigation (next/previous/skip), progress bar, Escape key support, and responsive positioning. No TypeScript errors.",
+          "updated_at": "2026-03-21T08:30:00.000000+00:00"
+        },
+        {
+          "id": "subtask-3-3",
+          "description": "Integrate tutorial steps into Dashboard, New Project, and Sprint views",
+          "service": "frontend",
+          "files_to_modify": [
+            "frontend/src/routes/index.tsx",
+            "frontend/src/routes/projects/new.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/",
+            "checks": [
+              "Tutorial highlights 'Create Project' button",
+              "Tutorial advances through wizard steps",
+              "Tutorial shows sprint status"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-sample-goal",
+      "name": "Sample Goal & Quick Start",
+      "type": "implementation",
+      "description": "Pre-populate a sample 'Hello World API' goal for first-time users to demonstrate the full workflow",
+      "depends_on": [
+        "phase-3-tutorial"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Create SampleGoalDialog component that offers to use demo goal or create custom",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/components/onboarding/SampleGoalDialog.tsx"
+          ],
+          "patterns_from": [
+            "src/components/settings/AddApiKeyModal.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/projects/new",
+            "checks": [
+              "Dialog offers sample goal option",
+              "Sample goal pre-fills wizard step 1"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Integrate sample goal into project creation flow during tutorial",
+          "service": "frontend",
+          "files_to_modify": [
+            "frontend/src/components/project/WizardStep1.tsx",
+            "frontend/src/stores/wizard.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/",
+            "checks": [
+              "Tutorial mode auto-fills sample goal",
+              "User can still create custom goal",
+              "Sample goal has valid name and description"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-progress",
+      "name": "Progress Indicator & Completion",
+      "type": "implementation",
+      "description": "Show onboarding completion progress and allow tutorial replay from settings",
+      "depends_on": [
+        "phase-4-sample-goal"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Create ProgressIndicator component showing onboarding checklist",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/components/onboarding/ProgressIndicator.tsx"
+          ],
+          "patterns_from": [
+            "src/components/project/ProjectWizard.tsx"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/",
+            "checks": [
+              "Progress indicator shows steps",
+              "Completed steps marked with checkmark",
+              "Progress persists across page refreshes"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Add 'Replay Tutorial' button to settings page",
+          "service": "frontend",
+          "files_to_modify": [
+            "frontend/src/routes/settings.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5173/settings",
+            "checks": [
+              "Replay tutorial button exists",
+              "Button resets onboarding state",
+              "Tutorial starts when clicked"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-6-integration",
+      "name": "Integration & E2E Verification",
+      "type": "integration",
+      "description": "Wire all components together, verify complete onboarding flow from first launch to completed sprint",
+      "depends_on": [
+        "phase-5-progress"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "End-to-end onboarding flow verification",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Clear localStorage and refresh page",
+              "Verify WelcomeModal appears",
+              "Click 'Start Tutorial'",
+              "Follow tutorial through: Dashboard → Create Project → Configure Team → Start Sprint",
+              "Verify sample goal is used",
+              "Verify progress indicator updates",
+              "Verify tutorial can be skipped",
+              "Verify tutorial can be replayed from settings",
+              "Verify entire flow takes < 5 minutes"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 6,
+    "total_subtasks": 11,
+    "services_involved": [
+      "frontend"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 1,
+      "parallel_groups": [],
+      "recommended_workers": 1,
+      "speedup_estimate": "Sequential (frontend-only, file conflicts likely)"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 015 --parallel 1"
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "integration",
+      "browser"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "First-time users see welcome modal on launch",
+      "Tutorial guides through complete project creation flow",
+      "Sample goal 'Hello World API' pre-fills wizard",
+      "Contextual tooltips appear on first encounter",
+      "Progress indicator tracks onboarding completion",
+      "Tutorial can be replayed from settings",
+      "No terminal commands required",
+      "Time to first sprint < 5 minutes"
+    ],
+    "verification_steps": [
+      {
+        "name": "Frontend Build",
+        "command": "cd frontend && npm run build",
+        "expected_outcome": "Build succeeds with no TypeScript errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Frontend Dev Server",
+        "command": "cd frontend && npm run dev",
+        "expected_outcome": "Dev server starts on port 5173",
+        "type": "test",
+        "required": true,
+        "blocking": false
+      },
+      {
+        "name": "Browser Verification",
+        "command": "manual",
+        "expected_outcome": "All acceptance criteria verified in browser",
+        "type": "manual",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "Medium risk UX feature - primarily frontend changes with localStorage persistence. Requires browser testing but no backend integration or security concerns."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": false,
+      "commands": [],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": false,
+      "commands": [],
+      "services_to_test": []
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:5173/",
+          "checks": [
+            "WelcomeModal appears on first launch",
+            "Tutorial overlay highlights UI elements",
+            "Progress indicator shows completion status",
+            "Sample goal pre-fills project wizard"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/projects/new",
+          "checks": [
+            "SampleGoalDialog offers demo goal",
+            "Tutorial guides through wizard steps",
+            "Demo goal has valid structure"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/settings",
+          "checks": [
+            "Replay tutorial button exists",
+            "Button resets onboarding state"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": false,
+      "checks": []
+    }
+  },
+  "qa_signoff": null,
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "xstateState": "planning",
+  "executionPhase": "coding",
+  "updated_at": "2026-03-21T08:06:41.502Z",
+  "last_updated": "2026-03-21T08:06:17.124429+00:00",
+  "recoveryNote": "Task recovered from stuck state at 2026-03-21T08:04:13.444Z",
+  "description": "# Guided Non-Technical Onboarding Experience\n\nCreate an interactive first-run experience that guides new users from installation through their first successful sprint completion. Include an interactive tutorial, contextual tooltips, a sample goal that demonstrates the full workflow, and progressive disclosure of advanced features. Target zero-terminal-required for the entire flow.\n\n## Rationale\nCrewAI requires significant Python expertise (pain-1-7), and no multi-agent framework has a non-technical-friendly onboarding (gap-7). FoundrAI's web dashboard and project wizard already lower the bar — a guided onboarding experience completes the vision of making AI agent orchestration accessible to non-developers.\n\n## User Stories\n- As a non-technical founder, I want a guided walkthrough so that I can use FoundrAI without learning command-line tools\n- As a new user, I want to see FoundrAI working with a sample project before configuring my own so that I understand the workflow\n\n## Acceptance Criteria\n- [ ] First-time users see an interactive welcome flow on first launch\n- [ ] Tutorial walks through: create project → configure team → start sprint → view results\n- [ ] Sample goal ('Build a Hello World API') pre-populated for first sprint\n- [ ] Contextual tooltips explain UI elements on first encounter\n- [ ] Progress indicator shows onboarding completion status\n- [ ] Tutorial can be replayed from settings\n- [ ] No terminal commands required for the entire onboarding flow\n- [ ] Time to first sprint < 5 minutes from application launch"
+}
