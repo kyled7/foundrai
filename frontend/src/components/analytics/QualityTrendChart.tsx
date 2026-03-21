@@ -21,7 +21,7 @@ export function QualityTrendChart({ data }: QualityTrendChartProps) {
 
   const chartData = data.map(s => ({
     sprint: `S${s.sprint_number}`,
-    passRate: Math.round(s.pass_rate * 100),
+    passRate: Math.round(s.pass_rate),
   }));
 
   return (
