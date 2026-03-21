@@ -29,10 +29,17 @@ async def get_task_traces(task_id: str) -> dict:
 
 
 @router.get("/sprints/{sprint_id}/traces")
-async def get_sprint_traces(sprint_id: str, limit: int = 50) -> dict:
-    """Get decision traces for a sprint."""
+async def get_sprint_traces(
+    sprint_id: str,
+    limit: int = 50,
+    agent_role: str | None = None,
+    since: str | None = None,
+) -> dict:
+    """Get decision traces for a sprint with optional filters."""
     store = await _get_trace_store()
-    traces = await store.get_sprint_traces(sprint_id, limit=limit)
+    traces = await store.get_sprint_traces(
+        sprint_id, limit=limit, agent_role=agent_role, since=since
+    )
     return {
         "traces": [_trace_summary(t) for t in traces],
         "total": len(traces),
@@ -42,6 +49,31 @@ async def get_sprint_traces(sprint_id: str, limit: int = 50) -> dict:
 @router.get("/traces/{trace_id}")
 async def get_trace(trace_id: int) -> dict:
     """Get a single trace with full decompressed prompt/response."""
+    store = await _get_trace_store()
+    trace = await store.get_trace(trace_id)
+    if not trace:
+        raise HTTPException(status_code=404, detail="Trace not found")
+    return {
+        "trace_id": trace.trace_id,
+        "event_id": trace.event_id,
+        "task_id": trace.task_id,
+        "sprint_id": trace.sprint_id,
+        "agent_role": trace.agent_role,
+        "model": trace.model,
+        "prompt": trace.prompt,
+        "response": trace.response,
+        "thinking": trace.thinking,
+        "tool_calls": trace.tool_calls,
+        "tokens_used": trace.tokens_used,
+        "cost_usd": trace.cost_usd,
+        "duration_ms": trace.duration_ms,
+        "timestamp": trace.timestamp,
+    }
+
+
+@router.get("/traces/{trace_id}/export")
+async def export_trace(trace_id: int) -> dict:
+    """Export a single trace as JSON for external analysis."""
     store = await _get_trace_store()
     trace = await store.get_trace(trace_id)
     if not trace:

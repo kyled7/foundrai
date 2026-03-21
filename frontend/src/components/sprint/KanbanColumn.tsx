@@ -17,9 +17,10 @@ interface Props {
   color: string;
   tasks: Task[];
   count: number;
+  onTaskClick?: (taskId: string) => void;
 }
 
-export function KanbanColumn({ columnId, title, color, tasks, count }: Props) {
+export function KanbanColumn({ columnId, title, color, tasks, count, onTaskClick }: Props) {
   const { setNodeRef, isOver } = useDroppable({
     id: columnId,
   });
@@ -43,7 +44,7 @@ export function KanbanColumn({ columnId, title, color, tasks, count }: Props) {
         )}
       >
         {tasks.map((task) => (
-          <TaskCard key={task.task_id} task={task} />
+          <TaskCard key={task.task_id} task={task} onTaskClick={onTaskClick} />
         ))}
       </div>
     </div>

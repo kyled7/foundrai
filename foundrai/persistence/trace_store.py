@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import zlib
+from typing import Any
 
 from foundrai.models.decision_trace import DecisionTrace
 from foundrai.persistence.database import Database
@@ -58,12 +59,29 @@ class TraceStore:
         rows = await cursor.fetchall()
         return [self._row_to_trace(r) for r in rows]
 
-    async def get_sprint_traces(self, sprint_id: str, limit: int = 50) -> list[DecisionTrace]:
-        """Get traces for a sprint."""
-        cursor = await self.db.conn.execute(
-            "SELECT * FROM decision_traces WHERE sprint_id = ? ORDER BY timestamp DESC LIMIT ?",
-            (sprint_id, limit),
-        )
+    async def get_sprint_traces(
+        self,
+        sprint_id: str,
+        limit: int = 50,
+        agent_role: str | None = None,
+        since: str | None = None,
+    ) -> list[DecisionTrace]:
+        """Get traces for a sprint with optional filters."""
+        sql = "SELECT * FROM decision_traces WHERE sprint_id = ?"
+        params: list[Any] = [sprint_id]
+
+        if agent_role:
+            sql += " AND agent_role = ?"
+            params.append(agent_role)
+
+        if since:
+            sql += " AND timestamp > ?"
+            params.append(since)
+
+        sql += " ORDER BY timestamp DESC LIMIT ?"
+        params.append(limit)
+
+        cursor = await self.db.conn.execute(sql, params)
         rows = await cursor.fetchall()
         return [self._row_to_trace(r) for r in rows]
 

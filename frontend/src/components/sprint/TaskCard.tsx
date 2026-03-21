@@ -5,13 +5,15 @@ import { AgentAvatar } from '@/components/shared/AgentAvatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CostDisplay } from '@/components/shared/CostDisplay';
 import { cn } from '@/lib/utils';
+import { Search } from 'lucide-react';
 
 interface Props {
   task: Task;
   isDragging?: boolean;
+  onTaskClick?: (taskId: string) => void;
 }
 
-export const TaskCard = memo(function TaskCard({ task, isDragging = false }: Props) {
+export const TaskCard = memo(function TaskCard({ task, isDragging = false, onTaskClick }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, isDragging: isBeingDragged } = useDraggable({
@@ -43,6 +45,11 @@ export const TaskCard = memo(function TaskCard({ task, isDragging = false }: Pro
     setExpanded((prev) => !prev);
   }, []);
 
+  const handleViewTraces = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onTaskClick?.(task.task_id);
+  }, [onTaskClick, task.task_id]);
+
   return (
     <div
       ref={setNodeRef}
@@ -59,19 +66,21 @@ export const TaskCard = memo(function TaskCard({ task, isDragging = false }: Pro
     >
       <div className="flex items-start justify-between gap-2">
         <h4 className="text-sm font-medium leading-tight">{task.title}</h4>
-        <StatusBadge status={task.status} />
+        <div className="flex items-center gap-1">
+          <StatusBadge status={task.status} />
+          {onTaskClick && (
+            <button
+              onClick={handleViewTraces}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              title="View decision traces"
+              aria-label="View decision traces for this task"
+            >
+              <Search size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-1.5">
-          <AgentAvatar role={task.assigned_to} size="sm" />
-          <span className="text-xs text-gray-500 capitalize">
-            {task.assigned_to.replace('_', ' ')}
-          </span>
-        </div>
-        {task.cost_usd !== undefined && task.cost_usd > 0 && (
-          <CostDisplay costUsd={task.cost_usd} className="text-xs" />
-        )}
       <div className="flex items-center gap-1.5 mt-2">
         <AgentAvatar role={task.assigned_to} size="sm" />
         <span className="text-xs text-gray-500 capitalize">
