@@ -1,33 +1,27 @@
 import { api } from './client';
+import type { DecisionTraceSummary, DecisionTrace, TracesResponse } from '../types';
 
-export interface TraceSummary {
-  trace_id: number;
-  event_id: number | null;
-  task_id: string | null;
-  sprint_id: string | null;
-  agent_role: string;
-  model: string;
-  tokens_used: number;
-  cost_usd: number;
-  duration_ms: number;
-  thinking: string | null;
-  timestamp: string;
+export async function getTaskTraces(taskId: string): Promise<TracesResponse> {
+  return api.get(`/tasks/${taskId}/traces`);
 }
 
-export interface TraceDetail extends TraceSummary {
-  prompt: string;
-  response: string;
-  tool_calls: unknown[];
+export async function getSprintTraces(
+  sprintId: string,
+  limit = 50,
+  agentRole?: string,
+  since?: string
+): Promise<TracesResponse> {
+  const params = new URLSearchParams({ limit: limit.toString() });
+  if (agentRole) params.append('agent_role', agentRole);
+  if (since) params.append('since', since);
+
+  return api.get(`/sprints/${sprintId}/traces?${params.toString()}`);
 }
 
-export async function getTaskTraces(taskId: string) {
-  return api.get<{ traces: TraceSummary[]; total: number }>(`/tasks/${taskId}/traces`);
+export async function getTraceDetail(traceId: number): Promise<DecisionTrace> {
+  return api.get(`/traces/${traceId}`);
 }
 
-export async function getSprintTraces(sprintId: string, limit = 50) {
-  return api.get<{ traces: TraceSummary[]; total: number }>(`/sprints/${sprintId}/traces?limit=${limit}`);
-}
-
-export async function getTraceDetail(traceId: number) {
-  return api.get<TraceDetail>(`/traces/${traceId}`);
+export async function exportTrace(traceId: number): Promise<DecisionTrace> {
+  return api.get(`/traces/${traceId}/export`);
 }
