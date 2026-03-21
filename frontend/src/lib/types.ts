@@ -189,6 +189,7 @@ export interface Approval {
   status: ApprovalStatus;
   created_at: string;
   resolved_at: string | null;
+  expires_at: string | null;
 }
 
 export interface ApprovalDecision {

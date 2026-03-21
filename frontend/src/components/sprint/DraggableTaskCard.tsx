@@ -1,11 +1,11 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { TaskResponse } from '../../types';
+import type { Task } from '@/lib/types';
 import { TaskCard } from './TaskCard';
 import { cn } from '../../utils/cn';
 
 interface Props {
-  task: TaskResponse;
+  task: Task;
 }
 
 export function DraggableTaskCard({ task }: Props) {

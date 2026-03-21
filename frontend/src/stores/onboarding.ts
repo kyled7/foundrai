@@ -46,7 +46,7 @@ function loadOnboardingState(): Partial<OnboardingState> {
     const data: StoredOnboarding = JSON.parse(stored);
     return {
       isFirstRun: data.isFirstRun,
-      completedSteps: new Set(data.completedSteps),
+      completedSteps: new Set(data.completedSteps as OnboardingStep[]),
       dismissedTooltips: new Set(data.dismissedTooltips),
       tooltipsEnabled: data.tooltipsEnabled,
     };

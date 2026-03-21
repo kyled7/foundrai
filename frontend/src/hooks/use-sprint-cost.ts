@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSprintWebSocket } from './useSprintWebSocket';
 import { api } from '@/lib/api';

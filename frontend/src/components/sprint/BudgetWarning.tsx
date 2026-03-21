@@ -29,7 +29,7 @@ interface BudgetWarningProps {
  * - Error banner (red) at 100% usage (exceeded)
  * - Info banner (blue) when automatic model tier-down occurs
  */
-export function BudgetWarning({ budgetStatus, sprintId, dismissible = true, modelSwitch }: BudgetWarningProps) {
+export function BudgetWarning({ budgetStatus, sprintId: _sprintId, dismissible = true, modelSwitch }: BudgetWarningProps) {
   const [isBudgetDismissed, setIsBudgetDismissed] = useState(false);
   const [isModelSwitchDismissed, setIsModelSwitchDismissed] = useState(false);
 

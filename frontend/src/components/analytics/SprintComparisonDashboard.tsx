@@ -26,7 +26,7 @@ export function SprintComparisonDashboard({ projectId }: SprintComparisonDashboa
 
   // Filter by date range (if date is available in sprint data)
   const filteredSprints = dateRange
-    ? sprints.filter(s => {
+    ? sprints.filter(_s => {
         // TODO: Add date filtering when sprint comparison data includes dates
         return true;
       })

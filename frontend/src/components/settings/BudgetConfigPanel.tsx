@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
 import { useBudgetConfig, useSaveBudgetConfig } from '@/hooks/use-budget-config';
-import type { BudgetConfig } from '@/lib/types';
 
 const agentRoles = [
   { value: 'product_manager', label: 'Product Manager' },

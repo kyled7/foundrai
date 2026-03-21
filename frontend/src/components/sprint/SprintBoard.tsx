@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { DndContext, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useState } from 'react';
 import { useSprintStore } from '@/stores/sprintStore';
 import { useTraceStore } from '@/stores/traceStore';
@@ -107,7 +107,7 @@ function SprintBoardContent({ sprintId }: SprintBoardProps) {
     clearTraces();
   }
 
-  function handleDragStart(event: { active: { id: string } }) {
+  function handleDragStart(event: DragStartEvent) {
     const task = tasks.find((t) => t.task_id === event.active.id);
     setActiveTask(task || null);
   }

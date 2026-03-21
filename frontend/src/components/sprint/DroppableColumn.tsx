@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
-import type { TaskResponse } from '../../types';
+import type { Task } from '@/lib/types';
 import { TaskCard } from './TaskCard';
 import { cn } from '../../utils/cn';
 
@@ -15,7 +15,7 @@ interface Props {
   id: string;
   title: string;
   color: string;
-  tasks: TaskResponse[];
+  tasks: Task[];
   count: number;
 }
 

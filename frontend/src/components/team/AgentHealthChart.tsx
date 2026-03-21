@@ -64,7 +64,7 @@ export function AgentHealthChart({ data, loading, className }: AgentHealthChartP
                 qualityScore: 'Quality Score',
                 failureRate: 'Failure Rate',
               };
-              return [`${value.toFixed(1)}${name !== 'healthScore' ? '%' : ''}`, labels[name] || name];
+              return [`${value.toFixed(1)}${name !== 'healthScore' ? '%' : ''}`, labels[name] || name] as [string, string];
             }}
           />
           <Legend

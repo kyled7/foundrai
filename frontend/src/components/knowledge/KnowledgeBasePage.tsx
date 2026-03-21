@@ -61,8 +61,9 @@ export function KnowledgeBasePage({ projectId }: KnowledgeBasePageProps) {
   const unpinnedLearnings = filteredLearnings.filter(l => !l.pinned);
 
   // Get sprints for filter
-  const sprints = sprintsQuery.data ?? [];
-  const availableSprints = sprints.map(s => ({
+  const sprintsData = sprintsQuery.data;
+  const sprints = Array.isArray(sprintsData) ? sprintsData : (sprintsData?.sprints ?? []);
+  const availableSprints = sprints.map((s: { sprint_id: string; sprint_number: number }) => ({
     sprint_id: s.sprint_id,
     sprint_number: s.sprint_number,
   }));

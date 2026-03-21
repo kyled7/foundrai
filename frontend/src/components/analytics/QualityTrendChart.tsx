@@ -46,7 +46,7 @@ export function QualityTrendChart({ data }: QualityTrendChartProps) {
               borderRadius: 8,
               color: '#f1f5f9',
             }}
-            formatter={(value: number) => [`${value}%`, 'Pass Rate']}
+            formatter={(value: number) => [`${value}%`, 'Pass Rate'] as [string, string]}
             labelFormatter={l => `Sprint ${l.substring(1)}`}
           />
           <Line

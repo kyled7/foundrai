@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { DndContext, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { SprintBoard } from '../SprintBoard';
 import { useSprintStore } from '../../../stores/sprintStore';
-import type { TaskResponse, TaskStatus } from '../../../types';
+import type { TaskStatus } from '../../../types';
 
 // Mock the sprint store
 vi.mock('../../../stores/sprintStore', () => ({
@@ -193,13 +192,7 @@ describe('SprintBoard - Drag and Drop', () => {
 
       // Simulate drag end by directly calling the handler
       // In a real scenario, this would be triggered by @dnd-kit
-      const event: DragEndEvent = {
-        active: { id: 'task-1', data: { current: undefined }, rect: { current: { initial: null, translated: null } } },
-        over: { id: 'in_progress', data: { current: undefined }, rect: null, disabled: false },
-        delta: { x: 0, y: 0 },
-        collisions: null,
-        activatorEvent: new MouseEvent('mousedown'),
-      };
+      // DragEndEvent would be triggered by @dnd-kit internally
 
       // The component internally handles the drag end
       await waitFor(() => {
@@ -287,14 +280,7 @@ describe('SprintBoard - Drag and Drop', () => {
     it('should not update when dropped outside droppable area', async () => {
       render(<SprintBoard />);
 
-      // When over is null, no update should occur
-      const event: DragEndEvent = {
-        active: { id: 'task-1', data: { current: undefined }, rect: { current: { initial: null, translated: null } } },
-        over: null,
-        delta: { x: 0, y: 0 },
-        collisions: null,
-        activatorEvent: new MouseEvent('mousedown'),
-      };
+      // When over is null, no update should occur (DragEndEvent handled internally)
 
       // No update should be triggered
       await waitFor(() => {
@@ -386,7 +372,7 @@ describe('SprintBoard - Drag and Drop', () => {
         return selector(state);
       });
 
-      const { rerender } = render(<SprintBoard />);
+      render(<SprintBoard />);
 
       const retryButton = screen.getByRole('button', { name: /retry/i });
 
