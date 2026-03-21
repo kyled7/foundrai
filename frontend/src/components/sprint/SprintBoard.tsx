@@ -7,17 +7,26 @@ import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { KanbanColumn } from './KanbanColumn';
 import { BudgetWarning } from './BudgetWarning';
 import { DecisionTracePanel } from '../traces/DecisionTracePanel';
+import { CommunicationGraph } from '../graph/CommunicationGraph';
 import { api } from '@/lib/api';
 import type { TaskStatus, Task } from '@/lib/types';
 import { TaskCard } from './TaskCard';
 import { getTaskTraces } from '@/api/traces';
-import { X } from 'lucide-react';
+import { X, LayoutDashboard, Network } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const COLUMNS: { key: string; title: string; statuses: TaskStatus[]; color: string }[] = [
   { key: 'backlog',     title: 'Backlog',     statuses: ['pending', 'blocked'], color: 'gray' },
   { key: 'in_progress', title: 'In Progress', statuses: ['in_progress'],        color: 'blue' },
   { key: 'completed',   title: 'Completed',   statuses: ['completed'],          color: 'green' },
   { key: 'failed',      title: 'Failed',      statuses: ['failed'],             color: 'red' },
+];
+
+type ViewTab = 'board' | 'graph';
+
+const tabs: { id: ViewTab; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'board', label: 'Board', icon: LayoutDashboard },
+  { id: 'graph', label: 'Communication Graph', icon: Network },
 ];
 
 interface SprintBoardProps {
@@ -56,6 +65,7 @@ function SprintBoardContent({ sprintId }: SprintBoardProps) {
   const setTraces = useTraceStore((s) => s.setTraces);
   const clearTraces = useTraceStore((s) => s.clearTraces);
 
+  const [activeTab, setActiveTab] = useState<ViewTab>('board');
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [tracePanelOpen, setTracePanelOpen] = useState(false);
@@ -151,6 +161,19 @@ function SprintBoardContent({ sprintId }: SprintBoardProps) {
     refetchInterval: 10000, // Refetch every 10 seconds
   });
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    const currentIndex = tabs.findIndex((t) => t.id === activeTab);
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = tabs[(currentIndex + 1) % tabs.length];
+      setActiveTab(next.id);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prev = tabs[(currentIndex - 1 + tabs.length) % tabs.length];
+      setActiveTab(prev.id);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full" role="region" aria-label="Sprint task board">
       {/* Budget warning banner */}
@@ -160,37 +183,74 @@ function SprintBoardContent({ sprintId }: SprintBoardProps) {
         </div>
       )}
 
-      {/* Kanban columns */}
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
+      {/* Tab Navigation */}
+      <div
+        role="tablist"
+        aria-label="Sprint views"
+        className="flex gap-1 border-b border-border overflow-x-auto px-4"
+        onKeyDown={handleKeyDown}
       >
-        <div className="flex gap-2 md:gap-3 xl:gap-4 overflow-x-auto p-2 md:p-3 xl:p-4 flex-1">
-          {COLUMNS.map((col) => {
-            const filtered = tasks.filter((t) => col.statuses.includes(t.status));
-            return (
-              <KanbanColumn
-                key={col.key}
-                columnId={col.key}
-                title={col.title}
-                color={col.color}
-                tasks={filtered}
-                count={filtered.length}
-                onTaskClick={handleTaskClick}
-              />
-            );
-          })}
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={activeTab === id}
+            aria-controls={`panel-${id}`}
+            tabIndex={activeTab === id ? 0 : -1}
+            onClick={() => setActiveTab(id)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px',
+              activeTab === id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-foreground hover:border-border'
+            )}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Board View */}
+      {activeTab === 'board' && (
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="flex gap-2 md:gap-3 xl:gap-4 overflow-x-auto p-2 md:p-3 xl:p-4 flex-1">
+            {COLUMNS.map((col) => {
+              const filtered = tasks.filter((t) => col.statuses.includes(t.status));
+              return (
+                <KanbanColumn
+                  key={col.key}
+                  columnId={col.key}
+                  title={col.title}
+                  color={col.color}
+                  tasks={filtered}
+                  count={filtered.length}
+                  onTaskClick={handleTaskClick}
+                />
+              );
+            })}
+          </div>
+          <DragOverlay>
+            {activeTask ? (
+              <div className="opacity-80 rotate-2">
+                <TaskCard task={activeTask} isDragging />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Communication Graph View */}
+      {activeTab === 'graph' && sprintId && (
+        <div className="flex-1 overflow-hidden">
+          <CommunicationGraph sprintId={sprintId} />
         </div>
-        <DragOverlay>
-          {activeTask ? (
-            <div className="opacity-80 rotate-2">
-              <TaskCard task={activeTask} isDragging />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      )}
 
       {/* Decision Trace Panel Overlay */}
       {tracePanelOpen && (
