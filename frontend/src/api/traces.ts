@@ -1,6 +1,10 @@
 import { api } from './client';
 import type { DecisionTraceSummary, DecisionTrace, TracesResponse } from '../types';
 
+// Re-export types for backward compatibility
+export type TraceDetail = DecisionTrace;
+export type TraceSummary = DecisionTraceSummary;
+
 export async function getTaskTraces(taskId: string): Promise<TracesResponse> {
   return api.get(`/tasks/${taskId}/traces`);
 }
