@@ -159,10 +159,14 @@ Built with modern native technologies:
 - **Database:** Embedded SQLite + ChromaDB for local data persistence
 - **Updates:** Built-in auto-updater with incremental patches for fast releases
 
-> **macOS Security Note:** The app is not code-signed yet. After copying to `/Applications`, macOS may show *"FoundrAI is damaged and can't be opened."* To fix this, run once in Terminal:
+> **⚠️ macOS Security Note (Development Stage):**
+> FoundrAI is currently in active development and the desktop app is **not yet code-signed or notarized** with Apple. When you download the DMG and copy the app to `/Applications`, macOS will block it — the app may crash on launch or show *"FoundrAI is damaged and can't be opened"* without an "Open Anyway" option in System Settings.
+>
+> **To fix this, run once in Terminal before launching:**
 > ```bash
 > xattr -cr /Applications/FoundrAI.app
 > ```
+> This removes the macOS quarantine flag. You only need to do this once after installation. Code signing will be added in a future release.
 
 ## Getting Started
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/tauri/refs/heads/dev/crates/tauri-config-schema/schema.json",
   "productName": "FoundrAI",
-  "version": "0.1.0",
+  "version": "0.6.0",
   "identifier": "com.foundrai.desktop",
   "build": {
     "frontendDist": "../../foundrai/frontend/dist"
@@ -37,18 +37,12 @@
       "minimumSystemVersion": "10.15"
     },
     "externalBin": [
-      "binaries/foundrai-server"
+      "foundrai-server"
     ]
   },
   "plugins": {
     "shell": {
-      "sidecar": true,
-      "scope": [
-        {
-          "name": "binaries/foundrai-server",
-          "sidecar": true
-        }
-      ]
+      "open": true
     }
   }
 }

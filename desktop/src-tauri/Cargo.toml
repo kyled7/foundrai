@@ -1,6 +1,6 @@
 [package]
 name = "foundrai-desktop"
-version = "0.1.0"
+version = "0.6.0"
 description = "FoundrAI Desktop — AI Agent Orchestration Platform"
 authors = ["FoundrAI"]
 edition = "2021"
