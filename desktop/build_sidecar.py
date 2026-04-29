@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DESKTOP = ROOT / "desktop"
 FRONTEND = ROOT / "frontend"
-TAURI_BINS = DESKTOP / "src-tauri" / "binaries"
+TAURI_BINS = DESKTOP / "src-tauri"
 
 
 def _target_triple() -> str:
@@ -53,32 +53,30 @@ def build_pyinstaller() -> None:
 
 
 def stage_binary() -> None:
-    """Copy the frozen binary to the Tauri binaries directory."""
+    """Copy the frozen single-file binary to the Tauri binaries directory."""
     triple = _target_triple()
     ext = ".exe" if platform.system() == "Windows" else ""
     binary_name = f"foundrai-server-{triple}{ext}"
 
-    # PyInstaller output
-    dist_dir = DESKTOP / "dist" / "foundrai-server"
-    if not dist_dir.exists():
-        print(f"ERROR: PyInstaller output not found at {dist_dir}")
+    # PyInstaller --onefile output is a single executable, not a directory
+    src_exe = DESKTOP / "dist" / f"foundrai-server{ext}"
+    if not src_exe.exists():
+        print(f"ERROR: PyInstaller output not found at {src_exe}")
         sys.exit(1)
 
     TAURI_BINS.mkdir(parents=True, exist_ok=True)
 
-    # For --onedir mode, copy the entire directory
-    dest = TAURI_BINS / f"foundrai-server-{triple}"
-    if dest.exists():
-        shutil.rmtree(dest)
-    shutil.copytree(dist_dir, dest)
-
-    # Also create the expected entry-point binary name
-    src_exe = dist_dir / f"foundrai-server{ext}"
+    # Remove any prior staging (file or leftover --onedir directory)
     dest_exe = TAURI_BINS / binary_name
-    if src_exe.exists():
-        shutil.copy2(src_exe, dest_exe)
-        print(f"==> Staged {dest_exe}")
+    if dest_exe.exists() or dest_exe.is_symlink():
+        if dest_exe.is_dir():
+            shutil.rmtree(dest_exe)
+        else:
+            dest_exe.unlink()
 
+    shutil.copy2(src_exe, dest_exe)
+    dest_exe.chmod(0o755)
+    print(f"==> Staged {dest_exe}")
     print(f"==> Binary staged for target: {triple}")
 
 

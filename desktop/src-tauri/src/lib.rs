@@ -42,7 +42,7 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 let shell = app_handle.shell();
 
-                let (mut rx, _child) = match shell.sidecar("binaries/foundrai-server") {
+                let (mut rx, _child) = match shell.sidecar("foundrai-server") {
                     Ok(cmd) => match cmd.spawn() {
                         Ok(result) => result,
                         Err(e) => {
